@@ -16,6 +16,12 @@ entities:
             entity:
               title: Представление компонента
               type: string
+              enum:
+                - Это для Саши!
+                - actor
+                - component
+                - database
+                - queue
           required:
             - title
             - entity

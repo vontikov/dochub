@@ -1,5 +1,6 @@
 {
     "inbuilt": [
-        "plugins/html"
+        "plugins/html",
+        "plugins/mm2excel"
     ]
 }

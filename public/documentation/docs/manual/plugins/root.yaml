@@ -19,3 +19,6 @@ docs:
       head1:
         type: test
     source: examples/example.html
+  dochub.plugins.mm2excel:
+    location: DocHub/Руководство/Плагины/Выгрузка в excel
+    type: mm2excel/exporter
