@@ -1,0 +1,14 @@
+{
+  "name": "mm2excel",
+  "version": "1.0.0",
+  "description": "Позволяет формировать excel книги из метамодели DocHub и импортировать данные из этих книг.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "R.Piontik",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "exceljs": "4.3.0"
+  }
+}
