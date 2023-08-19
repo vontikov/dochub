@@ -165,6 +165,26 @@ entities: # Сущности расширенной матемодели
                 "[a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]*)*$": # Шаблон ключа
                     type: object
                     properties:
+                        test:
+                          title: Вложенная структура
+                          type: object
+                          properties:
+                            field1:
+                              title: Целое
+                              type: integer
+                            field2:
+                              title: Дробное
+                              type: number
+                            field3:
+                              title: Строка
+                              type: string
+                            field4:
+                              title: Перечисление
+                              type: string
+                              enum: 
+                                - Вариант 1
+                                - Вариант 2
+                                - Вариант 3
                         icon:
                             title: Иконка
                             type: string
