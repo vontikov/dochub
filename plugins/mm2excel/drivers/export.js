@@ -13,7 +13,7 @@ async function explainJSONSchema(schema, path, row = 1, parent) {
     if (schema.patternProperties) {
         for (const prop in schema?.patternProperties) {
             columns.push({
-                header: 'ID',
+                header: 'Идентификатор',
                 path: `${path}/$id`,
                 width: 32,
                 row,
