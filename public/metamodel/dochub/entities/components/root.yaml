@@ -1,2 +1,7 @@
 imports:
   - base.yaml
+  - blank.yaml
+  - summary.yaml
+  - docs.yaml
+  - contexts.yaml
+  - hierarchy.yaml

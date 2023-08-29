@@ -20,5 +20,15 @@ docs:
         type: test
     source: examples/example.html
   dochub.plugins.mm2excel:
-    location: DocHub/Руководство/Плагины/Выгрузка в excel
-    type: mm2excel/exporter
+    location: Excel/Выгрузка
+    type: mm2excel.exporter
+    source: >
+      (
+        $merge(entities.$spread().(
+            $id := $keys()[0];
+            $wcard($id, 'kadzo.v2023.**') and *.objects ? 
+                {
+                    $id: true
+                }
+        ))      
+      )

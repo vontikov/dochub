@@ -5,7 +5,6 @@
     <div v-if="toc" class="toc" v-html="toc" />
     <markdown
       v-if="(markdown !== null)"
-      class="pa-3"
       toc
       v-bind:breaks="false"
       v-bind:html="false"
@@ -225,7 +224,8 @@
   clear:both;
 }
 
-.markdown-document:not(:first-child) h2 {
+.markdown-document h1:not(:first-child),
+.markdown-document h2:not(:first-child) {
   margin-top: 56px;
 }
 
@@ -237,9 +237,9 @@
   clear:both;
 }
 
-.markdown-document:not(:first-child) h3,
-.markdown-document:not(:first-child) h4,
-.markdown-document:not(:first-child) h5 {
+.markdown-document h3:not(:first-child),
+.markdown-document h4:not(:first-child),
+.markdown-document h5:not(:first-child) {
   margin-top: 32px;
 }
 

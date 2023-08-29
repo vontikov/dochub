@@ -117,22 +117,22 @@ skinparam component<<Person>> {
     %set_variable_value("$join_append", 0)
 !endprocedure
 
-!unquoted procedure $Entity($entity, $ACName, $id, $ACType)
+!unquoted procedure $Entity($entity, $ACName, $id, $ACType, $color="")
     $join_start()
     !if ($entity == component)
-        component $id[
+        component $id $color[
         <b>$ACName</b>
         ====
     !elseif ($entity == system)
-        component $id[
+        component $id $color[
             <b>$ACName</b>
             ====
     !elseif ($entity == actor || $entity == person)
-        actor $id [
+        actor $id $color[
         ..===$ACName..
         ]
     !else
-        $entity $id [
+        $entity $id $color[
             <b>$ACName</b>
             ====
     !endif

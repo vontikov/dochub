@@ -1,0 +1,30 @@
+
+/* Общие стили */
+.markdown-document pre[class*="language-markuper"] {
+    color: #000000de !important;
+    background: none !important;
+}
+
+.markdown-document code[class*="language-markuper"] {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+
+/* Элементы формы */
+.markdown-document pre.language-markuper-form-label {
+    padding: 0 !important;
+    color: #0009 !important;
+    margin-bottom: 0 !important;
+}
+
+.markdown-document pre.language-markuper-form-field {
+    padding: 0 !important;
+    margin-top: 0 !important;
+}
+
+.markdown-document code.language-markuper-form-field {
+    padding: 0 !important;
+    overflow-wrap: break-word !important;
+    white-space: break-spaces;
+}

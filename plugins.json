@@ -1,6 +1,7 @@
 {
     "inbuilt": [
         "plugins/html",
-        "plugins/mm2excel"
+        "plugins/mm2excel",
+        "plugins/markaper"
     ]
 }
