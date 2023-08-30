@@ -246,7 +246,7 @@ async function buildWorkbook(workbook, config) {
         context.sheets.map((sheet) => {
             sheet.columns.map((column, colIndex) => {
                 if (column.path === `${relation.rel}/$id`) {
-                    const colChar = columnsIndex[colIndex + 1];
+                    const colChar = columnsIndex[colIndex];
                     const sheetName = sheet.sheet.name;
                     const name = column.path.slice(1).split('/').join('___');
                     context.workbook.definedNames.add(`'${sheetName}'!$${colChar}$${column.rowMax + 1}:${colChar}$${DATA_ROWS_LIMIT}`, name);
