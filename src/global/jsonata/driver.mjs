@@ -130,6 +130,7 @@ export default {
                             start: (new Date()).getTime(),
                             end: null
                         };
+						debugger;
                         const result = Object.freeze(this.core.evaluate(context));
                         obj.trace.end = (new Date()).getTime();
                         obj.trace.exposition = this.trace.end - this.trace.start;

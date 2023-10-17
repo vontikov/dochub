@@ -43,7 +43,7 @@ export default {
                         url += `&subject=${encodeURIComponent(JSON.stringify(self_ || null))}`;
                         result = (await requests.request(url)).data;
                     } else {
-                        !this.expOrigin && (this.expOrigin = this.driver.expression(expression, self_, params, isTrace || env.isTraceJSONata, funcs));
+                        !this.expOrigin && (this.expOrigin = this.driver.expression(expression, self_, params, isTrace || env.isTraceJSONata(), funcs));
                         result = await this.expOrigin.evaluate(context || window.Vuex.state.manifest || {});
                     }
                 } catch (e) {
