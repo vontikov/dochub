@@ -125,27 +125,37 @@ export default {
                         }
 					}
 
-                    if (isTrace) {
-                        obj.trace = {
-                            start: (new Date()).getTime(),
-                            end: null
-                        };
-						debugger;
-                        const result = Object.freeze(this.core.evaluate(context));
-                        obj.trace.end = (new Date()).getTime();
-                        obj.trace.exposition = this.trace.end - this.trace.start;
-                        // eslint-disable-next-line no-console
-                        console.groupCollapsed(`JSONata tracer expression (${obj.trace.exposition/1000} seconds):`);
-                        // eslint-disable-next-line no-console
-                        console.info('Statistics:', obj.trace);
-                        // eslint-disable-next-line no-console
-                        console.info('Query:', obj.expression);
-                        // eslint-disable-next-line no-console
-                        console.info('Result:', result);
-                        // eslint-disable-next-line no-console
-                        console.groupEnd();
-                        return result;
-                    } else return Object.freeze(this.core.evaluate(context));
+                    //if (isTrace) {
+                        return new Promise((success, reject) => {
+							obj.trace = {
+								start: (new Date()).getTime(),
+								end: null
+							};
+							const doStat = (result) => {
+								obj.trace.end = (new Date()).getTime();
+								obj.trace.exposition = this.trace.end - this.trace.start;
+								// eslint-disable-next-line no-console
+								console.groupCollapsed(`JSONata tracer expression (${obj.trace.exposition/1000} seconds):`);
+								// eslint-disable-next-line no-console
+								console.info('Statistics:', obj.trace);
+								// eslint-disable-next-line no-console
+								console.info('Query:', obj.expression);
+								// eslint-disable-next-line no-console
+								result && console.info('Result:', result);
+								// eslint-disable-next-line no-console
+								console.groupEnd();
+							};
+							this.core.evaluate(context)
+							.then((result) => {
+								doStat(result);
+								success(result);
+							})
+							.catch((error) => {
+								doStat();
+								if (reject) reject(error);
+							});
+						}); 
+                    //} else return Object.freeze(this.core.evaluate(context));
 
 				} catch (e) {
 					// eslint-disable-next-line no-console
