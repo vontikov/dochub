@@ -125,7 +125,7 @@ export default {
                         }
 					}
 
-                    //if (isTrace) {
+                    if (isTrace) {
                         return new Promise((success, reject) => {
 							obj.trace = {
 								start: (new Date()).getTime(),
@@ -148,15 +148,14 @@ export default {
 							this.core.evaluate(context)
 							.then((result) => {
 								doStat(result);
-								success(result);
+								success(Object.freeze(result));
 							})
 							.catch((error) => {
 								doStat();
 								if (reject) reject(error);
 							});
 						}); 
-                    //} else return Object.freeze(this.core.evaluate(context));
-
+                    } else return Object.freeze(this.core.evaluate(context));
 				} catch (e) {
 					// eslint-disable-next-line no-console
 					console.error('JSONata error:');

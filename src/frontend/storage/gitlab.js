@@ -4,7 +4,7 @@ import cookie from 'vue-cookie';
 import storageManager from '@front/manifest/manager';
 import Vue from 'vue';
 import requests from '@front/helpers/requests';
-import gateway from '@idea/gateway';
+import gateway from '@ide/gateway';
 import consts from '@front/consts';
 import rules from '@front/helpers/rules';
 import crc16 from '@global/helpers/crc16';
@@ -121,6 +121,17 @@ export default {
 				package: null
 			};
 
+			let timeTrack = null;
+			const infoTractStart = () => {
+				timeTrack = Date.now();
+				// eslint-disable-next-line no-console
+				console.info('START TRACKING');
+			};
+			const infoTimeTrack = (tag) => {
+				// eslint-disable-next-line no-console
+				console.info(`RELOADING: ${tag}`, ((Date.now() - timeTrack) / 1000).toFixed(2));
+			};
+
 			context.commit('setRenderCore',
 				env.isPlugin(Plugins.idea) ? 'smetana' : 'graphviz'
 			);
@@ -129,6 +140,7 @@ export default {
 			context.commit('setDiffFormat', diff_format ? diff_format : context.state.diff_format);
 
 			storageManager.onReloaded = (parser) => {
+				infoTimeTrack('LOADED');
 				// Очищаем прошлую загрузку
 				context.commit('clean');
 				// Регистрируем обнаруженные ошибки
@@ -146,7 +158,12 @@ export default {
 					context.commit('setCriticalError', true);
 				}
 
+				infoTimeTrack('APPLY DATA');
+
 				entities(manifest);
+
+				infoTimeTrack('ENTITIES');
+
 				rules(manifest,
 					(problems) => context.commit('appendProblems', problems),
 					(error) => {
@@ -154,15 +171,19 @@ export default {
 						console.error(error);
 						context.commit('appendProblems', error);
 					});
+
+				infoTimeTrack('RULES');
 			};
 			storageManager.onStartReload = () => {
+				infoTractStart();
+
+				context.commit('setNoInited', null);
+				context.commit('setIsReloading', true);
+
 				errors.syntax = null;
 				errors.net = null;
 				errors.missing_files = null;
 				errors.package = null;
-
-				context.commit('setNoInited', null);
-				context.commit('setIsReloading', true);
 			};
 			storageManager.onError = (action, data) => {
 				const error = data.error || {};

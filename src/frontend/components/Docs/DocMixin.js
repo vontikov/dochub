@@ -1,5 +1,5 @@
 import datasets from '@front/helpers/datasets';
-import gateway from '@idea/gateway';
+import gateway from '@ide/gateway';
 import docs from '@front/helpers/docs';
 import uriTool from '@front/helpers/uri';
 import requests from '@front/helpers/requests';
@@ -200,6 +200,10 @@ export default {
 		path() { this.doRefresh(); },
 		params() { this.doRefresh(); },
 		profile() { this.doRefresh(); },
+		'$route'() { this.doRefresh(); },
+		isReloading(value) {
+			!value && this.doRefresh();
+		},
 		error(error) {
 			if (error) {
 				// eslint-disable-next-line no-console

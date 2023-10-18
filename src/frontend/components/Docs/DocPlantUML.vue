@@ -23,8 +23,8 @@
         content: ''
       };
     },
-    asyncComputed: {
-      async uml() {
+    computed: {
+      uml() {
         let result = '';
         if (this.isTemplate) {
           this.source.dataset && (result = mustache.render(this.content, this.source.dataset));

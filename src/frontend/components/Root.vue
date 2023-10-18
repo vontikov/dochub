@@ -36,6 +36,7 @@
 
   import PluginInit from '@idea/components/Init.vue';
   import env from '@front/helpers/env';
+  import navigate from '@ide/navigate';
 
   import MenuComponent from './Layouts/Menu';
   import HeaderComponent from './Layouts/Header';
@@ -72,6 +73,11 @@
       },
       navIsTemporary() {
         return this.$store.state.isPrintVersion;
+      }
+    },
+    watch: {
+      isLoading(value) {
+        !value && env.isPlugin() && navigate(this.$router);
       }
     },
     mounted() {

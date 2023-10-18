@@ -120,23 +120,21 @@
       baseURI() {
         return uriTool.getBaseURIOfPath(this.currentPath);
       },
-      isReloading() {
+      isManifestReloading() {
         return this.$store.state.isReloading;
+      },
+      isReloading() {
+        return this.refresher || this.isManifestReloading;
       },
       isPrintVersion() {
         return this.$store.state.isPrintVersion;
       }
     },
     watch: {
-      '$route'() {
-        this.refresh();
+      isManifestReloading(value) {
+        !value && this.refresh();
       },
-      params() {
-        this.refresh();
-      },
-      isReloading() {
-        this.refresh();
-      }
+      '$route'() { this.refresh(); }
     },
     mounted() {
       this.refresh();
@@ -178,7 +176,6 @@
           } else {
             this.pullProfileFromDataLake(`"${path.join('"."')}"`);
           }
-
         }, 50);
       },
       resolveParams() {

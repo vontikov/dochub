@@ -6,25 +6,47 @@
     </template>
     <template v-else>
       Упс... здесь пусто :(
+      <div v-if="isPlugin" style="margin-left: -50%;" class="location">
+        {{ currentURL }}
+      </div>
     </template>
   </div>
 </template>
 
 <script>
+  import env from '@front/helpers/env';
   export default {
     name: 'Empty',
     data() {
-      return {};
+      return {
+        currentURL: window.location.toString()
+      };
     },
     computed: {
+      isPlugin() {
+        return env.isPlugin();
+      },
       isLoading() {
         return this.$store.state.isReloading;
+      }
+    },
+    watch: {
+      '$route'() {
+        this.currentURL = window.location.toString();
       }
     }
   };
 </script>
 
 <style scoped>
+
+.location {
+  margin-top: 24px;
+  margin-left: -115px !important;
+  width: 400px;
+  word-wrap: inherit;
+  font-size: 10px;
+}
 
 
 </style>

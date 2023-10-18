@@ -2,7 +2,6 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import cookie from 'vue-cookie';
 
-import gateway from '@idea/gateway';
 import env from '@front/helpers/env';
 
 import appRoutes from './routes';
@@ -64,25 +63,5 @@ if (!env.isPlugin()) {
 }
 
 const router = new Router(rConfig);
-
-gateway.appendListener('navigate/component', (data) => {
-	router.push({ path: `/architect/components/${Object.keys(data)[0]}`});
-});
-
-gateway.appendListener('navigate/document', (data) => {
-	router.push({ path: `/docs/${Object.keys(data)[0]}`});
-});
-
-gateway.appendListener('navigate/aspect', (data) => {
-	router.push({ path: `/architect/aspects/${Object.keys(data)[0]}`});
-});
-
-gateway.appendListener('navigate/context', (data) => {
-	router.push({ path: `/architect/contexts/${Object.keys(data)[0]}`});
-});
-
-gateway.appendListener('navigate/devtool', (data) => {
-	router.push({ path: `/devtool/${Object.keys(data)[0]}`});
-});
 
 export default router;
