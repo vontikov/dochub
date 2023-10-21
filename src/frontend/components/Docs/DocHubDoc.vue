@@ -147,7 +147,7 @@
             type: contentType,
             source: `source:${encodeURIComponent(JSON.stringify(response.data))}`
           };
-        });
+        }).finally(() => this.refresher = null);
       },
       // Достаем данные профиля документа из DataLake
       pullProfileFromDataLake(dateLakeId) {
