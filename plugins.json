@@ -1,6 +1,7 @@
 {
     "inbuilt": [
         "plugins/html",
-        "plugins/markaper"
+        "plugins/markaper",
+        "plugins/formen"
     ]
 }

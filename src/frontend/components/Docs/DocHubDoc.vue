@@ -134,7 +134,8 @@
       isManifestReloading(value) {
         !value && this.refresh();
       },
-      '$route'() { this.refresh(); }
+      '$route'() { this.refresh(); },
+      params() { this.refresh(); }
     },
     mounted() {
       this.refresh();

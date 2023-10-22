@@ -1,5 +1,6 @@
 imports:
   - examples/table.yaml
+  - examples/formen.yaml
 docs:
   # *****************************************  
   #        Руководство по документам 
@@ -102,6 +103,18 @@ docs:
       - dochub.front.spa.blank
       - dochub.front.spa.blank.doc
     source: smartants.md
+  dochub.formen:
+    location: DocHub/Руководство/Документы/Formen
+    description: Динамические формы
+    autor: R.Piontik
+    type: markdown
+    subjects:
+      - dochub.front
+      - dochub.front.spa
+      - dochub.front.spa.blank
+      - dochub.front.spa.blank.doc
+    source: formen.md
+
   # *****************************************  
   #            Примеры документов
   # *****************************************  
@@ -423,3 +436,4 @@ docs:
         }
       )
     template: examples/openapi_template.json
+
