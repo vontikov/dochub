@@ -7,6 +7,9 @@ docs:
       title: Параметры отбора
       type: object
       properties:
+        checkbox:
+          title: Пример
+          type: boolean
         # Определим одно поле для отбора по направлению связи
         direction:
           title: Направление связи
@@ -16,6 +19,7 @@ docs:
             - "<--"
             - "-->"
             - "<-->"
+            - "<-"
     # Ссылка на объект управления
     subject: "@document/dochub.table.select"
     # Готовим данные для заполнения формы
@@ -23,7 +27,8 @@ docs:
       (
         {
           "data": {
-              "direction": "*" /* По умолчанию отбираем все связи */
+              "direction": "<-" /* По умолчанию отбираем все связи */,
+              "checkbox": true
           }
         }
       )
