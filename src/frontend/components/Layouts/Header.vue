@@ -14,6 +14,17 @@
     </v-app-bar-nav-icon>
     <v-toolbar-title style="cursor: pointer" v-on:click="onLogoClick">DocHub</v-toolbar-title>
     <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-spacer />
+    <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{ user || 'Login' }}</v-toolbar-title>
+    <v-spacer />
     <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
       <v-icon class="material-icons blink" style="display: inline">error</v-icon>
     </v-btn>
@@ -41,6 +52,7 @@
 
 <script>
   import env, {Plugins} from '@front/helpers/env';
+  import oidcClient from '@front/auth/oidc-client';
 
   import HeaderLogo from './HeaderLogo';
 
@@ -52,7 +64,8 @@
     data() {
       return {
         isSearchInCode: env.isPlugin(Plugins.idea),
-        isBackShow: env.isPlugin(Plugins.vscode)
+        isBackShow: env.isPlugin(Plugins.vscode),
+        user: null
       };
     },
     computed: {
@@ -68,6 +81,12 @@
           return this.$store.state.isPrintVersion;
         }
       }
+    },
+    mounted() {
+      window.OidcUserManager.getUser().then(user => {
+        const userName = user?.profile?.name;
+        this.user = userName ? userName + ' (Logout)' : null;
+      });
     },
     methods: {
       doPrint() {
@@ -114,6 +133,9 @@
             window.$PAPI.goto(null, 'document', struct[2]);
             break;
         }
+      },
+      loginout() {
+        this.user ? oidcClient.logout() : oidcClient.login();
       }
     }
   };

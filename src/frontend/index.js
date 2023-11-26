@@ -36,10 +36,12 @@ import '@assets/styles/main.css';
 import '@front/storage/indexedDB';
 import 'swagger-ui/dist/swagger-ui.css';
 import 'vuetify/dist/vuetify.min.css';
+import {UserManager, settings as oidcSettings} from '@/oidc-settings';
 
 window.Vue = Vue;
 window.Router = router;
 window.EventBus = new Vue();
+window.OidcUserManager = new UserManager(oidcSettings);
 
 Vue.use(Vuex);
 Vue.use(Vuetify);

@@ -43,6 +43,7 @@
     "mermaid": "10.6.1",
     "monaco-editor": "0.34.1",
     "mustache": "4.2.0",
+    "oidc-client-ts": "2.4.0",
     "semver": "7.5.4",
     "swagger-ui": "3.52.5",
     "uuid": "8.3.2",
