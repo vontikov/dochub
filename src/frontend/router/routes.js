@@ -32,6 +32,13 @@ const middleware = (route) => {
 		);
 	}
 
+    window.OidcUserManager.getUser().then(user => {
+      if (user) {
+        // eslint-disable-next-line no-console
+        console.log(user.profile.roles);
+      }
+    });
+
 	return route.params;
 };
 
