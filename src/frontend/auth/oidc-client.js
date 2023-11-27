@@ -28,5 +28,8 @@ export default {
         } else {
             window.location = window.origin + '/main';
         }
+    },
+    async getAccessToken() {
+      return (await window.OidcUserManager.getUser())?.access_token;
     }
 };
