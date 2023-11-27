@@ -1,8 +1,8 @@
 <template>
   <g>
-    <g 
+    <g
       v-for="box in layer.boxes"
-      v-bind:key="box.node.id">
+      v-bind:key="box.node.id + box.node.title">
       <g v-if="isArea(box)">
         <rect
           v-if="isArea(box)"
@@ -52,7 +52,7 @@
     },
     methods: {
       isArea(item) {
-        return item.node.subitems && Object.keys(item.node.subitems).length;
+        return item.node.subitems && Object.keys(item.node.subitems).length || item.node.id === 'gravityScope';
       }
     }
   };

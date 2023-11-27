@@ -168,6 +168,8 @@
                     console.warn(`Can't cache SA result: ${e}`);
                   }
                 }
+                // Кэшируем успешный результат
+                md5 && localStorage.setItem(cacheKey, JSON.stringify(message.graph));
                 success(message.graph);
               }
               else reject(message.error);

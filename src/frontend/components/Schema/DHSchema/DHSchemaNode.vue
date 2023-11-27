@@ -4,7 +4,7 @@
       v-for="(box, idx) in layer.boxes"
       v-bind:key="box.node + idx">
       <g
-        v-if="isArea(box)" 
+        v-if="isArea(box)"
         v-on:dblclick.stop.prevent="onNodeDblClick(box, true)">
         <template v-if="isShowArea">
           <rect
@@ -28,7 +28,7 @@
       </g>
       <g v-if="(!isArea(box) && isShowNode) || !box.node?.symbol?.startsWith('$')">
         <use
-          v-bind:key="box.node.id"
+          v-bind:key="box.node.id + box.node.title"
           v-bind:style="{ opacity: box.opacity }"
           v-bind:x="box.absoluteX"
           v-bind:y="box.absoluteY"
@@ -40,7 +40,7 @@
           v-bind:transform="`translate(${box.absoluteX},${box.absoluteY + box.height})`"
           class="node-text"
           v-bind:style="{ opacity: box.opacity }">
-          <tspan 
+          <tspan
             v-for="(line, index) in textLines(box)"
             v-bind:key="index"
             v-bind:x="box.width * 0.5"
@@ -48,7 +48,7 @@
             text-anchor="middle">
             {{ line }}
           </tspan>
-        </text>          
+        </text>
       </g>
       <schema-node
         v-bind:offset-x="box.x"
@@ -147,7 +147,7 @@
         return result.join(' ');
       },
       isArea(item) {
-        return item.node.subitems && Object.keys(item.node.subitems).length;
+        return item.node?.subitems && Object.keys(item.node?.subitems).length || item.node.id === 'gravityScope';
       }
     }
   };
