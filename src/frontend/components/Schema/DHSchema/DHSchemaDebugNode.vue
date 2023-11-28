@@ -52,7 +52,7 @@
     },
     methods: {
       isArea(item) {
-        return item.node.subitems && Object.keys(item.node.subitems).length || item.node.id === 'gravityScope';
+        return item.node.subitems && Object.keys(item.node.subitems).length;
       }
     }
   };

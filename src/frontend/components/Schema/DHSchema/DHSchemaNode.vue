@@ -112,7 +112,7 @@
     },
     methods: {
       textLines(box) {
-        const title = box.node.title || box.node.id;
+        const title = box.node.title || box.node.id || '';
         const result = [];
         let offset = 0;
         let length = 0;
@@ -147,7 +147,7 @@
         return result.join(' ');
       },
       isArea(item) {
-        return item.node?.subitems && Object.keys(item.node?.subitems).length || item.node.id === 'gravityScope';
+        return item.node?.subitems && Object.keys(item.node?.subitems).length;
       }
     }
   };
