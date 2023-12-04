@@ -28,7 +28,7 @@
       </g>
       <g v-if="(!isArea(box) && isShowNode) || !box.node?.symbol?.startsWith('$')">
         <use
-          v-bind:key="box.node.id + box.node.title"
+          v-bind:key="box.node.id"
           v-bind:style="{ opacity: box.opacity }"
           v-bind:x="box.absoluteX"
           v-bind:y="box.absoluteY"

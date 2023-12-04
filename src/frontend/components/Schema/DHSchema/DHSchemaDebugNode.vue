@@ -2,7 +2,7 @@
   <g>
     <g
       v-for="box in layer.boxes"
-      v-bind:key="box.node.id + box.node.title">
+      v-bind:key="box.node.id">
       <g v-if="isArea(box)">
         <rect
           v-if="isArea(box)"
