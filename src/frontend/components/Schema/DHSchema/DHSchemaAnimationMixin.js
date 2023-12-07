@@ -11,7 +11,7 @@ export default {
         animationActionFocusNode(target) {
             const regex = new RegExp(target);
             for (const nodeID in this.presentation.map) {
-                if (regex.test(nodeID)) this.selectNode(this.presentation.map[nodeID]);
+                if (regex.test(nodeID)) this.selectNodeAndNeighbors(this.presentation.map[nodeID]);
             }
         },
         // Фокусирует объекты диаграммы
@@ -71,7 +71,7 @@ export default {
                     return;
                 }
                 // Выполняем
-                if (this.animation.currentStep < scenario.length) 
+                if (this.animation.currentStep < scenario.length)
                     this.animationExecStep(scenario, this.animation.currentStep);
                 else
                     this.animationStop();
@@ -162,5 +162,5 @@ export default {
     destroyed() {
         this.animationStop();
     }
-    
+
 };
