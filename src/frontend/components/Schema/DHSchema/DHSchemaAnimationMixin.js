@@ -7,11 +7,20 @@ export default {
             this.cleanSelectedTracks();
             this.animation.information = null;
         },
-        // Фокусирует объекты диаграммы
+        // Фокусирует линк диаграммы
+        animationActionFocusLink(from, to) {
+            const regexFrom = new RegExp(from);
+            const regexTo = new RegExp(to);
+            for (const track of this.presentation.tracks) {
+                if(regexFrom.test(track.link.from), regexTo.test(track.link.to))
+                  this.onTrackClick(track);
+            }
+        },
+        // Фокусирует объект диаграммы
         animationActionFocusNode(target) {
             const regex = new RegExp(target);
             for (const nodeID in this.presentation.map) {
-                if (regex.test(nodeID)) this.selectNodeAndNeighbors(this.presentation.map[nodeID]);
+                if (regex.test(nodeID)) this.selectNode(this.presentation.map[nodeID]);
             }
         },
         // Фокусирует объекты диаграммы
@@ -46,6 +55,7 @@ export default {
                 switch((command.action || '$unknown$').toLowerCase()) {
                     case 'clean': this.animationActionClean(); break;
                     case 'focus-node': this.animationActionFocusNode(command.target); break;
+                    case 'focus-link': this.animationActionFocusLink(command.from, command.to); break;
                     case 'focus-neighbors': this.animationActionFocusNeighbors(command.target); break;
                     case 'info': this.animationActionInfo(command.text, command.subject); break;
                     default: throw `Не известная команда "${command.action}"`;
