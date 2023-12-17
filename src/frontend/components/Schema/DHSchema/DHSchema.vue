@@ -422,6 +422,10 @@
 
         return selected;
       },
+      // Выделяет ноду
+      selectNode(box) {
+        this.selected.nodes[box.node.id] = box;
+      },
       // Выделяет ноду и ее соседей со связями
       selectNodeAndNeighbors(box) {
         const selectedNodes = this.getSelectNode(box);
