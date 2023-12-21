@@ -12,7 +12,7 @@ export default function(config) {
 	this.makeFileURI = (projectID, repositoryId, source, branch) => {
 		const result = new URL(
 			`rest/api/1.0/projects/${projectID}/repos/${repositoryId}/raw/`
-			+ encodeURIComponent(source)
+			+ encodeURIComponent(source).split('%2F').join('/')
 			+ `?at=${branch}`
 			, config.bitbucket_server);
 		return result;
