@@ -117,7 +117,11 @@ export default function(config) {
 				let slices = result.url.toString().split('/');
 				const path = (new URL(uri, 'path:/' + slices[slices.length - 2].split('%2F').join('/'))).toString();
 				slices[slices.length - 2] = (path.split('path:/')[1] || '').split('/').join('%2F');
-				result.url = new URL(slices.join('/'));
+				result.url = new URL(slices.join('/') + (params ? '?' + params : ''));
+			} else if (result.type === 'bitbucket') {
+				const [url, params] = result.url.toString().split('?');
+				const path = (new URL(uri, url)).toString();
+				result.url = new URL(path + (params ? '?' + params : ''));
 			} else {
 				result.url = new URL(uri, result.url);
 			}
