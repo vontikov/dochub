@@ -224,6 +224,7 @@
   .menu-item-header {
     line-height: 14px;
     height: auto !important;
+    min-height: 32px;
     cursor: pointer;
   }
 
