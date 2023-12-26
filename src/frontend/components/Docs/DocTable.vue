@@ -10,6 +10,7 @@
           hide-details />
       </v-card-title>
       <v-data-table
+        v-bind:mobile-breakpoint="0"
         v-bind:headers="headers"
         v-bind:items="source.dataset || []"
         v-bind:search="search"
@@ -165,5 +166,11 @@ table {
 }
 td {
   white-space: pre-wrap
+}
+</style>
+
+<style>
+.v-data-table-header tr th {
+  white-space: nowrap;
 }
 </style>
