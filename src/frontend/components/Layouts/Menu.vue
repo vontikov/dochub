@@ -9,7 +9,7 @@
           slot="append">
           mdi-magnify
         </v-icon>
-      </v-text-field>      
+      </v-text-field>
     </v-list-item>
     <template v-for="(item, i) in menu">
       <v-list-item
@@ -140,9 +140,9 @@
             }
           }
         };
-        
+
         this.treeMenu && expand(this.treeMenu);
-        
+
         return result;
       }
     },
@@ -180,7 +180,7 @@
           if (struct[i] && (request.indexOf(struct[i]) < 0)) return false;
         }
         return true;
-      },      
+      },
       isMenuItemSelected(item) {
         return (item.route === this.currentRoute.fullPath) || (item.route === this.currentRoute.path);
       },
@@ -223,7 +223,7 @@
 
   .menu-item-header {
     line-height: 14px;
-    height: 32px !important;
+    height: auto !important;
     cursor: pointer;
   }
 
