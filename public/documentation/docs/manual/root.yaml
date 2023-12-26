@@ -3,6 +3,7 @@ imports:
   - rules/root.yaml
   - plugins/root.yaml
   - functions/root.yaml
+  - formen/root.yaml
 docs:
     dochub.manual:
         location: DocHub/Руководство
