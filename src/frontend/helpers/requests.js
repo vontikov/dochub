@@ -184,7 +184,7 @@ export default {
 
 		if (
 			env.isPlugin(Plugins.idea) && params.url.toString().startsWith('plugin:') ||
-			env.isPlugin(Plugins.vscode)
+			env.isPlugin(Plugins.vscode) && params.url.toString().startsWith('https://file+.vscode-resource.vscode-cdn.net') && !params.responseHook
 		) {
 			injectPAPIMiddleware();
 			this.trace(params.url);
