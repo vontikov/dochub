@@ -28,6 +28,21 @@ function makeParamsValidator(handler) {
 
     try {
         const rules = new ajv({ allErrors: true });
+        rules.addKeyword('callback', {
+            compile: function() {
+              return function(data) {
+                return typeof data === 'function';
+              };
+            }
+          });
+        rules.addKeyword('params', {
+            keyword: 'callback',
+            compile: function() {
+                return function(data) {
+                    return typeof data === 'function';
+                };
+        }
+        });
         return rules.compile(schema);
     } catch (e) {
         throw new Error(`Ошибка схемы входных параметров в декларации функции [${handler.id}]\n${e.toString()}`);
@@ -64,14 +79,20 @@ function prepareParams(handler, params) {
     if (!validator) return null;
 
     // Готовим параметры на вход
-    const result = {};
+    const result = {
+        context: {}
+    };
     handler.profile.params.map((param, index) => {
         const alias = param.alias || `param${index}`;
-        result[alias] = params[index];
+        if (typeof params[index] === 'function') {
+            !result.funcs && (result.funcs = {});
+            result.funcs[alias] = params[index];
+        } else
+            result.context[alias] = params[index];
     });
 
     // Проверяем по схеме
-    if (!validator(result)) {
+    if (!validator({...result.context, ...result.funcs})) {
         // ajv_localize(validator.errors);
         throw new Error(`Ошибка валидации входных параметров функции [${handler.id}]\n${JSON.stringify(validator.errors, null, 4)}`);
     }
@@ -106,14 +127,31 @@ export default (queryDriver, functions) => {
         };
         result[funcId] = async(...params) => {
             !func.validators && makeValidators(func);
-            if (!func.executor) {
-                func.executor = queryDriver.expression(func.profile?.code || 'undefined');
+            const input = prepareParams(func, params);  // Подготавливаем параметры и проверяем их на корректность
+            let doRebuildQuery = !func.executor;
+            if (!doRebuildQuery || input.funcs || func.funcs) {
+                const oldFuncs = Object.assign({}, func.funcs || {});
+                for (const funcId in input.funcs) {
+                    if (input.funcs[funcId] !== oldFuncs[funcId]) {
+                        doRebuildQuery = true;
+                        break;
+                    }
+                    delete oldFuncs[funcId];
+                }
+                doRebuildQuery |= Object.keys(oldFuncs).length;
             }
-            return prepareResult(func,              // Проверяем результат на корректность
-                await func.executor.evaluate(
-                    prepareParams(func, params)     // Подготавливаем параметры и проверяем их на корректность
-                )
-            );
+            if (doRebuildQuery) {
+                func.executor = queryDriver.expression(
+                    func.profile?.code || 'undefined',
+                    undefined,
+                    undefined,
+                    undefined,
+                    input?.funcs
+                );
+            }
+            const result = await func.executor.evaluate(input.context);
+            func.funcs = input.funcs;
+            return prepareResult(func, result);         // Проверяем результат на корректность
         };
     }
 
