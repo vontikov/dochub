@@ -244,7 +244,7 @@ const parser = {
 	},
 
 	async parseImports(manifest, baseURI) {
-		for (const key in manifest.imports || []) {
+		for (const key in manifest?.imports || []) {
 			const url = parser.cache.makeURIByBaseURI(manifest.imports[key], baseURI);
 			if (this.loaded[url]) {
 				// eslint-disable-next-line no-console
