@@ -194,8 +194,6 @@ export default {
 							location: url
 						});
 					}
-				} else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
-					context.commit('setNoInited', true);
 				} else if (action === 'package') {
 					if (errors.package?.items.find(({ description }) => description === `${error.toString()}\n`)) return;
 					if (!errors.package) {
@@ -215,6 +213,8 @@ export default {
 
 					item.description = `${error.toString()}\n`;
 					errors.package.items.push(item);
+				} else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
+					context.commit('setNoInited', true);
 				} else {
 					const item = {
 						uid,
