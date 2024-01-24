@@ -89,12 +89,16 @@ let cefQuery = params.get('$dochub-api-interface-func');
 // Если в параметрах интерфейсная функция не передана...
 if (!cefQuery) {
 	// Проверяем передана ли она в прошивке
-	if (fwCefQuery !== `${"%$dochub-api-"}${"interface-func%"}`)
-		cefQuery = fwCefQueryж
+	if (fwCefQuery !== `${"%$dochub-api-"}${"interface-func%"}`) {
+		console.info('Нашел интерфейсную функцию в прошивке!');
+		cefQuery = fwCefQuery;
 	// Если и тут нет, ищем в локальном хранилище след
-	else if (window.localStorage) {
+	} else if (window.localStorage) {
+		console.info('Нашел интерфейсную функцию в localStorage!');
 		cefQuery = localStorage.getItem('cefQuery');
 	}
+} else {
+	console.info('Нашел интерфейсную функцию в параметрах!');
 }
 
 // eslint-disable-next-line no-console
