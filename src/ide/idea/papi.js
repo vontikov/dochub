@@ -82,7 +82,24 @@ const params = new URLSearchParams(document.location.search);
 // Пытаемся получить название интерфейсной функции из параметров.
 // Если в параметрах ее нет, то берем '%$dochub-api-interface-func%' который
 // заботливо должен был подложить плагин заменой.
-const cefQuery = params.get('$dochub-api-interface-func') || '%$dochub-api-interface-func%';
+
+const fwCefQuery = '%$dochub-api-interface-func%';
+let cefQuery = params.get('$dochub-api-interface-func');
+
+// Если в параметрах интерфейсная функция не передана...
+if (!cefQuery) {
+	// Проверяем передана ли она в прошивке
+	if (fwCefQuery !== `${"%$dochub-api-"}${"interface-func%"}`) {
+		console.info('Нашел интерфейсную функцию в прошивке!');
+		cefQuery = fwCefQuery;
+	// Если и тут нет, ищем в локальном хранилище след
+	} else if (window.localStorage) {
+		console.info('Нашел интерфейсную функцию в localStorage!');
+		cefQuery = localStorage.getItem('cefQuery');
+	}
+} else {
+	console.info('Нашел интерфейсную функцию в параметрах!');
+}
 
 // eslint-disable-next-line no-console
 console.info('Plugin API function: ', cefQuery);
@@ -120,6 +137,8 @@ if (cefQuery && window[cefQuery]) {
 		console.error(e);
 	});
 
+	// Оставляем след интерфейсной функции для рефрешей и т.п.
+	window.localStorage && localStorage.setItem('cefQuery', cefQuery);
 } else {
 	// eslint-disable-next-line no-console
 	console.info('Это не плагин...');
