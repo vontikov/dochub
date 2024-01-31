@@ -25,11 +25,14 @@ export default {
 			created: function() {
 				this.$parent.$on('appendError', (error) => {
 					let message = (error?.message || error);
-					if (error.config) {
-						const link = error.config.url.toString();
+					if (error.response) {
 						const description = error.response?.data?.error || JSON.stringify(error.response?.data);
-						message = (description ? `<pre>${description}</pre>` : '') + `${message}<br><br>URL:<a href="${link}" target="_blank">${link}</a><br><br>`;
-					}
+						message = (description ? `<pre>${description}</pre>` : '');
+						if (error.config) {
+							const link = error.config.url.toString();
+							message += `${message}<br><br>URL:<a href="${link}" target="_blank">${link}</a><br><br>`;
+						} 
+					} 
 					this.errors.push(
 						{
 							key: Date.now(),
