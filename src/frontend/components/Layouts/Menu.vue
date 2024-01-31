@@ -221,10 +221,14 @@
   margin: 2px !important;
 }
 
-.menu-item-ico {
-  position: absolute;
-  right: 4px;
-}
+  .menu-item-header {
+    line-height: 14px;
+    height: auto !important;
+    min-height: 32px;
+    cursor: pointer;
+    position: absolute;
+    right: 4px;
+  }
 
 .menu-item-header {
   line-height: 14px;
