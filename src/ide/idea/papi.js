@@ -73,10 +73,6 @@ const PAPI = {
 	}
 };
 
-// Ищем окружение плагина
-
-// eslint-disable-next-line no-useless-escape
-// const cefQuery = (Object.getOwnPropertyNames(window).filter(item => /^cefQuery\_[0-9]/.test(item)) || [])[0];
 
 const params = new URLSearchParams(document.location.search);
 // Пытаемся получить название интерфейсной функции из параметров.
