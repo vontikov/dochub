@@ -36,7 +36,8 @@
         <v-bottom-sheet v-model="sheet">
           <v-card
             class="text-center"
-            height="200">
+            height="200"
+            v-bind:style="!isPlugin ? 'padding: 20px 0px 0px 300px' : ''">
             <v-card-text>
               <ul>
                 <li v-for="warn in warnings" v-bind:key="warn">
@@ -126,6 +127,7 @@
   import download from '@front/helpers/download';
 
   import DocMixin from './DocMixin';
+  import env from '@front/helpers/env';
 
   export default {
     name: 'DocHubViewpoint',
@@ -138,6 +140,7 @@
     },
     data() {
       return {
+        isPlugin: env.isPlugin(),
         warnings: [],
         sheet: false,
         menu: { // Контекстное меню

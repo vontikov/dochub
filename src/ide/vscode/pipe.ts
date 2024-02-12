@@ -39,8 +39,8 @@ export default (): void => {
 
       emit('download', stringifedUri);
     },
-    goto(href): void {
-      emit('goto', JSON.stringify(href));
+    goto(source, entity, id): void {
+      emit('goto', JSON.stringify({ source, entity, id }));
     },
     reload(currentRoute): void {
       emit('reload-force', { currentRoute });
