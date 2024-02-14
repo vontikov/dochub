@@ -40,6 +40,7 @@
       mode="area"
       v-bind:layer="presentation.layers"
       v-bind:hide-boundary-titles="data.config?.hideBoundaryTitles"
+      v-bind:hide-leaf-titles="data.config?.hideLeafTitles"
       v-on:node-dblclick="onNodeClick" />
 
     <template v-for="track in presentation.tracks">
@@ -60,6 +61,7 @@
       v-bind:offset-y="0"
       mode="node"
       v-bind:layer="presentation.layers"
+      v-bind:hide-boundary-titles="data.config?.hideBoundaryTitles"
       v-bind:hide-leaf-titles="data.config?.hideLeafTitles"
       v-on:node-click="onNodeClick" />
 
