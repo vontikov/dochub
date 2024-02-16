@@ -24,8 +24,8 @@
     <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
       <v-icon class="material-icons blink" style="display: inline">error</v-icon>
     </v-btn>
-    <v-btn v-if="isSearchInCode" icon title="Найти в коде" v-on:click="gotoCode">
-      <v-icon class="material-icons" style="display: inline">search</v-icon>
+    <v-btn v-if="gotoIconShow" icon title="Найти в коде" v-on:click="gotoCode">
+      <v-icon class="material-icons" style="display: inline">code</v-icon>
     </v-btn>
     <v-menu offset-y>
       <template #activator="{ on, attrs }">
@@ -58,11 +58,13 @@
     },
     data() {
       return {
-        isSearchInCode: env.isPlugin(Plugins.idea),
         isBackShow: env.isPlugin(Plugins.vscode)
       };
     },
     computed: {
+      gotoIconShow() {
+        return env.isPlugin() && this.$route.name === 'entities';
+      },
       isCriticalError() {
         return !!(this.$store.state.problems || []).find((item) => item.critical);
       },
@@ -100,34 +102,21 @@
         this.$router.push({name: 'main'}).catch(() => null);
       },
       gotoCode() {
-        // eslint-disable-next-line no-console
-        // console.info('For GOTO ', window.location.hash);
+        const location = window.location;
         const struct = window.location.hash.split('/');
-        switch (struct[1]) {
-          case 'entities': {
-            const entity = struct[2];
-            const url = new URL(window.location.hash.slice(1), window.location);
-            const id = url.searchParams.get('id');
-            window.$PAPI.goto(null, entity, id);
-          } break;
-          case 'architect': {
-            switch (struct[2]) {
-              case 'contexts':
-                window.$PAPI.goto(null, 'context', struct[3]);
-                break;
-              case 'aspects':
-                window.$PAPI.goto(null, 'aspect', struct[3]);
-                break;
-              case 'components':
-                window.$PAPI.goto(null, 'component', struct[3]);
-                break;
-            }
-            break;
-          }
-          case 'docs':
-            window.$PAPI.goto(null, 'document', struct[2]);
-            break;
-        }
+        const entity = struct?.[2];
+        const url = new URL(location.hash.slice(1), location);
+
+        // Пытаюсь извлечь идентификатор из параметра содержащем "id" или "domain" (для berezka)
+        // или в качестве идентификатора берется хвост от urlа
+        // TODO: надо переделать
+        const idRegex = /\b(\w*id|domain\w*)=([^&\s]+)\b/;
+        const id = idRegex.exec(url.search)?.[2] || struct[struct.length -1];
+
+        if(!entity || !id) return false;
+
+        // Запрос в ide на открытие entity c id
+        window.$PAPI.goto(null, entity, id);
       }
     }
   };
