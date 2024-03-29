@@ -1,5 +1,15 @@
 <template>
-  <div class="svg-image" v-html="content" />
+  <div v-if="showData" class="svg-image" v-html="content" />
+  <div v-else>
+    <p>Ключи не найдены в шаблоне:</p>
+    <li v-for="item in validate_result.not_found_in_svg" v-bind:key="item">
+      {{ item }}
+    </li>
+    <p>Ключи не найдены в результате запроса:</p>
+    <li v-for="item in validate_result.not_found_in_source" v-bind:key="item">
+      {{ item }}
+    </li>
+  </div>
 </template>
 
 <script>
@@ -8,7 +18,7 @@
   export default {
     name: 'SVGDocument',
     props: {
-      // Требуем обязательно передавать профайл документа 
+      // Требуем обязательно передавать профайл документа
       profile: {
         type: Object,
         required: true
@@ -41,16 +51,21 @@
     },
     data() {
       return {
+        showData: true,
         // Обработчик события обновления
         refresher: null,
-        // Здесь будет храниться контент из полученного SVG файла 
+        // Здесь будет храниться контент из полученного SVG файла
         content: '',
+        validate_result: {
+          not_found_in_svg : [],
+          not_found_in_source: []
+        },
         data: null
       };
     },
 
     watch: {
-      profile() {        
+      profile() {
         // При изменении переметров, генерируем событие обновления
         this.onRefresh();
       }
@@ -70,7 +85,13 @@
             .then( () => this.getContent(this.profile.template) )
             // Если все хорошо, рендерим HTML "как есть"
             .then((response) => {
-              this.content = mustache.render(response.data, this.data);
+              if (this.params.check) {
+                this.showData = false;
+                this.checkTemplate(response.data, this.data);
+              } else {
+                this.showData = true;
+                this.content = mustache.render(response.data, this.data);
+              }
             })
             // Если что-то пошло не так, генерируем HTML с ошибкой
             .catch((error) => {
@@ -82,6 +103,36 @@
         }
       },
 
+      checkTemplate(template, data){
+        const ast = mustache.parse(template);
+        const res = this.validate_result;
+        res.not_found_in_svg = [];
+        res.not_found_in_source = [];
+        const keys_in_template = {};
+        // Формат структуры: ast - массив
+        // элементы массива:
+        //   массив из 4 частей:
+        // 0 - тип части
+        // 1 - троковая константа / имя переменной
+        // 2 - смещение в файле начала фрагмента
+        // 3 - смещение в файле конца фрагмента
+
+        ast.map( (el) => {
+          const tp = el[0];
+          const vr = el[1];
+          if ( tp != 'name' ) return;
+          /* В шаблоне может быть несколько ссылок на один и тот же параметр, исключаем дубли */
+          if ( keys_in_template[vr] == 1 ) return;
+          keys_in_template[vr] = 1;
+          if ( vr in data) return;
+          res.not_found_in_source.push(vr);
+        } );
+
+        Object.keys(data).map( (el) => {
+          if ( el in keys_in_template ) return;
+          res.not_found_in_svg.push(el);
+        });
+      },
       // Обработчик события обновления
       onRefresh() {
         // Если обработчик уже запущен, останавливаем его
