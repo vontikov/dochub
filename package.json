@@ -39,6 +39,7 @@
     "core-js": "3.26.1",
     "dateformat": "3.0.3",
     "jsonata": "2.0.3",
+    "jsrsasign": "10.8.6",
     "md5": "2.3.0",
     "mermaid": "10.6.1",
     "monaco-editor": "0.34.1",

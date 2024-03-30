@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 
 import env, { Plugins } from './env';
 import { responseCacheInterceptor, requestCacheInterceptor } from './cache';
+import oidcClient from '@front/auth/oidc-client';
 // import uriTool from '@/helpers/uri';
 
 
@@ -33,6 +34,10 @@ axios.interceptors.request.use(async(params) => {
 	if (env.cache) {
 		await requestCacheInterceptor(params);
 	}
+  if (env.backendURL() && (new URL(params.url)).host === (new URL(env.backendURL())).host) {
+    const accessToken = await oidcClient.getAccessToken();
+    params.headers.common.Authorization = 'Bearer ' + accessToken;
+  }
 	return gitlab.axiosInterceptor(params);
 }, (error) => Promise.reject(error));
 
@@ -50,8 +55,8 @@ axios.interceptors.response.use(async(response) => {
 				)
 				response.data = JSON.parse(response.data);
 			else if (
-				(url.indexOf('.yaml/raw') >= 0) 
-				|| (url.slice(-5) === '.yaml') 
+				(url.indexOf('.yaml/raw') >= 0)
+				|| (url.slice(-5) === '.yaml')
 				|| (response?.headers || {})['content-type'] === 'application/x-yaml')
 				response.data = YAML.parse(response.data);
 		}
@@ -131,7 +136,7 @@ export default {
 		if (finalURl && finalURl.startsWith('backend://')) {
 			return (new URL(finalURl.slice(10), env.backendFileStorageURL()));
 		} else {
-			return url;	
+			return url;
 		}
 	},
 
@@ -158,11 +163,11 @@ export default {
 		params.url = uri;
 		// Если ссылка ведет на backend конвертируем ее
 		let strURI = (uri || '').toString();
-	
-		// Если URI является ссылкой на ресурс в Data Lake интерпретируем ее 
+
+		// Если URI является ссылкой на ресурс в Data Lake интерпретируем ее
 		strURI.startsWith('res://') && (strURI = this.expandResourceURI(strURI));
 		baseURI && baseURI.toString().startsWith('res://') && (baseURI = this.expandResourceURI(baseURI));
-		
+
 		if (strURI.startsWith('source:')) {
 			return new Promise((success) => {
 				success({
