@@ -6,47 +6,46 @@
     dark
     v-bind:class="isPrintVersion ? 'print-version' : ''"
     style="z-index: 99">
-    <v-btn v-if="isBackShow" icon v-on:click="back">
-      <v-icon>arrow_back</v-icon>
-    </v-btn>
-    <v-app-bar-nav-icon v-on:click="() => handleDrawer()">
-      <header-logo />
-    </v-app-bar-nav-icon>
-    <v-toolbar-title style="cursor: pointer" v-on:click="onLogoClick">DocHub</v-toolbar-title>
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-spacer />
-    <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{ user || 'Login' }}</v-toolbar-title>
-    <v-spacer />
-    <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
-      <v-icon class="material-icons blink" style="display: inline">error</v-icon>
-    </v-btn>
-    <v-btn v-if="isSearchInCode" icon title="Найти в коде" v-on:click="gotoCode">
-      <v-icon class="material-icons" style="display: inline">search</v-icon>
-    </v-btn>
-    <v-menu offset-y>
-      <template #activator="{ on, attrs }">
-        <v-btn icon v-bind="attrs" v-on="on">
-          <v-icon>mdi-dots-vertical</v-icon>
+    <div class="main-layout__header">
+      <div class="main-layout__header__menu">
+        <v-btn v-if="isBackShow" icon v-on:click="back">
+          <v-icon>arrow_back</v-icon>
         </v-btn>
-      </template>
-      <v-list>
-        <v-list-item>
-          <v-checkbox v-model="isPrintVersion" />
-          <v-list-item-title>Версия для печати</v-list-item-title>
-        </v-list-item>
-        <v-list-item>
-          <v-list-item-title style="cursor: pointer;" v-on:click="doPrint">Печать</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
+        <v-app-bar-nav-icon v-on:click="() => handleDrawer()">
+          <header-logo/>
+        </v-app-bar-nav-icon>
+        <v-toolbar-title style="cursor: pointer" v-on:click="onLogoClick">DocHub</v-toolbar-title>
+      </div>
+      <div class="main-layout__header__menu">
+        <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{
+            user || 'Login'
+          }}
+        </v-toolbar-title>
+        <v-spacer/>
+        <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
+          <v-icon class="material-icons blink" style="display: inline">error</v-icon>
+        </v-btn>
+        <v-btn v-if="isSearchInCode" icon title="Найти в коде" v-on:click="gotoCode">
+          <v-icon class="material-icons" style="display: inline">search</v-icon>
+        </v-btn>
+        <v-menu offset-y>
+          <template #activator="{ on, attrs }">
+            <v-btn icon v-bind="attrs" v-on="on">
+              <v-icon>mdi-dots-vertical</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item>
+              <v-checkbox v-model="isPrintVersion"/>
+              <v-list-item-title>Версия для печати</v-list-item-title>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title style="cursor: pointer;" v-on:click="doPrint">Печать</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
+    </div>
   </v-app-bar>
 </template>
 
@@ -86,6 +85,11 @@
       window.OidcUserManager.getUser().then(user => {
         const userName = user?.profile?.name;
         this.user = userName ? userName + ' (Logout)' : null;
+        if (this.user) {
+          window.Vuex.dispatch('reloadRootManifest');
+        } else {
+          window.Vuex.dispatch('clean');
+        }
       });
     },
     methods: {
@@ -110,11 +114,12 @@
         const struct = window.location.hash.split('/');
         switch (struct[1]) {
           case 'entities': {
-            const entity = struct[2];
-            const url = new URL(window.location.hash.slice(1), window.location);
-            const id = url.searchParams.get('id');
-            window.$PAPI.goto(null, entity, id);
-          } break;
+                             const entity = struct[2];
+                             const url = new URL(window.location.hash.slice(1), window.location);
+                             const id = url.searchParams.get('id');
+                             window.$PAPI.goto(null, entity, id);
+                           }
+                           break;
           case 'architect': {
             switch (struct[2]) {
               case 'contexts':
@@ -135,13 +140,29 @@
         }
       },
       loginout() {
-        this.user ? oidcClient.logout() : oidcClient.login();
+        console.log("login/logout");
+        this.user ? oidcClient.logout() : oidcClient.login().then(() => {
+          window.Vuex.dispatch('setRolesFromToken');
+          console.log("call set roles from token");
+        });
       }
     }
   };
 </script>
 
 <style scoped>
+
+.main-layout__header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.main-layout__header__menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 header.print-version {
   position: absolute;
@@ -152,9 +173,9 @@ header.print-version {
     opacity: 0.0;
   }
 }
+
 .blink {
   color: #A00 !important;
   animation: blink 1s step-start 0s infinite;
 }
-
 </style>

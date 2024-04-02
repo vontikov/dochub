@@ -6,7 +6,7 @@ Log.setLevel(Log.ERROR);
 const url = window.location.origin;
 
 export const settings = {
-    authority: 'http://localhost:8099/realms/dochub',
+    authority: 'https://auth.slsdev.ru/cfbRYTbCu86vSIbmWCQk/realms/dochub',
     client_id: 'dochub',
     redirect_uri: new URL('/login', url),
     post_logout_redirect_uri: new URL('/logout', url),

@@ -2,7 +2,6 @@
     "inbuilt": [
         "plugins/html",
         "plugins/markaper",
-        "plugins/charts",
-        "plugins/iframe"
+        "plugins/charts"
     ]
 }

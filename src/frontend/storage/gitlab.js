@@ -55,7 +55,8 @@ export default {
 		// Признак инциализации проекта в плагине
 		notInited: null,
 		// Признак критической проблемы
-		criticalError: null
+		criticalError: null,
+    available_roles: {} //TODO: посмотреть!!!
 	},
 
 	mutations: {
@@ -67,6 +68,7 @@ export default {
 			state.projects = {};
 			state.last_changes = {};
 			state.criticalError = null;
+      state.available_roles = {};
 		},
 		setManifest(state, value) {
 			state.manifest = value;
@@ -107,7 +109,10 @@ export default {
 		},
 		setPrintVersion(state, value) {
 			state.isPrintVersion = value;
-		}
+		},
+    setAvailableRoles(state, value) {
+      state.available_roles = value;
+    }
 	},
 
 	actions: {
@@ -296,7 +301,12 @@ export default {
 
 			gateway.appendListener('source/changed', reloadSourceAll);
 		},
+    //парсим токен с ролями
+    setRolesFromToken(context){
+      console.log('ACTION.............');
+      context.commit('setAvailableRoles', {roles : {users: ['test']}});
 
+    },
 		// Вызывается при необходимости получить access_token
 		refreshAccessToken(context, OAuthCode) {
 			const params = OAuthCode ? {
@@ -343,6 +353,7 @@ export default {
 
 		// Reload root manifest
 		async reloadRootManifest(_context, payload) {
+      console.log('reload root manifest');
 			// Если работаем в режиме backend, берем все оттуда
 			if (env.isBackendMode()) {
 				storageManager.onStartReload();

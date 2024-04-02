@@ -4,6 +4,7 @@ import cache from '../storage/cache.mjs';
 import queries from '../../global/jsonata/queries.mjs';
 import helpers from './helpers.mjs';
 import compression from '../../global/compress/compress.mjs';
+import {getRoles} from '../helpers/jwt.mjs';
 
 const compressor = compression();
 
@@ -37,6 +38,7 @@ export default (app) => {
     app.get('/core/storage/jsonata/:query', function(req, res) {
         if (!helpers.isServiceReady(app, res)) return;
 
+        const roles = getRoles(req.headers);
         const request = parseRequest(req);
         const query = (request.query.length === 36) && queries.QUERIES[request.query]
             ? `(${queries.makeQuery(queries.QUERIES[request.query], request.params)})`
@@ -54,8 +56,9 @@ export default (app) => {
             });
             return;
         } else {
+            app.storage = {...app.storage, manifests: null}
             const oldHash = app.storage.hash;
-            storeManager.reloadManifest()
+            storeManager.reloadManifest(app)
                 .then((storage) => storeManager.applyManifest(app, storage))
                 .then(() => cache.clearCache(oldHash))
                 .then(() => res.json({ message: 'success' }));
@@ -63,36 +66,45 @@ export default (app) => {
     });
 
     // Выполняет произвольные запросы 
-    app.get('/core/storage/release-data-profile/:query', function(req, res) {
+    app.get('/core/storage/release-data-profile/:query', async function(req, res) {
         if (!helpers.isServiceReady(app, res)) return;
 
-        const request = parseRequest(req);
-        cache.pullFromCache(app.storage.hash, JSON.stringify({ path: request.query, params: request.params }), async() => {
-            if (request.query.startsWith('/'))
-                return await datasets(app).releaseData(request.query, request.params);
-            else {
-                let profile = null;
-                const params = request.params;
-                if (request.query.startsWith('{'))
-                    profile = JSON.parse(request.query);
-                else
-                    profile = JSON.parse(await compressor.decodeBase64(request.query));
+        const roles = getRoles(req.headers);
 
-                const ds = datasets(app);
-                if (profile.$base) {
-                    const path = ds.pathResolver(profile.$base);
-                    if (!path) {
-                        res.status(400).json({
-                            error: `Error $base location [${profile.$base}]`
-                        });
-                        return;
+            console.log('apppp', app);
+            app.storage = {...app.storage, roles: [...roles]};
+            console.log('apppp', app);
+            const request = parseRequest(req);
+            cache.pullFromCache(app.storage.hash, JSON.stringify({
+                path: request.query,
+                params: request.params,
+                roles: roles
+            }), async () => {
+                if (request.query.startsWith('/'))
+                    return await datasets(app).releaseData(request.query, request.params);
+                else {
+                    let profile = null;
+                    const params = request.params;
+                    if (request.query.startsWith('{'))
+                        profile = JSON.parse(request.query);
+                    else
+                        profile = JSON.parse(await compressor.decodeBase64(request.query));
+
+                    const ds = datasets(app);
+                    if (profile.$base) {
+                        const path = ds.pathResolver(profile.$base);
+                        if (!path) {
+                            res.status(400).json({
+                                error: `Error $base location [${profile.$base}]`
+                            });
+                            return;
+                        }
+                        return await ds.getData(path.context, profile, params, path.baseURI);
+                    } else {
+                        return await ds.getData(app.storage.manifest, profile, params);
                     }
-                    return await ds.getData(path.context, profile, params, path.baseURI);
-                } else {
-                    return await ds.getData(app.storage.manifest, profile, params);
                 }
-            } 
-        }, res);
+            }, res);
     });
 
     // Возвращает результат работы валидаторов

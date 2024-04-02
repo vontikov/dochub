@@ -30,7 +30,7 @@ export default async(app, storeManager) => {
             if (remoteHash !== app.storage?.hash) {
                 logger.log(`Cluster inconsistency detected. Current hash is [${app.storage?.hash}], remote hash is [${remoteHash}]. Reloading manifest...`, LOG_TAG);
                 storeManager.cleanStorage(app);
-                storeManager.reloadManifest()
+                storeManager.reloadManifest(app)
                 .then(async(storage) => {
                     await storeManager.applyManifest(app, storage);
                     logger.log(`Reloading complete. Current hash is [${app.storage.hash}], remote hash is [${remoteHash}].`, LOG_TAG);

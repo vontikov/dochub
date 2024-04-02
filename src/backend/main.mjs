@@ -29,27 +29,27 @@ const mainLoop = async function() {
         logger.log(`DocHub server running on ${serverPort}`, LOG_TAG);
     });
 
-    storeManager.reloadManifest()
-        .then(async(storage) => {
-            await storeManager.applyManifest(app, storage);
-            // Подключаем драйвер кластера
-            await middlewareCluster(app, storeManager);
+     storeManager.reloadManifest(app)
+         .then(async(storage) => {
+             await storeManager.applyManifest(app, storage);
+             // Подключаем драйвер кластера
+             await middlewareCluster(app, storeManager);
 
-            // Подключаем сжатие контента
-            middlewareCompression(app);
+             // Подключаем сжатие контента
+             middlewareCompression(app);
 
-            // API ядра
-            controllerCore(app);
+             // API ядра
+             controllerCore(app);
 
-            // API сущностей 
-            controllerEntity(app);
+             // API сущностей
+             controllerEntity(app);
 
-            // Контроллер доступа к файлам в хранилище
-            controllerStorage(app);
+             // Контроллер доступа к файлам в хранилище
+             controllerStorage(app);
 
-            // Статические ресурсы
-            controllerStatic(app);
-        });
+             // Статические ресурсы
+             controllerStatic(app);
+         });
 };
 
 mainLoop();

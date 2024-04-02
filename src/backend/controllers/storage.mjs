@@ -9,7 +9,10 @@ export default (app) => {
     app.get('/core/storage/:hash/*', async function(req, res) {
         const hash = req.params.hash || '$unknown$';
         const roles = getRoles(req.headers);
-        if (roles.includes('architect')) {
+        console.log('roles', roles);
+
+        if (Array.isArray(roles) && roles.length) {
+            app.storage = {...app.storage, roles: [...roles]};
             const url = req.originalUrl.slice(`/core/storage/${hash}/`.length).replace(/\%E2\%86\%90/g, '..');
             //const url = decodeURIComponent(req.params.url);
             const uri = url.split('?')[0];

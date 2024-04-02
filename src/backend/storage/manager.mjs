@@ -4,7 +4,7 @@ import cache from './cache.mjs';
 import md5 from 'md5';
 import events from '../helpers/events.mjs';
 import validators from '../helpers/validators.mjs';
-import entities from '../entities/entities.mjs';
+//import entities from '../entities/entities.mjs';
 import objectHash from 'object-hash';
 
 const LOG_TAG = 'storage-manager';
@@ -28,25 +28,74 @@ manifestParser.onReloaded = (parser) => {
 export default {
 	// Стек обработчиков события на обновление манифеста
 	onApplyManifest: [],
-	reloadManifest: async function() {
+	reloadManifest: async function(app) {
+
+		console.log('reloadManifest');
 		logger.log('Run full reload manifest', LOG_TAG);
 		// Загрузку начинаем с виртуального манифеста
 		cache.errorClear();
-		await manifestParser.clean();
-		await manifestParser.startLoad();
-		await manifestParser.import('file:///$root$');
-		await manifestParser.checkAwaitedPackages();
-		await manifestParser.checkLoaded();
-		await manifestParser.stopLoad();
+		let localStorage = {};
+		let createManifest = async function() {
+			await manifestParser.clean();
+			await manifestParser.startLoad();
+			await manifestParser.import('file:///$root$');
+			await manifestParser.checkAwaitedPackages();
+			await manifestParser.checkLoaded();
+			await manifestParser.stopLoad();
+		};
 
-		entities(manifestParser.manifest);
+		function cleanData(manifest, filters, domain) {
+			if (typeof manifest != "object") return;
+			if (!manifest) return;
+
+			for (const key in manifest) {
+				for(const filter in filters) {
+					if (!key.match(filters[filter]) && key.includes(domain)) {
+						delete manifest[key];
+					}else {
+						cleanData(manifest[key], filters, domain);
+					}
+				}
+			}
+		}
+
+		let createRoleManifest = async function () {
+			try {
+				let uri = `file:///${process.env.VUE_APP_DOCHUB_ROLES}`;
+				const response = await cache.request(uri, '/');
+
+				const manifest = response && (typeof response.data === 'object'
+					? response.data
+					: JSON.parse(response.data));
+
+				const domain = manifest?.domain;
+
+					for (const key in manifest?.roles) {
+						let rawManifest = Object.assign({}, manifestParser.manifest);
+						cleanData(rawManifest, manifest?.roles[key], domain);
+						localStorage.manifests[key] = rawManifest;
+					}
+
+			} catch (e) {
+				this.registerError(e, e.uri || uri);
+			}
+		}
+
+		await createManifest();
+		localStorage.manifests = {origin: manifestParser.manifest};
+		await createRoleManifest();
+
+		console.log('manifestParser.manifest', localStorage.manifests.origin);
+
+		//entities(localStorage.manifests.origin); //TODO: уточнить!!!
 
 		logger.log('Full reload is done', LOG_TAG);
 		const result = {
-			manifest: manifestParser.manifest,			// Сформированный манифест
-			hash: objectHash(manifestParser.manifest),	// HASH состояния для контроля в кластере
+			manifest: localStorage.manifests.origin,			// Сформированный манифест
+			hash: objectHash(localStorage.manifests.origin),	// HASH состояния для контроля в кластере
 			mergeMap: {},								// Карта склейки объектов
 			md5Map: {},									// Карта путей к ресурсам по md5 пути
+			manifests: {...localStorage.manifests},
 			// Ошибки, которые возникли при загрузке манифестов
 			// по умолчанию заполняем ошибками, которые возникли при загрузке
 			problems: Object.keys(cache.errors || {}).map((key) => cache.errors[key]) || []
@@ -70,9 +119,11 @@ export default {
 	},
 	applyManifest: async function(app, storage) {
 		app.storage = storage;  // Инициализируем данные хранилища
+		app.storage.roles = [];
 		validators(app);        // Выполняет валидаторы
 		Object.freeze(app.storage);
 		this.onApplyManifest.map((listener) => listener(app));
+		console.log('applyManifest');
 	},
 	cleanStorage(app) {
 		app.storage = undefined;
