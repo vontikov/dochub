@@ -6,6 +6,8 @@ import events from '../helpers/events.mjs';
 import validators from '../helpers/validators.mjs';
 //import entities from '../entities/entities.mjs';
 import objectHash from 'object-hash';
+import lodash from 'lodash';
+
 
 const LOG_TAG = 'storage-manager';
 
@@ -44,17 +46,27 @@ export default {
 			await manifestParser.stopLoad();
 		};
 
-		function cleanData(manifest, filters, domain) {
+		let matchRegex = (string, filters) => {
+
+			var len = filters.length, i = 0;
+
+			for (; i < len; i++) {
+				if (string.match(filters[i])) {
+					return true;
+				}
+			}
+			return false;
+		};
+
+		function cleanData(manifest, filters) {
 			if (typeof manifest != "object") return;
 			if (!manifest) return;
 
 			for (const key in manifest) {
-				for(const filter in filters) {
-					if (!key.match(filters[filter]) && key.includes(domain)) {
-						delete manifest[key];
-					}else {
-						cleanData(manifest[key], filters, domain);
-					}
+				if(matchRegex(key, filters)) {
+					cleanData(manifest[key], filters);
+				} else {
+					delete manifest[key];
 				}
 			}
 		}
@@ -68,11 +80,9 @@ export default {
 					? response.data
 					: JSON.parse(response.data));
 
-				const domain = manifest?.domain;
-
 					for (const key in manifest?.roles) {
-						let rawManifest = Object.assign({}, manifestParser.manifest);
-						cleanData(rawManifest, manifest?.roles[key], domain);
+						let rawManifest = lodash.cloneDeep(localStorage.manifests.origin);
+						cleanData(rawManifest, manifest?.roles[key]);
 						localStorage.manifests[key] = rawManifest;
 					}
 
@@ -87,14 +97,14 @@ export default {
 
 		console.log('manifestParser.manifest', localStorage.manifests.origin);
 
-		//entities(localStorage.manifests.origin); //TODO: уточнить!!!
+		//entities(manifestParser.manifest); //TODO: уточнить!!!
 
 		logger.log('Full reload is done', LOG_TAG);
 		const result = {
-			manifest: localStorage.manifests.origin,			// Сформированный манифест
-			hash: objectHash(localStorage.manifests.origin),	// HASH состояния для контроля в кластере
+			manifest: localStorage.manifests['default'],			// Сформированный манифест
+			hash: objectHash(localStorage.manifests['default']),	// HASH состояния для контроля в кластере
 			mergeMap: {},								// Карта склейки объектов
-			md5Map: {},									// Карта путей к ресурсам по md5 пути
+			md5Map: {}, 								// Карта путей к ресурсам по md5 пути
 			manifests: {...localStorage.manifests},
 			// Ошибки, которые возникли при загрузке манифестов
 			// по умолчанию заполняем ошибками, которые возникли при загрузке

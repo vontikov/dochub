@@ -6,7 +6,7 @@ import entities from '../entities/entities.mjs';
 import md5 from 'md5';
 
 export default function(app) {
-	let ctx = app.storage.roles.length == 0 ? app.storage.manifests['default'] : app.storage.manifests[app.storage.roles[0]];
+	let ctx = app.storage.roles.length === 0 ? app.storage.manifests['default'] : app.storage.manifests[app.storage.roles[0]];
 	entities(ctx);
 	const result = Object.assign({}, datasetDriver,
 		{
