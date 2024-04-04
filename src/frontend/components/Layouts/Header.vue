@@ -22,8 +22,6 @@
     <v-btn v-if="isBackShow" icon v-on:click="refresh">
       <v-icon>refresh</v-icon>
     </v-btn>
-
-
       </div>
       <div class="main-layout__header__menu">
         <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{
@@ -142,6 +140,14 @@
 
         // Запрос в ide на открытие entity c id
         window.$PAPI.goto(null, entity, id);
+      },
+      loginout() {
+        this.user ? oidcClient.logout() : oidcClient.login();
+        console.log("login/logout");
+        this.user ? oidcClient.logout() : oidcClient.login().then(() => {
+          window.Vuex.dispatch('setRolesFromToken');
+          console.log("call set roles from token");
+        });
       }
     }
   };
