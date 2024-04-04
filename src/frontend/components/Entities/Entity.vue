@@ -1,7 +1,7 @@
 <template>
   <div v-bind:style="placeHolderStyle">
     <doc
-      v-if="!isParamsInvalid && !refresh" 
+      v-if="!isParamsInvalid && !refresh"
       v-bind:path="presentationPath"
       v-bind:params="entityParams"
       v-bind:context-menu="toSwitchPres" />
@@ -20,11 +20,11 @@
 
   import doc from '@front/components/Docs/DocHubDoc.vue';
   import query from '@front/manifest/query';
-   
+
   import { uploadDocument } from './EntityUpload';
 
   export default {
-    name: 'Entity',    
+    name: 'Entity',
     components: {
       doc
     },
@@ -64,7 +64,7 @@
       },
       // Стиль на время перестройки документа
       placeHolderStyle() {
-        return this.minHeight ? { 'min-height': `${this.minHeight}px` } : undefined; 
+        return this.minHeight ? { 'min-height': `${this.minHeight}px` } : undefined;
       },
       // Валидируем входящие параметры, если контракт на параметры определен
       isParamsInvalid() {
@@ -77,7 +77,7 @@
         Object.keys(items).map((id) => {
           if (id === this.currentPresentation) return;
           const schema = items[id].params;
-          if (!schema || !this.isInvalidParamsToPres(schema)) 
+          if (!schema || !this.isInvalidParamsToPres(schema))
             result.push({
               id,
               title: items[id].title || id,
@@ -85,7 +85,7 @@
             });
         });
         return result;
-      },  
+      },
       // Получаем профиль представления
       presProfile() {
         return this.profile?.presentations?.[this.presentation] || {};
@@ -109,6 +109,9 @@
         this.reloadProfile();
       },
       manifest() {
+        this.reloadProfile();
+      },
+      currentPresentation() {
         this.reloadProfile();
       }
     },
@@ -173,7 +176,7 @@
           uploadDocument(presProfile, path, this.entityParams, this.manifest);
         } else { // Иначе переключаем презентацию
           this.switchedPresentation = presentation;
-          /* 
+          /*
           this.$router.push({
             path: `/entities/${this.entity}/${presentation}`,
             query: this.$route.query

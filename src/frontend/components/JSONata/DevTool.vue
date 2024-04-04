@@ -12,6 +12,7 @@
             </v-toolbar-title>
             <v-spacer />
             <v-autocomplete
+              v-if="isOriginAvailable"
               v-model="origin"
               hide-details
               clearable
@@ -130,6 +131,7 @@
         autoExec: cookie.get(COOKIE_NAME_AUTOEXEC) === 'false' ? false : true,
         origin: null,   // Выбранный базовый источник
         origins: [],    // Список доступных источников данных
+        isOriginAvailable: !env.isBackendMode(), // Определяет доступен ли выбор origin
         logHeaders: [
           {
             text: 'Таймлайн',
@@ -193,10 +195,10 @@
         this.doAutoExecute();
       },
       refreshOrigins() {
-        const pipe = query.expression(`datasets.$spread().{
+        const pipe = query.expression(`[(datasets.$spread().{
           "id": $keys()[0],
           "title": *.title
-        }`, null, null, true, { log: this.log});
+        })]`, null, null, true, { log: this.log});
         pipe.evaluate().then((data) => this.origins = data);
       },
       doAutoExecute() {
@@ -256,7 +258,7 @@
         if (this.autoExec || force) {
           this.observer = setTimeout(() => {
             this.observer = null;
-            if (this.origin) {
+            if (this.origin && this.isOriginAvailable) {
               datasets().releaseData(`/datasets/${this.origin}`)
                 .then((data) => this.doExecute(data))
                 .catch((e) => this.error = e);

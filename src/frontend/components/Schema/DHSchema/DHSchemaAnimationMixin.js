@@ -7,7 +7,16 @@ export default {
             this.cleanSelectedTracks();
             this.animation.information = null;
         },
-        // Фокусирует объекты диаграммы
+        // Фокусирует линк диаграммы
+        animationActionFocusLink(from, to) {
+            const regexFrom = new RegExp(from);
+            const regexTo = new RegExp(to);
+            for (const track of this.presentation.tracks) {
+                if(regexFrom.test(track.link.from), regexTo.test(track.link.to))
+                  this.onTrackClick(track);
+            }
+        },
+        // Фокусирует объект диаграммы
         animationActionFocusNode(target) {
             const regex = new RegExp(target);
             for (const nodeID in this.presentation.map) {
@@ -46,6 +55,7 @@ export default {
                 switch((command.action || '$unknown$').toLowerCase()) {
                     case 'clean': this.animationActionClean(); break;
                     case 'focus-node': this.animationActionFocusNode(command.target); break;
+                    case 'focus-link': this.animationActionFocusLink(command.from, command.to); break;
                     case 'focus-neighbors': this.animationActionFocusNeighbors(command.target); break;
                     case 'info': this.animationActionInfo(command.text, command.subject); break;
                     default: throw `Не известная команда "${command.action}"`;
@@ -71,7 +81,7 @@ export default {
                     return;
                 }
                 // Выполняем
-                if (this.animation.currentStep < scenario.length) 
+                if (this.animation.currentStep < scenario.length)
                     this.animationExecStep(scenario, this.animation.currentStep);
                 else
                     this.animationStop();
@@ -162,5 +172,5 @@ export default {
     destroyed() {
         this.animationStop();
     }
-    
+
 };

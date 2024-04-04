@@ -1,22 +1,19 @@
 <template>
   <v-list dense class="grey lighten-4">
-    <v-list-item>
-      <v-text-field
-        dense
-        clearable
-        v-on:input="inputFilter">
-        <v-icon
-          slot="append">
+    <errexp v-if="error" v-bind:error="error" v-bind:query="queryCodeForError" />
+    <v-list-item v-else>
+      <v-text-field dense clearable v-on:input="inputFilter">
+        <v-icon slot="append">
           mdi-magnify
         </v-icon>
-      </v-text-field>      
+      </v-text-field>
     </v-list-item>
     <template v-for="(item, i) in menu">
       <v-list-item
         v-if="(item.route !== '/problems') || (problems.length)"
         v-bind:key="i"
-        v-bind:class="{ 'menu-item' : true, 'menu-item-selected': isMenuItemSelected(item) }"
-        v-bind:style="{'padding-left': '' + (item.level * 8) + 'px'}">
+        v-bind:class="{ 'menu-item': true, 'menu-item-selected': isMenuItemSelected(item) }"
+        v-bind:style="{ 'padding-left': '' + (item.level * 8) + 'px' }">
         <v-list-item-action class="menu-item-action">
           <v-icon v-if="item.isGroup" v-on:click="onClickMenuExpand(item)">
             <template v-if="isExpandItem(item)">expand_more</template>
@@ -29,10 +26,7 @@
           v-on:click="onClickMenuItem(item)">
           {{ item.title }} ({{ problemsCount }})
         </v-subheader>
-        <v-subheader
-          v-else
-          class="menu-item-header"
-          v-on:click="onClickMenuItem(item)">
+        <v-subheader v-else class="menu-item-header" v-on:click="onClickMenuItem(item)">
           {{ item.title }}
         </v-subheader>
         <v-list-item-action v-if="item.icon" class="menu-item-action menu-item-ico">
@@ -47,13 +41,18 @@
 
   import uri from '@front/helpers/uri';
   import query from '@front/manifest/query';
+  import errexp from '@front/components/JSONata/JSONataErrorExplainer.vue';
 
   export default {
     name: 'Menu',
+    components: {
+      errexp
+    },
     data() {
       return {
         // Открытые пункты меню
         currentRoute: this.$router.currentRoute,
+        error: null,
         filter: {
           text: '',
           query: '',
@@ -69,46 +68,52 @@
     asyncComputed: {
       async treeMenu() {
         const result = { items: {} };
+        try {
+          const dataset = (this.menuCache ? this.menuCache : await query.expression(query.menu()).evaluate()) || [];
+          !this.menuCache && this.$nextTick(() => this.menuCache = dataset);
 
-        const dataset = (this.menuCache ? this.menuCache : await query.expression(query.menu()).evaluate()) || [];
-        !this.menuCache && this.$nextTick(() => this.menuCache = dataset);
-
-        dataset.map((item) => {
-          if (!this.isInFilter(item.location)) return;
-          const location = item.location.split('/');
-          let node = result;
-          let key = null;
-          for(let i = 0; i < location.length; i++) {
-            key = location[i];
-            !node.items[key] && (node.items[key] = { title: key, items: {} });
-            node = node.items[key];
-          }
-          node.title = item.title;
-          node.route = item.route;
-          node.icon = item.icon;
-          if ((node.route === this.currentRoute.fullPath) || (node.route === this.currentRoute.path)) {
-            this.$nextTick(() => {
-              let subLocation = null;
-              location.map((item) => {
-                subLocation = subLocation ? `${subLocation}/${item}` : item;
-                if (!this.expands[subLocation])
-                  this.$set(this.expands, subLocation, true);
+          dataset.map((item) => {
+            if (!this.isInFilter(item.location)) return;
+            const location = item.location.split('/');
+            let node = result;
+            let key = null;
+            for (let i = 0; i < location.length; i++) {
+              key = location[i];
+              !node.items[key] && (node.items[key] = { title: key, items: {} });
+              node = node.items[key];
+            }
+            node.title = item.title;
+            node.route = item.route;
+            node.icon = item.icon;
+            if ((node.route === this.currentRoute.fullPath) || (node.route === this.currentRoute.path)) {
+              this.$nextTick(() => {
+                let subLocation = null;
+                location.map((item) => {
+                  subLocation = subLocation ? `${subLocation}/${item}` : item;
+                  if (!this.expands[subLocation])
+                    this.$set(this.expands, subLocation, true);
+                });
               });
-            });
-          }
-        });
-
+            }
+          });
+          this.error = null;
+        } catch (err) {
+          this.error = err;
+        }
         return result;
       }
     },
     computed: {
+      queryCodeForError() {
+        return query.menu();
+      },
       // Выясняем сколько значимых отклонений зафиксировано
       // исключения не учитываем
       problemsCount() {
         let result = 0;
         this.problems.map((validator) => {
           (validator.items || []).map((problem) =>
-            !problem.exception && result ++
+            !problem.exception && result++
           );
         });
         return result;
@@ -140,9 +145,9 @@
             }
           }
         };
-        
+
         this.treeMenu && expand(this.treeMenu);
-        
+
         return result;
       }
     },
@@ -180,7 +185,7 @@
           if (struct[i] && (request.indexOf(struct[i]) < 0)) return false;
         }
         return true;
-      },      
+      },
       isMenuItemSelected(item) {
         return (item.route === this.currentRoute.fullPath) || (item.route === this.currentRoute.path);
       },
@@ -192,7 +197,7 @@
           if (uri.isExternalURI(item.route)) {
             window.open(item.route, '_blank');
           } else {
-            this.$router.push({ path: item.route }).catch(()=> null);
+            this.$router.push({ path: item.route }).catch(() => null);
           }
         else
           this.onClickMenuExpand(item);
@@ -205,34 +210,34 @@
 </script>
 
 <style scoped>
-  .menu-item {
-    min-height: 20px !important;
-    margin-top: 2px;
-    margin-bottom: 2px;
-  }
+.menu-item {
+  min-height: 20px !important;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
 
-  .menu-item-action {
-    padding: 0;
-    margin: 2px !important;
-  }
+.menu-item-action {
+  padding: 0;
+  margin: 2px !important;
+}
 
-  .menu-item-ico {
-    position: absolute;
-    right: 4px;
-  }
+.menu-item-header {
+  line-height: 14px;
+  height: auto !important;
+  min-height: 32px;
+  cursor: pointer;
+}
 
-  .menu-item-header {
-    line-height: 14px;
-    height: 32px !important;
-    cursor: pointer;
-  }
+.menu-item-ico {
+  position: absolute;
+  right: 4px;
+}
 
-  .menu-item-selected {
-    background: rgb(52, 149, 219);
-  }
+.menu-item-selected {
+  background: rgb(52, 149, 219);
+}
 
-  .menu-item-selected * {
-    color: #fff !important;
-  }
-
+.menu-item-selected * {
+  color: #fff !important;
+}
 </style>

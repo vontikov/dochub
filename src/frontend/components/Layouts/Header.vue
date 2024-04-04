@@ -8,42 +8,51 @@
     style="z-index: 99">
     <div class="main-layout__header">
       <div class="main-layout__header__menu">
-        <v-btn v-if="isBackShow" icon v-on:click="back">
-          <v-icon>arrow_back</v-icon>
-        </v-btn>
-        <v-app-bar-nav-icon v-on:click="() => handleDrawer()">
-          <header-logo/>
-        </v-app-bar-nav-icon>
-        <v-toolbar-title style="cursor: pointer" v-on:click="onLogoClick">DocHub</v-toolbar-title>
+    <i class="fa-solid fa-bug" />
+    <v-app-bar-nav-icon v-on:click="() => handleDrawer()">
+      <header-logo />
+    </v-app-bar-nav-icon>
+    <v-toolbar-title style="cursor: pointer" v-on:click="onLogoClick">DocHub</v-toolbar-title>
+    <v-btn v-if="isBackShow" icon v-on:click="back">
+      <v-icon>arrow_back</v-icon>
+    </v-btn>
+    <v-btn v-if="isBackShow" icon v-on:click="debug">
+      <v-icon>mdi-bug</v-icon>
+    </v-btn>
+    <v-btn v-if="isBackShow" icon v-on:click="refresh">
+      <v-icon>refresh</v-icon>
+    </v-btn>
+
+
       </div>
       <div class="main-layout__header__menu">
         <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{
             user || 'Login'
           }}
         </v-toolbar-title>
-        <v-spacer/>
-        <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
-          <v-icon class="material-icons blink" style="display: inline">error</v-icon>
+        <v-spacer />
+    <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
+      <v-icon class="material-icons blink" style="display: inline">error</v-icon>
+    </v-btn>
+    <v-btn v-if="gotoIconShow" icon title="Найти в коде" v-on:click="gotoCode">
+      <v-icon class="material-icons" style="display: inline">code</v-icon>
+    </v-btn>
+    <v-menu offset-y>
+      <template #activator="{ on, attrs }">
+        <v-btn icon v-bind="attrs" v-on="on">
+          <v-icon>mdi-dots-vertical</v-icon>
         </v-btn>
-        <v-btn v-if="isSearchInCode" icon title="Найти в коде" v-on:click="gotoCode">
-          <v-icon class="material-icons" style="display: inline">search</v-icon>
-        </v-btn>
-        <v-menu offset-y>
-          <template #activator="{ on, attrs }">
-            <v-btn icon v-bind="attrs" v-on="on">
-              <v-icon>mdi-dots-vertical</v-icon>
-            </v-btn>
-          </template>
-          <v-list>
-            <v-list-item>
-              <v-checkbox v-model="isPrintVersion"/>
-              <v-list-item-title>Версия для печати</v-list-item-title>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title style="cursor: pointer;" v-on:click="doPrint">Печать</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
+      </template>
+      <v-list>
+        <v-list-item>
+          <v-checkbox v-model="isPrintVersion" />
+          <v-list-item-title>Версия для печати</v-list-item-title>
+        </v-list-item>
+        <v-list-item>
+          <v-list-item-title style="cursor: pointer;" v-on:click="doPrint">Печать</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-menu>
       </div>
     </div>
   </v-app-bar>
@@ -62,12 +71,14 @@
     },
     data() {
       return {
-        isSearchInCode: env.isPlugin(Plugins.idea),
         isBackShow: env.isPlugin(Plugins.vscode),
         user: null
       };
     },
     computed: {
+      gotoIconShow() {
+        return env.isPlugin() && this.$route.name === 'entities';
+      },
       isCriticalError() {
         return !!(this.$store.state.problems || []).find((item) => item.critical);
       },
@@ -105,46 +116,32 @@
       gotoProblems() {
         this.$router.push({name: 'problems'}).catch(() => null);
       },
+      debug() {
+        window.$PAPI.debug();
+      },
+      async refresh() {
+        const currentRoute = { path: this.$route.path, query: this.$route.query };
+        await window.$PAPI.reload(currentRoute);
+      },
       onLogoClick() {
         this.$router.push({name: 'main'}).catch(() => null);
       },
       gotoCode() {
-        // eslint-disable-next-line no-console
-        // console.info('For GOTO ', window.location.hash);
+        const location = window.location;
         const struct = window.location.hash.split('/');
-        switch (struct[1]) {
-          case 'entities': {
-                             const entity = struct[2];
-                             const url = new URL(window.location.hash.slice(1), window.location);
-                             const id = url.searchParams.get('id');
-                             window.$PAPI.goto(null, entity, id);
-                           }
-                           break;
-          case 'architect': {
-            switch (struct[2]) {
-              case 'contexts':
-                window.$PAPI.goto(null, 'context', struct[3]);
-                break;
-              case 'aspects':
-                window.$PAPI.goto(null, 'aspect', struct[3]);
-                break;
-              case 'components':
-                window.$PAPI.goto(null, 'component', struct[3]);
-                break;
-            }
-            break;
-          }
-          case 'docs':
-            window.$PAPI.goto(null, 'document', struct[2]);
-            break;
-        }
-      },
-      loginout() {
-        console.log("login/logout");
-        this.user ? oidcClient.logout() : oidcClient.login().then(() => {
-          window.Vuex.dispatch('setRolesFromToken');
-          console.log("call set roles from token");
-        });
+        const entity = struct?.[2];
+        const url = new URL(location.hash.slice(1), location);
+
+        // Пытаюсь извлечь идентификатор из параметра содержащем "id" или "domain" (для berezka)
+        // или в качестве идентификатора берется хвост от urlа
+        // TODO: надо переделать
+        const idRegex = /\b(\w*id|domain\w*)=([^&\s]+)\b/;
+        const id = idRegex.exec(url.search)?.[2] || struct[struct.length -1];
+
+        if(!entity || !id) return false;
+
+        // Запрос в ide на открытие entity c id
+        window.$PAPI.goto(null, entity, id);
       }
     }
   };
@@ -178,4 +175,5 @@ header.print-version {
   color: #A00 !important;
   animation: blink 1s step-start 0s infinite;
 }
+
 </style>

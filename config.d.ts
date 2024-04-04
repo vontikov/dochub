@@ -1,5 +1,12 @@
 // eslint-disable-next-line no-var
 declare var DochubVsCodeExt: {
+  metamodelUri: {
+    $mid: number;
+    authority: string;
+    path: string;
+    scheme: string;
+  };
+
   rootManifest: string,
   settings: {
     isEnterprise: boolean,    // Признак использования фронта в плагине как Enterprise портала

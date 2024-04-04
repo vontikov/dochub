@@ -297,6 +297,19 @@ const parser = {
 		// }
 	},
 
+	async parseImports(manifest, baseURI) {
+		for (const key in manifest?.imports || []) {
+			const url = parser.cache.makeURIByBaseURI(manifest.imports[key], baseURI);
+			if (this.loaded[url]) {
+				// eslint-disable-next-line no-console
+				console.warn(`Manifest [${url}] already loaded.`);
+			} else {
+				this.loaded[url] = true;
+				await this.import(url, true);
+			}
+		}
+	},
+
 	async parseManifest(manifest, uri) {
 		this.pushToMergeMap('/', null, uri);
 		this.manifest = this.merge(this.manifest, manifest, uri);
@@ -315,18 +328,11 @@ const parser = {
 				case '$package':
 					await this.parseEntity(node, `/${section}`, uri);
 					break;
-				case 'imports':
-					for (const key in node) {
-						const url = parser.cache.makeURIByBaseURI(node[key], uri);
-						if (this.loaded[url]) {
-							// eslint-disable-next-line no-console
-							console.warn(`Manifest [${url}] already loaded.`);
-						} else {
-							this.loaded[url] = true;
-							await this.import(url, true);
-						}
-					}
+				/* Убрано чтобы разнести загрузку контента и импорты при решении зависимостей
+				case 'imports': 
+					await this.parseImports(node, uri);
 					break;
+				*/
 			}
 		}
 	},
@@ -438,6 +444,7 @@ const parser = {
 
 				// если у пакета решены его зависимости
 				// - парсим и складываем версию в установленные пакеты
+				await this.parseImports(manifest, uri);
 				if (parser.isDepsResolved(uri, $package)) {
 					await this.parseManifest(manifest, uri);
 					// TODO если пакет уже установлен с другой версией то что?
@@ -451,7 +458,10 @@ const parser = {
 					this.awaitedPackages[uri] = manifest;
 					return;
 				}
-			} else await this.parseManifest(manifest, uri);
+			} else {
+				await this.parseImports(manifest, uri);	
+				await this.parseManifest(manifest, uri);
+			} 
 
 		} catch (e) {
 			this.registerError(e, e.uri || uri);

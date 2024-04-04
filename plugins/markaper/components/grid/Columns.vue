@@ -1,9 +1,8 @@
 <template>
   <div class="mkr-grid-row">
-    <dhsection 
+    <dhsection
       v-for="(item, index) in items"
       v-bind:key="index"
-      v-bind:style="makeStyle(item)"
       class="mkr-grid-col"
       v-bind:section="item" />
   </div>
@@ -42,11 +41,13 @@
 
 <style scoped>
   .mkr-grid-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 0.8fr 1fr;
   }
-
-  .mkr-grid-col {
-    flex: 1;
+  @media (max-width: 640px) {
+    .mkr-grid-row {
+      grid-template-columns: 1fr;
+    }
   }
 
 </style>

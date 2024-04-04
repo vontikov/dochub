@@ -40,6 +40,7 @@
       mode="area"
       v-bind:layer="presentation.layers"
       v-bind:hide-boundary-titles="data.config?.hideBoundaryTitles"
+      v-bind:hide-leaf-titles="data.config?.hideLeafTitles"
       v-on:node-dblclick="onNodeClick" />
 
     <template v-for="track in presentation.tracks">
@@ -60,6 +61,7 @@
       v-bind:offset-y="0"
       mode="node"
       v-bind:layer="presentation.layers"
+      v-bind:hide-boundary-titles="data.config?.hideBoundaryTitles"
       v-bind:hide-leaf-titles="data.config?.hideLeafTitles"
       v-on:node-click="onNodeClick" />
 
@@ -208,6 +210,11 @@
     },
     mixins: [ DHSchemaAnimationMixin, DHSchemaExcalidrawMixin, ZoomAndPan],
     props: {
+      // Варнинги генерации диаграммы
+      warnings: {
+        type: Array,
+        default: () => []
+      },
       // Дистанция между объектами на диаграмме
       distance: {
         type: Number,
@@ -248,6 +255,7 @@
         }
       }
     },
+    emits: ['update:warnings'],
     data() {
       return {
         isBuilding: 0,
@@ -416,6 +424,10 @@
 
         return selected;
       },
+      // Выделяет ноду
+      selectNode(box) {
+        this.selected.nodes[box.node.id] = box;
+      },
       // Выделяет ноду и ее соседей со связями
       selectNodeAndNeighbors(box) {
         const selectedNodes = this.getSelectNode(box);
@@ -560,6 +572,8 @@
           this.debug
         )
           .then((presentation) => {
+            if(presentation.warnings?.length)
+              this.$emit('update:warnings', presentation.warnings);
             this.presentation = presentation;
             this.rebuildViewBox();
             this.cleanSelectedTracks();

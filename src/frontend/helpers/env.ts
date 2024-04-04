@@ -18,7 +18,6 @@ const ENV_ERROR_TAG = '[env.dochub]';
 
 const DEF_METAMODEL_URI_PORTAL = '/metamodel/root.yaml';
 const DEF_METAMODEL_URI_IDEA = 'plugin:/idea/metamodel/root.yaml';
-const DEF_METAMODEL_URI_VSCODE = 'https://dochub.info/metamodel/root.yaml';
 
 export default {
   dochub: <TProcessEnvValues>{},
@@ -155,8 +154,12 @@ export default {
     if (this.isPlugin(Plugins.idea)) {
       result = settings?.isEnterprise ? result : DEF_METAMODEL_URI_IDEA;
     } else if (this.isPlugin(Plugins.vscode)) {
-      result = settings?.isEnterprise ? result : DEF_METAMODEL_URI_VSCODE;
-      host = settings?.enterpriseServer;
+      if(!settings?.isEnterprise && window.DochubVsCodeExt?.metamodelUri) {
+        const { scheme, path, authority } = window.DochubVsCodeExt?.metamodelUri;
+
+        result = `${path}`;
+        host = `${scheme}://${authority}`;
+      } else host = settings?.enterpriseServer;
     }
     result = (new URL(result, host)).toString();
     // eslint-disable-next-line no-console

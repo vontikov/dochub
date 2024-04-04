@@ -10,6 +10,7 @@
           hide-details />
       </v-card-title>
       <v-data-table
+        v-bind:mobile-breakpoint="0"
         v-bind:headers="headers"
         v-bind:items="source.dataset || []"
         v-bind:search="search"
@@ -91,10 +92,15 @@
               / 48), 5);
       },
       footerProps() {
-        let itemsPerPageOptions = [5, 10, 15];
-        let newOption = this.itemsPerPage;
-        if (itemsPerPageOptions.indexOf(newOption) === -1) itemsPerPageOptions.push(newOption);
-        itemsPerPageOptions.sort((a, b) => a - b).push(-1);
+        let lengthOtions = Array.from(
+          new Set(
+            [5, 10, 15, Math.min(this.source.dataset?.length, 20)]
+          )
+        );
+        const itemsPerPageOptions = lengthOtions
+          .sort((a, b) => a - b)
+          .filter(v => v <= this.source.dataset?.length);
+
         return {'items-per-page-options': itemsPerPageOptions};
       }
     },
@@ -165,5 +171,11 @@ table {
 }
 td {
   white-space: pre-wrap
+}
+</style>
+
+<style>
+.v-data-table-header tr th {
+  white-space: nowrap;
 }
 </style>

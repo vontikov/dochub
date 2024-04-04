@@ -29,6 +29,24 @@
         <v-btn v-if="!isShowLinks" icon title="Показать связи" v-on:click="setShowLinks(true)">
           <v-icon>mdi-sitemap</v-icon>
         </v-btn>
+        <v-btn v-if="warnings?.length" icon title="Предупреждения" v-on:click="sheet = !sheet">
+          <v-icon style="color: rgb(255, 0, 0);">warning</v-icon>
+        </v-btn>
+
+        <v-bottom-sheet v-model="sheet">
+          <v-card
+            class="text-center"
+            height="200"
+            v-bind:style="!isPlugin ? 'padding: 20px 0px 0px 300px' : ''">
+            <v-card-text>
+              <ul>
+                <li v-for="warn in warnings" v-bind:key="warn">
+                  {{ warn }}
+                </li>
+              </ul>
+            </v-card-text>
+          </v-card>
+        </v-bottom-sheet>
 
         <template v-if="scenario">
           <v-select
@@ -67,8 +85,10 @@
         ref="schema"
         v-model="status"
         class="schema"
+        v-bind:warnings="warnings"
         v-bind:data="data"
         v-bind:show-links="isShowLinks"
+        v-on:update:warnings="v => warnings = v"
         v-on:playstop="onPlayStop"
         v-on:playstart="onPlayStart"
         v-on:selected-nodes="onSelectedNodes"
@@ -107,6 +127,7 @@
   import download from '@front/helpers/download';
 
   import DocMixin from './DocMixin';
+  import env from '@front/helpers/env';
 
   export default {
     name: 'DocHubViewpoint',
@@ -119,6 +140,9 @@
     },
     data() {
       return {
+        isPlugin: env.isPlugin(),
+        warnings: [],
+        sheet: false,
         menu: { // Контекстное меню
           show: false,  // Признак отображения
           x : 0,  // Позиция x

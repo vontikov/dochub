@@ -37,6 +37,8 @@ export default {
 		access_token: null,
 		// Токен бновления access_token досутпа в GitLab
 		refresh_token: null,
+		// Время обновления данных
+		moment: null,
 		// Обобщенный манифест
 		manifest: {},
 		// Выявленные Проблемы
@@ -71,6 +73,7 @@ export default {
       state.available_roles = {};
 		},
 		setManifest(state, value) {
+			state.moment = Date.now();
 			state.manifest = value;
 		},
 		setSources(state, value) {
@@ -196,8 +199,6 @@ export default {
 							location: url
 						});
 					}
-				} else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
-					context.commit('setNoInited', true);
 				} else if (action === 'package') {
 					if (errors.package?.items.find(({ description }) => description === `${error.toString()}\n`)) return;
 					if (!errors.package) {
@@ -217,6 +218,8 @@ export default {
 
 					item.description = `${error.toString()}\n`;
 					errors.package.items.push(item);
+				} else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
+					context.commit('setNoInited', true);
 				} else {
 					const item = {
 						uid,

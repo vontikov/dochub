@@ -2,6 +2,7 @@
     "inbuilt": [
         "plugins/html",
         "plugins/markaper",
-        "plugins/charts"
+        "plugins/charts",
+        "plugins/devtool"
     ]
 }
