@@ -4,7 +4,7 @@ import cache from './cache.mjs';
 import md5 from 'md5';
 import events from '../helpers/events.mjs';
 import validators from '../helpers/validators.mjs';
-//import entities from '../entities/entities.mjs';
+import entities from '../entities/entities.mjs';
 import objectHash from 'object-hash';
 import lodash from 'lodash';
 
@@ -63,7 +63,7 @@ export default {
 			if (!manifest) return;
 
 			for (const key in manifest) {
-				if(matchRegex(key, filters)) {
+				if(typeof manifest[key] != 'object' || matchRegex(key, filters)) {
 					cleanData(manifest[key], filters);
 				} else {
 					delete manifest[key];
@@ -97,7 +97,7 @@ export default {
 
 		console.log('manifestParser.manifest', localStorage.manifests.origin);
 
-		//entities(manifestParser.manifest); //TODO: уточнить!!!
+		entities(localStorage.manifests['default']); //TODO: уточнить!!!
 
 		logger.log('Full reload is done', LOG_TAG);
 		const result = {
