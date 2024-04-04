@@ -9,14 +9,13 @@ import {getRoles} from '../helpers/jwt.mjs';
 const compressor = compression();
 
 // const LOG_TAG = 'controller-core';
-
 export default (app) => {
 
     // Создает ответ на JSONata запрос и при необходимости кэширует ответ
-    function makeJSONataQueryResponse(res, query, params, subject) {
-        cache.pullFromCache(app.storage.hash, JSON.stringify({ query, params, subject }), async() => {
+    function makeJSONataQueryResponse(res, query, params, subject, roles) {
+        cache.pullFromCache(app.storage.hash, JSON.stringify({ query, params, subject, roles }), async() => {
             return await datasets(app).parseSource(
-                app.storage.manifest,
+                app.storage.manifests[roles],
                 query,
                 subject,
                 params
@@ -39,16 +38,19 @@ export default (app) => {
         if (!helpers.isServiceReady(app, res)) return;
 
         const roles = getRoles(req.headers);
+        app.storage = {...app.storage, roles: [...roles]};
         const request = parseRequest(req);
         const query = (request.query.length === 36) && queries.QUERIES[request.query]
             ? `(${queries.makeQuery(queries.QUERIES[request.query], request.params)})`
             : request.query;
 
-        makeJSONataQueryResponse(res, query, request.params, request.subject);
+        makeJSONataQueryResponse(res, query, request.params, request.subject, roles);
     });
 
     // Запрос на обновление манифеста
     app.put('/core/storage/reload', function(req, res) {
+        const roles = getRoles(req.headers);
+        app.storage = {...app.storage, roles: [...roles]};
         const reloadSecret = req.query.secret;
         if (reloadSecret !== process.env.VUE_APP_DOCHUB_RELOAD_SECRET) {
             res.status(403).json({
@@ -110,6 +112,8 @@ export default (app) => {
     // Возвращает результат работы валидаторов
     app.get('/core/storage/problems/', function(req, res) {
         if (!helpers.isServiceReady(app, res)) return;
+        const roles = getRoles(req.headers);
+        app.storage = {...app.storage, roles: [...roles]};
         res.json(app.storage.problems || []);
     });
 
