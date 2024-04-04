@@ -49,8 +49,6 @@ export default (app) => {
 
     // Запрос на обновление манифеста
     app.put('/core/storage/reload', function(req, res) {
-        const roles = getRoles(req.headers);
-        app.storage = {...app.storage, roles: [...roles]};
         const reloadSecret = req.query.secret;
         if (reloadSecret !== process.env.VUE_APP_DOCHUB_RELOAD_SECRET) {
             res.status(403).json({
