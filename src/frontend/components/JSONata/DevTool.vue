@@ -256,7 +256,7 @@
               this.origin.length > 1 ?
                 this.doExecute(
                   await Promise.all(this.origin.map(async(origin) => {
-                    return await datasets().releaseData(`/datasets/${origin}`);
+                    return {[ origin ]: await datasets().releaseData(`/datasets/${origin}`) };
                   })).catch((e) => this.error = e)
                 )
                 : this.doExecute(
