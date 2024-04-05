@@ -14,8 +14,9 @@ export default (app) => {
     // Создает ответ на JSONata запрос и при необходимости кэширует ответ
     function makeJSONataQueryResponse(res, query, params, subject, roles) {
         cache.pullFromCache(app.storage.hash, JSON.stringify({ query, params, subject, roles }), async() => {
+            let ctx = roles.length === 0 ? app.storage.manifests['default'] : app.storage.manifests[roles];
             return await datasets(app).parseSource(
-                app.storage.manifests[roles],
+                ctx,
                 query,
                 subject,
                 params
