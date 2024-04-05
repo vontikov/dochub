@@ -5,6 +5,8 @@ import pathTool from '@global/manifest/tools/path.mjs';
 import env from '@front/helpers/env';
 import compress from '@global/compress/compress.mjs';
 
+let DecompressionStream, CompressionStream;
+
 const compressor = compress({
 	// eslint-disable-next-line no-undef
 	DecompressionStream,
