@@ -1,4 +1,5 @@
 const COMPRESS_METHOD = 'gzip'; //deflate
+let DecompressionStream, CompressionStream;
 
 export default function(driver) {
 
