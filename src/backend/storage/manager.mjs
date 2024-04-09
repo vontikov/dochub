@@ -78,7 +78,10 @@ export default {
 			if (!manifest) return;
 
 			for (const key in manifest) {
-				if(typeof manifest[key] != 'object' || matchRegex(key, filters)) {
+				if(key === 'patternProperties' || key === 'headers' || key === 'schema' || key === 'functions' || key === 'grid' || typeof manifest[key] != 'object')
+					continue;
+
+				if(matchRegex(key, filters))  {
 					cleanData(manifest[key], filters);
 				} else {
 					delete manifest[key];
