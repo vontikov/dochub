@@ -58,7 +58,7 @@ gantt
         MVP Framework SEAF          :done, 2023-07-01, 92d
         POC mutators                :done, 2023-07-01, 150d
     section Q4 2023
-        Framework SEAF              :active, 2023-10-01, 92d
+        Framework SEAF              :done, 2023-10-01, 92d
         Time Machine                :active, 2023-11-01, 250d
         Public metamodel repository :active, 2023-10-01, 200d
     section Q2 2024
