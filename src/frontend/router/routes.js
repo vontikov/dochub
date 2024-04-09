@@ -94,7 +94,7 @@ const routes = [
     props: middleware
   },
   {
-    name: 'problems',
+    name: 'problems-subj',
     path: '/problems/:subject',
     component: Problems,
     props: middleware
