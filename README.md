@@ -56,14 +56,15 @@ gantt
     section Q3 2023
         Iaas reverce tool           :done, 2023-07-01, 92d
         MVP Framework SEAF          :done, 2023-07-01, 92d
-        MVP mutators                :active, 2023-07-01, 150d
+        POC mutators                :done, 2023-07-01, 150d
     section Q4 2023
         Framework SEAF              :active, 2023-10-01, 92d
-        Time Machine                :active, 2023-11-01, 90d
-        Public metamodel repository :active, 2023-10-01, 90d
-    section Q1 2024
-        Process Disigner tool       :2024-01-01, 90d
-        Architectire Commutiny tool :2024-01-01, 90d
+        Time Machine                :active, 2023-11-01, 250d
+        Public metamodel repository :active, 2023-10-01, 200d
+    section Q2 2024
+        MVP mutators                :active, 2024-01-01, 200d
+        Process Disigner tool       :2024-06-01, 90d
+        Architectire Commutiny tool :2024-06-01, 90d
 
 click plugins href "https://dochub.info/docs/dochub.plugins.intro"
 click smartants href "https://dochub.info/docs/dochub.smartants"
