@@ -115,6 +115,5 @@ export default (app) => {
         app.storage = {...app.storage, roles: [...roles]};
         res.json(app.storage.problems || []);
     });
-
 };
 

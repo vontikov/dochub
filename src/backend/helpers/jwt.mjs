@@ -2,9 +2,9 @@ import { KJUR } from "jsrsasign";
 
 export function getRoles(headers) {
     console.log('headers', headers);
-    const jwt = headers?.authorization.slice(7);
+    const jwt = headers?.authorization?.slice(7);
 
-    if (!jwt || typeof jwt === "string" && !jwt.includes('undefined')) {
+    if (!!jwt && typeof jwt === "string" && !jwt.includes('undefined')) {
         try {
             console.log('headers.authorization', jwt);
             console.log('KJUR.jws.JWS.parse(jwt)',KJUR.jws.JWS.parse(jwt));
