@@ -7,6 +7,7 @@ import validators from '../helpers/validators.mjs';
 import entities from '../entities/entities.mjs';
 import objectHash from 'object-hash';
 import lodash from 'lodash';
+import {systemRules, exclude} from './system-rules.mjs';
 
 import jsonataDriver from '../../global/jsonata/driver.mjs';
 import jsonataFunctions from '../../global/jsonata/functions.mjs';
@@ -73,12 +74,23 @@ export default {
 			return false;
 		};
 
+		let matchExclude = (string) => {
+			var len = exclude.length, i = 0;
+
+			for (; i < len; i++) {
+				if (string === exclude[i]) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		function cleanData(manifest, filters) {
 			if (typeof manifest != "object") return;
 			if (!manifest) return;
 
 			for (const key in manifest) {
-				if(key === 'patternProperties' || key === 'headers' || key === 'schema' || key === 'functions' || key === 'grid' || typeof manifest[key] != 'object')
+				if(matchExclude(key) || typeof manifest[key] != 'object')
 					continue;
 
 				if(matchRegex(key, filters))  {
@@ -100,7 +112,7 @@ export default {
 
 					for (const key in manifest?.roles) {
 						let rawManifest = lodash.cloneDeep(localStorage.manifests.origin);
-						cleanData(rawManifest, manifest?.roles[key]);
+						cleanData(rawManifest, systemRules.concat(manifest?.roles[key]));
 						localStorage.manifests[key] = rawManifest;
 					}
 
