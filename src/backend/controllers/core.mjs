@@ -113,7 +113,12 @@ export default (app) => {
         if (!helpers.isServiceReady(app, res)) return;
         const roles = getRoles(req.headers);
         app.storage = {...app.storage, roles: [...roles]};
-        res.json(app.storage.problems || []);
+
+        const value = roles.length !== 0 ? roles[0] : 'default';
+        const problems = app.storage.problems.filter(e => {
+            return e.key === value;
+        });
+        res.json(problems || []);
     });
 };
 
