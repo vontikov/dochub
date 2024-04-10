@@ -6,15 +6,16 @@ import entities from '../entities/entities.mjs';
 import md5 from 'md5';
 
 export default function(app) {
-	let ctx = app.storage.roles.length === 0 ? app.storage.manifests['default'] : app.storage.manifests[app.storage.roles[0]];
-	entities(ctx);
+
+	let currentContext = app.storage.roleId === '' ? app.storage.manifests['default'] : app.storage.manifests[app.storage.roleId];
+	entities(currentContext);
 	const result = Object.assign({}, datasetDriver,
 		{
 			// Возвращаем метаданных об объекте
 			pathResolver(path) {
 				return {
-					context: ctx,
-					subject: pathTool.get(ctx, path),
+					context: currentContext,
+					subject: pathTool.get(currentContext, path),
 					baseURI: app.storage.md5Map[md5(path)]
 				};
 			},

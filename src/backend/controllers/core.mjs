@@ -5,6 +5,7 @@ import queries from '../../global/jsonata/queries.mjs';
 import helpers from './helpers.mjs';
 import compression from '../../global/compress/compress.mjs';
 import {getRoles} from '../helpers/jwt.mjs';
+import {getCurrentRuleId, getCurrentRules} from "../utils/rules.mjs";
 
 const compressor = compression();
 
@@ -12,9 +13,9 @@ const compressor = compression();
 export default (app) => {
 
     // Создает ответ на JSONata запрос и при необходимости кэширует ответ
-    function makeJSONataQueryResponse(res, query, params, subject, roles) {
-        cache.pullFromCache(app.storage.hash, JSON.stringify({ query, params, subject, roles }), async() => {
-            let ctx = roles.length === 0 ? app.storage.manifests['default'] : app.storage.manifests[roles];
+    function makeJSONataQueryResponse(res, query, params, subject, ruleId) {
+        cache.pullFromCache(app.storage.hash, JSON.stringify({ query, params, subject, ruleId }), async() => {
+            let ctx = ruleId === '' ? app.storage.manifests['default'] : app.storage.manifests[ruleId];
             return await datasets(app).parseSource(
                 ctx,
                 query,
@@ -22,6 +23,15 @@ export default (app) => {
                 params
             );
         }, res);
+    }
+
+    function checkRulesManifest(ruleName) {
+        for(let key in app.storage.manifests) {
+            if(key === ruleName) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Парсит переданные во внутреннем формате данные 
@@ -35,17 +45,20 @@ export default (app) => {
     }
 
     // Выполняет произвольные запросы 
-    app.get('/core/storage/jsonata/:query', function(req, res) {
+    app.get('/core/storage/jsonata/:query', async function(req, res) {
         if (!helpers.isServiceReady(app, res)) return;
 
         const roles = getRoles(req.headers);
-        app.storage = {...app.storage, roles: [...roles]};
+        const id = await getCurrentRuleId(roles);
+        const currentRules = await getCurrentRules(roles);
+        app.storage = {...app.storage, roles: [...currentRules],roleId: id};
+
         const request = parseRequest(req);
         const query = (request.query.length === 36) && queries.QUERIES[request.query]
             ? `(${queries.makeQuery(queries.QUERIES[request.query], request.params)})`
             : request.query;
 
-        makeJSONataQueryResponse(res, query, request.params, request.subject, roles);
+        makeJSONataQueryResponse(res, query, request.params, request.subject, id);
     });
 
     // Запрос на обновление манифеста
@@ -71,15 +84,15 @@ export default (app) => {
         if (!helpers.isServiceReady(app, res)) return;
 
         const roles = getRoles(req.headers);
+        const id = await getCurrentRuleId(roles);
+        const currentRules = await getCurrentRules(roles);
+        app.storage = {...app.storage, roles: [...currentRules], roleId: id};
 
-            console.log('apppp', app);
-            app.storage = {...app.storage, roles: [...roles]};
-            console.log('apppp', app);
             const request = parseRequest(req);
             cache.pullFromCache(app.storage.hash, JSON.stringify({
                 path: request.query,
                 params: request.params,
-                roles: roles
+                roles: id
             }), async () => {
                 if (request.query.startsWith('/'))
                     return await datasets(app).releaseData(request.query, request.params);
@@ -109,15 +122,30 @@ export default (app) => {
     });
 
     // Возвращает результат работы валидаторов
-    app.get('/core/storage/problems/', function(req, res) {
+    app.get('/core/storage/problems/', async function(req, res) {
         if (!helpers.isServiceReady(app, res)) return;
-        const roles = getRoles(req.headers);
-        app.storage = {...app.storage, roles: [...roles]};
 
-        const value = roles.length !== 0 ? roles[0] : 'default';
-        const problems = app.storage.problems.filter(e => {
-            return e.key === value;
-        });
+        const roles = getRoles(req.headers);
+        const currentRules = await getCurrentRules(roles);
+        const id = await getCurrentRuleId(roles);
+        app.storage = {...app.storage, roles: [...currentRules], roleId: id};
+
+        let problems;
+        if(id === '' ) {
+            problems = app.storage.problems.filter(e => {
+                return e.key === 'default';
+            });
+        } else if(checkRulesManifest(id)) {
+            problems = app.storage.problems.filter(e => {
+                return e.key === id;
+            });
+        } else {
+            app.new_rules = currentRules;
+            await storeManager.createNewManifest(app);
+            problems = app.storage.problems.filter(e => {
+                return e.key === id;
+            });
+        }
         res.json(problems || []);
     });
 };

@@ -1,6 +1,7 @@
 import logger from '../utils/logger.mjs';
 import request from '../helpers/request.mjs';
 import {getRoles} from '../helpers/jwt.mjs';
+import {getCurrentRuleId, getCurrentRules} from "../utils/rules.mjs";
 
 const LOG_TAG = 'controller-storage';
 
@@ -9,7 +10,9 @@ export default (app) => {
     app.get('/core/storage/:hash/*', async function(req, res) {
 
         const roles = getRoles(req.headers);
-        app.storage = {...app.storage, roles: [...roles]};
+        const currentRules = await getCurrentRules(roles);
+        const id = await getCurrentRuleId(roles);
+        app.storage = {...app.storage, roles: [...currentRules], roleId: id};
 
         const hash = req.params.hash || '$unknown$';
         const url = req.originalUrl.slice(`/core/storage/${hash}/`.length).replace(/\%E2\%86\%90/g, '..');

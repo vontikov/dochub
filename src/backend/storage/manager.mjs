@@ -46,6 +46,76 @@ export default {
 	},
 	// Стек обработчиков события на обновление манифеста
 	onApplyManifest: [],
+	createNewManifest: async function(app) {
+		let matchRegex = (string, filters) => {
+
+			var len = filters.length, i = 0;
+
+			for (; i < len; i++) {
+				if (string.match(filters[i])) {
+					return true;
+				}
+			}
+			return false;
+		};
+
+		let matchExclude = (string) => {
+			var len = exclude.length, i = 0;
+
+			for (; i < len; i++) {
+				if (string === exclude[i]) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		function cleanData(manifest, filters) {
+			if (typeof manifest != "object") return;
+			if (!manifest) return;
+
+			for (const key in manifest) {
+				if(matchExclude(key) || typeof manifest[key] != 'object')
+					continue;
+
+				if(matchRegex(key, filters))  {
+					cleanData(manifest[key], filters);
+				} else {
+					delete manifest[key];
+				}
+			}
+		}
+
+
+		if(app.new_rules) {
+
+			const mergeRules = [];
+			const ids = [];
+
+			let uri = `file:///${process.env.VUE_APP_DOCHUB_ROLES}`;
+			const response = await cache.request(uri, '/');
+
+			const manifest = response && (typeof response.data === 'object'
+				? response.data
+				: JSON.parse(response.data));
+
+			for(let rule in app.new_rules) {
+				for(let nRule in manifest?.roles) {
+					if(app.new_rules[rule] === nRule) {
+						mergeRules.push(manifest?.roles[nRule]);
+						ids.push(nRule)
+					}
+				}
+			}
+
+			const id = ids.sort((a,b) => {return a.localeCompare(b);}).join('');
+			let rawManifest = lodash.cloneDeep(app.storage.manifests.origin);
+			cleanData(rawManifest, systemRules.concat(mergeRules));
+			app.storage.manifests[id] = rawManifest;
+			app.storage.problems = [];
+			validators(app);
+		}
+	},
 	reloadManifest: async function(app) {
 
 		console.log('reloadManifest');
