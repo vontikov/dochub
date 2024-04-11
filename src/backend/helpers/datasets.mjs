@@ -7,7 +7,7 @@ import md5 from 'md5';
 
 export default function(app) {
 
-	let currentContext = app.storage.roleId === '' ? app.storage.manifests['default'] : app.storage.manifests[app.storage.roleId];
+	let currentContext = app.storage.roleId === 'default' ? app.storage.manifests['default'] : app.storage.manifests[app.storage.roleId];
 	entities(currentContext);
 	const result = Object.assign({}, datasetDriver,
 		{

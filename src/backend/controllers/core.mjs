@@ -115,7 +115,7 @@ export default (app) => {
                         }
                         return await ds.getData(path.context, profile, params, path.baseURI);
                     } else {
-                        return await ds.getData(app.storage.manifest, profile, params);
+                        return await ds.getData(app.storage.manifests[id], profile, params);
                     }
                 }
             }, res);
