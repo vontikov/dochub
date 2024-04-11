@@ -88,7 +88,6 @@ export const systemRules = [
     '^entities\.*$',
     '^extra-links\.*$',
     '^\$error[a-zA-Z\._0-9]*$',
-    '^ecogroup\.[a-zA-Z\._0-9]*$',
     '^elk[a-zA-Z\._0-9]*$',
     '^fetchLinks\.*$',
     '^function_id\.*$',

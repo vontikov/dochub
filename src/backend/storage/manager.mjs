@@ -89,7 +89,7 @@ export default {
 
 		if(app.new_rules) {
 
-			const mergeRules = [];
+			let mergeRules = [];
 			const ids = [];
 
 			let uri = `file:///${process.env.VUE_APP_DOCHUB_ROLES}`;
@@ -102,7 +102,7 @@ export default {
 			for(let rule in app.new_rules) {
 				for(let nRule in manifest?.roles) {
 					if(app.new_rules[rule] === nRule) {
-						mergeRules.push(manifest?.roles[nRule]);
+						mergeRules = mergeRules.concat(manifest?.roles[nRule]);
 						ids.push(nRule)
 					}
 				}
