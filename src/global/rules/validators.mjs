@@ -1,5 +1,5 @@
 // Выполняет валидаторы и накладывает исключения
-export default function(datasets, manifest, success, reject, key) {
+export default function(datasets, manifest, success, reject) {
 	const rules = (manifest['rules'] || {});
 	const validators = rules['validators'] || {};
 	const exceptions = rules['exceptions'] || {};
@@ -9,7 +9,6 @@ export default function(datasets, manifest, success, reject, key) {
 			.then((items) => {
 				success({
 					id,
-					key,
 					title: validators[id].title || id,
 					items: (items || []).map((item) => {
 						return Object.assign({
@@ -21,7 +20,6 @@ export default function(datasets, manifest, success, reject, key) {
 				reject(
 					{
 						id,
-						key,
 						title: validators[id].title || id,
 						error,
 						items: [

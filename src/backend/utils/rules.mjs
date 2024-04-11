@@ -1,7 +1,7 @@
 import cache from "../storage/cache.mjs";
 
 export async function getCurrentRuleId(rules) {
-    if(rules.length === 0) return '';
+    if(rules.length === 0) return 'default';
 
     const ids = [];
 

@@ -11,9 +11,8 @@ export default function(app) {
 		app.storage.problems.push(validator);
 	};
 	logger.log('Executing validators..', LOG_TAG);
-	for (const key in app.storage.manifests) {
-		validators(datasets(app), app.storage.manifests[key], pushValidator, pushValidator, key);
-	}
+
+	validators(datasets(app), app.storage.manifests[app.storage.roleId], pushValidator, pushValidator);
 
 	logger.log('Done.', LOG_TAG);
 

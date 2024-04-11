@@ -112,8 +112,6 @@ export default {
 			let rawManifest = lodash.cloneDeep(app.storage.manifests.origin);
 			cleanData(rawManifest, systemRules.concat(mergeRules));
 			app.storage.manifests[id] = rawManifest;
-			app.storage.problems = [];
-			validators(app);
 		}
 	},
 	reloadManifest: async function(app) {
@@ -206,6 +204,7 @@ export default {
 			mergeMap: {},								// Карта склейки объектов
 			md5Map: {}, 								// Карта путей к ресурсам по md5 пути
 			manifests: {...localStorage.manifests},
+			roleId: 'default',
 			// Ошибки, которые возникли при загрузке манифестов
 			// по умолчанию заполняем ошибками, которые возникли при загрузке
 			problems: Object.keys(cache.errors || {}).map((key) => cache.errors[key]) || []

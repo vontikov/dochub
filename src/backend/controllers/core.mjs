@@ -130,23 +130,11 @@ export default (app) => {
         const id = await getCurrentRuleId(roles);
         app.storage = {...app.storage, roles: [...currentRules], roleId: id};
 
-        let problems;
-        if(id === '' ) {
-            problems = app.storage.problems.filter(e => {
-                return e.key === 'default';
-            });
-        } else if(checkRulesManifest(id)) {
-            problems = app.storage.problems.filter(e => {
-                return e.key === id;
-            });
-        } else {
+        if(!checkRulesManifest(id)) {
             app.new_rules = currentRules;
             await storeManager.createNewManifest(app);
-            problems = app.storage.problems.filter(e => {
-                return e.key === id;
-            });
         }
-        res.json(problems || []);
+        res.json(app.storage.problems || []);
     });
 };
 
