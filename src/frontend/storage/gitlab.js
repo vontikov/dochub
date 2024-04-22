@@ -99,7 +99,9 @@ export default {
 			Vue.set(state.last_changes, value.id, value.payload);
 		},
 		appendProblems(state, value) {
-			state.problems = state.problems.concat([value]);
+      if(!state.problems?.find(({ id }) => id === value.id)) {
+        state.problems = state.problems.concat([value]);
+      }
 		},
 		setRenderCore(state, value) {
 			state.renderCore = value;
