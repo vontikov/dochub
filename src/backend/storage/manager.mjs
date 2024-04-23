@@ -92,7 +92,7 @@ export default {
 			let mergeRules = [];
 			const ids = [];
 
-			let uri = `file:///${process.env.VUE_APP_DOCHUB_ROLES}`;
+			let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
 			const response = await cache.request(uri, '/');
 
 			const manifest = response && (typeof response.data === 'object'
@@ -171,7 +171,7 @@ export default {
 
 		let createRoleManifest = async function () {
 			try {
-				let uri = `file:///${process.env.VUE_APP_DOCHUB_ROLES}`;
+				let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
 				const response = await cache.request(uri, '/');
 
 				const manifest = response && (typeof response.data === 'object'

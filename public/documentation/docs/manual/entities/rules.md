@@ -16,9 +16,12 @@
    default:
      - '^kadzo\.v2023\.data_objects*$'
 ```
+VUE_APP_DOCHUB_ROLES=file:///workspace/sberauto/roles.yaml
+
 Если пользователь имеет несколько ролей, то наборы правил объединяются.
 
 Для работы ролевой модели требуется дополнительно указать в файле .env несколько параметров:
+
 
 Указываем путь до сервера аутентификации с указанием realms
 VUE_APP_DOCHUB_AUTHORITY_SERVER=https://dochub-server.ru/realms/dochub
