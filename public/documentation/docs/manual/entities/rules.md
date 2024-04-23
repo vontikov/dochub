@@ -25,7 +25,7 @@ VUE_APP_DOCHUB_ROLES=file:///workspace/sberauto/roles.yaml
 
 Указываем путь до сервера аутентификации с указанием realms
 VUE_APP_DOCHUB_AUTHORITY_SERVER=https://dochub-server.ru/realms/dochub
-Указываем client id
+Указываем client id, например: dochub
 VUE_APP_DOCHUB_AUTHORITY_CLIENT_ID={CLIENTID}
 {PUBLIC KEY} - указываем public key, смотрим настройки keycloack
 VUE_APP_DOCHUB_AUTH_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----{PUBLIC KEY}-----END PUBLIC KEY-----
