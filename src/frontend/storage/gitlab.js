@@ -57,8 +57,7 @@ export default {
 		// Признак инциализации проекта в плагине
 		notInited: null,
 		// Признак критической проблемы
-		criticalError: null,
-    available_roles: {} //TODO: посмотреть!!!
+		criticalError: null
 	},
 
 	mutations: {
@@ -70,7 +69,6 @@ export default {
 			state.projects = {};
 			state.last_changes = {};
 			state.criticalError = null;
-      state.available_roles = {};
 		},
 		setManifest(state, value) {
 			state.moment = Date.now();
@@ -114,10 +112,7 @@ export default {
 		},
 		setPrintVersion(state, value) {
 			state.isPrintVersion = value;
-		},
-    setAvailableRoles(state, value) {
-      state.available_roles = value;
-    }
+		}
 	},
 
 	actions: {

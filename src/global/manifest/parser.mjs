@@ -239,62 +239,9 @@ const parser = {
 	// Разбираем сущности
 	// path - путь к перечислению сущностей (ключ -> объект)
 	async parseEntity(context, path, baseURI) {
-		//if(Array.isArray(this.filters) && !this.filters.length) {
 			for (const key in context) {
 				await this.expandProperty(context[key], `${path}/${encodeURIComponent(key)}`, baseURI);
 			}
-		//} else {
-		//	for (const key in context) {
-		//		for(const filter in this.filters) {
-		//			if(key.match(this.filters[filter])) {
-		//				console.log('---------------------------');
-		//				console.log('key',key);
-			//			console.log('value',context[key]);
-			//			console.log('---------------------------');
-			//			await this.expandProperty(context[key], `${path}/${encodeURIComponent(key)}`, baseURI);
-			//		}
-			//	}
-			//}
-		//}
-
-
-		//TODO: Смотреть сюда!!!! winodw.Vuex.state....roles
-		// let uri = `file:///${process.env.VUE_APP_DOCHUB_ROLES}`;
-		//
-		// try {
-		// 	const response = this.onPullSource
-		// 		? await this.onPullSource(uri, '/', this)
-		// 		: await parser.cache.request(uri, '/');
-		//
-		// 	const manifest = response && (typeof response.data === 'object'
-		// 		? response.data
-		// 		: JSON.parse(response.data));
-		//
-		// 	let userRoles = this.app?.storage?.roles;
-		// 	console.log('userRoles', userRoles);
-		//
-		// 	let filters;
-		// 	if(Array.isArray(userRoles) && userRoles.length) {
-		// 		filters = manifest?.roles[userRoles[0]]; // формировать полный список фильтров по ролям
-		// 	} else {
-		// 		filters = manifest?.roles['default'];
-		// 	}
-		//
-		// 	for (const key in context) {
-		// 		for(const filter in filters) {
-		// 			if(key.match(filters[filter])) {
-		// 				console.log('---------------------------');
-		// 				console.log('key',key);
-		// 				console.log('value',context[key]);
-		// 				console.log('---------------------------');
-		// 				await this.expandProperty(context[key], `${path}/${encodeURIComponent(key)}`, baseURI);
-		// 			}
-		// 		}
-		// 	}
-		//
-		// } catch (e) {
-		// 	this.registerError(e, e.uri || uri);
-		// }
 	},
 
 	async parseImports(manifest, baseURI) {

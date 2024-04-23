@@ -195,7 +195,7 @@ export default {
 
 		console.log('manifestParser.manifest', localStorage.manifests.origin);
 
-		entities(localStorage.manifests['default']); //TODO: уточнить!!!
+		entities(localStorage.manifests['default']);
 
 		logger.log('Full reload is done', LOG_TAG);
 		const result = {

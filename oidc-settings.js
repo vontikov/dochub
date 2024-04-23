@@ -6,8 +6,8 @@ Log.setLevel(Log.ERROR);
 const url = window.location.origin;
 
 export const settings = {
-    authority: 'https://auth.slsdev.ru/cfbRYTbCu86vSIbmWCQk/realms/dochub',
-    client_id: 'dochub',
+    authority: process.env.VUE_APP_DOCHUB_AUTHORITY_SERVER,
+    client_id: process.env.VUE_APP_DOCHUB_AUTHORITY_CLIENT_ID,
     redirect_uri: new URL('/login', url),
     post_logout_redirect_uri: new URL('/logout', url),
     response_type: 'code',
