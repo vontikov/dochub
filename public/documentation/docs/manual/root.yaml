@@ -131,7 +131,7 @@ docs:
         - dochub.front
       source: config/deployment.md
     dochub.rules:
-      location: Dochub/Ролевая модель
+      location: Dochub/Руководство/Ролевая модель
       description: Ролевая модель
       type: markdown
       source: entities/rules.md
