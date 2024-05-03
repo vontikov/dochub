@@ -18,7 +18,6 @@ const serverPort = process.env.VUE_APP_DOCHUB_BACKEND_PORT || 3030;
 
 // Актуальный манифест
 app.storage = null;
-app.set
 
 // Подключаем контроль доступа
 middlewareAccess(app);
