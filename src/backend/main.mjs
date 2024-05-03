@@ -18,6 +18,7 @@ const serverPort = process.env.VUE_APP_DOCHUB_BACKEND_PORT || 3030;
 
 // Актуальный манифест
 app.storage = null;
+app.set
 
 // Подключаем контроль доступа
 middlewareAccess(app);
@@ -25,9 +26,11 @@ middlewareAccess(app);
 // Основной цикл приложения
 const mainLoop = async function() {
     // Загружаем манифест
-    app.listen(serverPort, function(){
+    const server = app.listen(serverPort, function(){
         logger.log(`DocHub server running on ${serverPort}`, LOG_TAG);
     });
+
+    server.setTimeout(500000);
 
      storeManager.reloadManifest(app)
          .then(async(storage) => {
