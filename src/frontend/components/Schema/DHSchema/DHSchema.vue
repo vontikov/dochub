@@ -100,12 +100,12 @@
     <template v-if="error">
       <text
         v-bind:x="landscape.viewBox.left"
-        v-bind:y="landscape.viewBox.top + 50"
+        v-bind:y="landscape.viewBox.top + 30"
         class="error">
         <tspan
           v-for="line in errorLines"
           v-bind:key="line"
-          x="200"
+          x="0"
           dy="1.2em">
           {{ line }}
         </tspan>
@@ -206,6 +206,7 @@
 
   const OPACITY = 0.3;
   const IS_DEBUG = false;
+  const CHAR_WIDTH = 16;
 
   export default {
     name: 'DHSchema',
@@ -265,7 +266,6 @@
     emits: ['update:warnings'],
     data() {
       return {
-        errorLineLength: 42,
         isBuilding: 0,
         resizer: null,
         debug: IS_DEBUG ? {
@@ -293,6 +293,9 @@
       };
     },
     computed: {
+      errorLineLength() {
+        return +this.viewBox.split(' ')[2] / CHAR_WIDTH;
+      },
       // Разбиваем error message на строки
       errorLines() {
         const lines = [];
@@ -300,7 +303,7 @@
         let curLineString = '';
         this.error.split(' ').forEach(word => {
           curLineLength += word.length;
-          curLineString += word + ' ';
+          curLineString = `${curLineString} ${word} `;
           if(curLineLength > this.errorLineLength) {
             lines.push(curLineString);
             curLineLength = 0;
