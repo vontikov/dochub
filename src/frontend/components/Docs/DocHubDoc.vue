@@ -14,6 +14,7 @@
         v-bind:profile="profile"
         v-bind:path="currentPath"
         v-bind:get-content="getContentForPlugin"
+        v-bind:put-content="putContentForPlugin"
         v-bind:to-print="isPrintVersion"
         v-bind:pull-data="pullData"
         v-bind:context-menu="contextMenu" />
@@ -41,6 +42,7 @@
   import datasets from '@front/helpers/datasets';
   import query from '@front/manifest/query';
   import uriTool from '@front/helpers/uri';
+  import env from '@front/helpers/env';
 
   import Swagger from './DocSwagger.vue';
   import Plantuml from './DocPlantUML.vue';
@@ -188,6 +190,14 @@
       resolvePath() {
         if (this.path === '$URL$') return this.$router.history.current.path;
         return this.profile?.$base || this.path;
+      },
+      putContentForPlugin(url, content) {
+        return env.isPlugin() ? new Promise((success, reject) => {
+          const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
+          window.$PAPI.pushFile(fullPath, content)
+            .then(success)
+            .catch(reject);
+        }) : null;
       },
       // Провайдер контента файлов для плагинов
       //  url - прямой или относительный URL к файлу

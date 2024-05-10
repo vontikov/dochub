@@ -12,6 +12,7 @@
   "author": "R.Piontik",
   "license": "Apache-2.0",
   "dependencies": {
+    "bpmn-js": "^17.6.4",
     "vue-bpmn": "^0.3.0"
   }
 }
