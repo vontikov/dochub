@@ -122,8 +122,11 @@
       baseURI() {
         return uriTool.getBaseURIOfPath(this.currentPath);
       },
-      isReloading() {
+      isReloadingManifest() {
         return this.$store.state.isReloading;
+      },
+      isReloading() {
+        return this.isReloadingManifest || !!this.refresher;
       },
       isPrintVersion() {
         return this.$store.state.isPrintVersion;
@@ -136,7 +139,7 @@
       params() {
         this.refresh();
       },
-      isReloading() {
+      isReloadingManifest() {
         this.refresh();
       }
     },
@@ -151,6 +154,8 @@
             type: contentType,
             source: `source:${encodeURIComponent(JSON.stringify(response.data))}`
           };
+        }).finally(() => {
+          this.refresher = null;
         });
       },
       // Достаем данные профиля документа из DataLake
@@ -180,7 +185,6 @@
           } else {
             this.pullProfileFromDataLake(`"${path.join('"."')}"`);
           }
-
         }, 50);
       },
       resolveParams() {
@@ -203,9 +207,14 @@
       //  url - прямой или относительный URL к файлу
       getContentForPlugin(url) {
         return new Promise((success, reject) => {
-          requests.request(url, this.baseURI)
-            .then(success)
-            .catch(reject);
+          const whiter = setInterval(() => {
+            if (!this.isReloading) {
+              requests.request(url, this.baseURI)
+                .then(success)
+                .catch(reject);
+              clearInterval(whiter);
+            }
+          }, 50);
         });
       },
       // API к озеру данных архитектуры
