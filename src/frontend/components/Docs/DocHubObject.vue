@@ -53,7 +53,8 @@
         };
         try {
           // eslint-disable-next-line no-debugger
-          if (this.src.startsWith('@')) {
+          const source = this.src.toLowerCase();
+          if (source.startsWith('@')) {
             const url = new URL(this.src.replace('@', '/'), requests.getSourceRoot());
             const path = url.pathname.split('/');
             result.type = path[1];
@@ -66,16 +67,9 @@
               // Иначе воспринимаем как презентацию
               result.presentation = path[3];
             }
-          } else if (this.src.toLowerCase().startsWith('https://www.youtube.com/')) {
-            const url = new URL(this.src);
+          } else if (source.startsWith('https://www.youtube.com/') || source.startsWith('https://youtu.be/')) {
             result.type = 'youtube';
-            if (url.pathname.startsWith('/embed/')) {
-              result.subject = this.src;
-            } else if (url.pathname.startsWith('/watch')) {
-              debugger;
-              result.subject = `https://www.youtube.com/embed/${url.searchParams.get('v')}`;
-            }
-            
+            result.subject = this.src;
           }
         } catch (e) {
           // eslint-disable-next-line no-console

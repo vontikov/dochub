@@ -11,10 +11,11 @@ export default {
             type: Function,
             required: true
         },
-        // Требуем обязательно передавать функцию сохранения контента
+        // Получаем функцию сохранения контента если есть
         putContent: {
             type: Function,
-            required: true
+            default: null,
+            required: false
         },
         // Содержимое документа
         value: String

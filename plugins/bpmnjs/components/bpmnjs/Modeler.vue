@@ -28,11 +28,6 @@
       getContent: {
         type: Function,
         required: true
-      },
-      // Требуем обязательно передавать функцию сохранения контента
-      putContent: {
-        type: Function,
-        required: true
       }
     },
     data() {

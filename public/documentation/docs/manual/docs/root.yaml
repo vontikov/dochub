@@ -399,6 +399,10 @@ docs:
     location: DocHub/Руководство/Документы/BPMN/Простой пример
     type: bpmnjs
     source: examples/bpmn.xml
+  dochub.example.bpmn_full:
+    location: DocHub/Руководство/Документы/BPMN/Расширенный пример
+    type: bpmnjs
+    source: examples/pizza-collaboration.xml
   # *****************************************  
   #                 Шаблоны
   # *****************************************  
