@@ -7,7 +7,7 @@
       v-if="(markdown !== null)"
       toc
       v-bind:breaks="false"
-      v-bind:html="false"
+      v-bind:html="isHTMLSupport"
       v-bind:postrender="rendered"
       v-on:toc-rendered="tocRendered">
       {{ markdown }}
@@ -90,6 +90,10 @@
       };
     },
     computed: {
+      // Определяет поддерживаются ли HTML тэги в markdown
+      isHTMLSupport() {
+        return (process.env.VUE_APP_DOCHUB_MARKDOWN_HTML || 'off').toLocaleLowerCase() === 'on';
+      },
       // Возвращает URL документа с учетом истории переходов
       currentURL() {
         return this.redirectURL ? this.redirectURL : this.url;

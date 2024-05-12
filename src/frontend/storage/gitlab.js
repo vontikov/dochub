@@ -144,12 +144,12 @@ export default {
 				// Обновляем манифест и фризим объекты
 				context.commit('setManifest', manifest);
 				context.commit('setSources', parser.mergeMap);
-				context.commit('setIsReloading', false);
 				if (!Object.keys(context.state.manifest || {}).length) {
 					context.commit('setCriticalError', true);
 				}
 
 				entities(manifest);
+				context.commit('setIsReloading', false);
 				rules(manifest,
 					(problems) => context.commit('appendProblems', problems),
 					(error) => {
@@ -252,6 +252,7 @@ export default {
 						errors.net.items.push(item);
 					}
 
+					// Может не надо? 
 					context.commit('setIsReloading', false);
 				}
 			};
