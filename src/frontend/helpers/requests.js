@@ -5,6 +5,17 @@ import gitlab from '@front/helpers/gitlab';
 import uriTool from '@front/helpers/uri';
 import { Buffer } from 'buffer';
 
+const XML = {
+	parse(xml) {
+		let result = null;
+		require('xml2js').parseString(xml, (err, json) => {
+			if (err) throw err;
+			result = json;
+		});
+		return result;
+	}
+};
+
 import env, { Plugins } from './env';
 import { responseCacheInterceptor, requestCacheInterceptor } from './cache';
 // import uriTool from '@/helpers/uri';
@@ -45,15 +56,20 @@ axios.interceptors.response.use(async(response) => {
 			const url = (response.config.url || '').toString().split('?')[0].toLowerCase();
 			if (
 				(url.indexOf('.json/raw') >= 0)
-				|| (url.slice(-5) === '.json')
+				|| (url.endsWith('.json'))
 				|| (response?.headers || {})['content-type'] === 'application/json'
 				)
 				response.data = JSON.parse(response.data);
 			else if (
 				(url.indexOf('.yaml/raw') >= 0)
-				|| (url.slice(-5) === '.yaml')
+				|| (url.endsWith('.yaml'))
 				|| (response?.headers || {})['content-type'] === 'application/x-yaml')
 				response.data = YAML.parse(response.data);
+			else if (
+				(url.indexOf('.xml/raw') >= 0)
+				|| (url.endsWith('.xml'))
+				|| (response?.headers || {})['content-type'] === 'application/xml') 
+				response.data = XML.parse(response.data);
 		}
 	}
 
@@ -71,12 +87,13 @@ axios.interceptors.response.use(async(response) => {
 
 function injectPAPIMiddleware() {
 	if (window.$PAPI && !window.$PAPI.middleware) {
-		window.$PAPI.middleware = function(response) {
+		window.$PAPI.middleware = function(response, request) {
 			if (!response) return response;
 			let type = response.contentType;
 			switch (type) {
 				case 'yaml': response.data = YAML.parse(response.data); break;
 				case 'json': response.data = JSON.parse(response.data); break;
+				case 'xml': !request.raw && (response.data = XML.parse(response.data)); break;
 				case 'jpg':
 					type = 'jpeg';
 				// eslint-disable-next-line no-fallthrough
@@ -188,6 +205,7 @@ export default {
 		) {
 			injectPAPIMiddleware();
 			this.trace(params.url);
+			params.raw = !!axios_params?.raw;
 			return window.$PAPI.request(params);
 		} else {
 			return axios(params);

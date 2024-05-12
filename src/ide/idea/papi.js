@@ -15,7 +15,7 @@ const PAPI = {
 				try {
 					const parseData = result || 'null';
 					if (window.$PAPI?.middleware)
-						res(window.$PAPI.middleware(JSON.parse(parseData)));
+						res(window.$PAPI.middleware(JSON.parse(parseData), params));
 					else
 						res(JSON.parse(parseData));
 				} catch (e) {
