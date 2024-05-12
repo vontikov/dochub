@@ -5,14 +5,14 @@
       v-model="content"
       v-bind:profile="profile"
       v-bind:get-content="getContent"
-      v-bind:put-content="putContent" 
+      v-bind:put-content="proxyPutContent" 
       v-on:onEdit="onEdit" />
     <viewer 
       v-else
       v-model="content"
       v-bind:profile="profile"
       v-bind:get-content="getContent"
-      v-bind:put-content="putContent" 
+      v-bind:put-content="proxyPutContent" 
       v-on:onEdit="onEdit" />
   </div>
 </template>
@@ -42,6 +42,11 @@
       putContent: {
         type: Function,
         required: true
+      },
+      // Шина событий
+      eventBus: {
+        type: Object,
+        required: true
       }
     },
     data() {
@@ -49,8 +54,25 @@
         isEdit: false,
         content: emptyDiagram,
         error: null,
-        source: null
+        source: null,
+        updateCommit: 0
       };
+    },
+    computed: {
+      // Обработчик сохранения данных
+      // eslint-disable-next-line vue/return-in-computed-property
+      proxyPutContent() {
+        if (!this.putContent) return null;
+        // eslint-disable-next-line vue/no-async-in-computed-properties
+        return (source, xml) => {
+          return new Promise((success, reject) => {
+            this.beginUpdate();
+            this.putContent(source, xml)
+              .then(success)
+              .catch(reject);
+          });
+        };
+      }
     },
     watch: {
       profile(value) {
@@ -59,8 +81,22 @@
     },
     mounted() {
       this.reload();
+      // Обработчик события обновления данных
+      this.eventBus.$on('on-changed-source', (source) => {
+        source.endsWith(this.profile.source) && this.endUpdate() && this.reload();
+      });
     },
     methods: {
+      // Процесс обновления начат
+      beginUpdate() {
+        setTimeout(() => this.endUpdate(), 3000); // Таймаут для обновления
+        return !!(++this.updateCommit);
+      },
+      // Процесс обновления завершен
+      endUpdate() {
+        return !(this.updateCommit>0 && this.updateCommit--);
+      },
+      // Переход в режим редактирования
       onEdit(mode) {
         this.isEdit = mode;
       },
@@ -84,6 +120,12 @@
 
 .bpmnjs {
   min-height: 400px;
+}
+
+.bpmnjs:hover {
+  margin: -1px;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 4px;
 }
 
 </style>

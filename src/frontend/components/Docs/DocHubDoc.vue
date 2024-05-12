@@ -16,6 +16,7 @@
         v-bind:get-content="getContentForPlugin"
         v-bind:put-content="putContentForPlugin"
         v-bind:to-print="isPrintVersion"
+        v-bind:event-bus="eventBus"
         v-bind:pull-data="pullData"
         v-bind:context-menu="contextMenu" />
       <template v-else>
@@ -111,6 +112,9 @@
       };
     },
     computed: {
+      eventBus() {
+        return window.EventBus;
+      },
       is() {
         return inbuiltTypes[this.docType] 
           || (this.$store.state.plugins.documents[this.docType] && `plugin-doc-${this.docType}`)
@@ -130,6 +134,14 @@
       },
       isPrintVersion() {
         return this.$store.state.isPrintVersion;
+      },
+      putContentForPlugin() {
+        return env.isPlugin() ? (url, content) => {return new Promise((success, reject) => {
+          const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
+          window.$PAPI.pushFile(fullPath, content)
+            .then(success)
+            .catch(reject);
+        });} : null;
       }
     },
     watch: {
@@ -194,14 +206,6 @@
       resolvePath() {
         if (this.path === '$URL$') return this.$router.history.current.path;
         return this.profile?.$base || this.path;
-      },
-      putContentForPlugin(url, content) {
-        return env.isPlugin() ? new Promise((success, reject) => {
-          const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
-          window.$PAPI.pushFile(fullPath, content)
-            .then(success)
-            .catch(reject);
-        }) : null;
       },
       // Провайдер контента файлов для плагинов
       //  url - прямой или относительный URL к файлу

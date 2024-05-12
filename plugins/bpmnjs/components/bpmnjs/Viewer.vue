@@ -1,13 +1,14 @@
 <template>
   <div class="bpmnjs-space">
-    <div ref="container" class="bpmnjs-viewer" />
+    <div ref="container" class="bpmnjs-viewer" v-bind:style="{ height}" />
     <v-toolbar
+      v-if="putContent"
       dense
       floating 
       elevation="0"
       color="rgba(0, 0, 0, 0.03)"
       class="toolbar">
-      <v-btn v-if="putContent" icon title="Редактировать" v-on:click="onEdit">
+      <v-btn icon title="Редактировать" v-on:click="onEdit">
         <v-icon>mdi-file-edit-outline</v-icon>
       </v-btn>
     </v-toolbar>
@@ -22,7 +23,8 @@
     mixins: [BaseMixin],
     data() {
       return {
-        bpmnViewer: null
+        bpmnViewer: null,
+        height: '50vh'
       };
     },
     methods: {
@@ -34,6 +36,8 @@
           event.error && this.registerError(event.error);
           event.warnings && this.registerWarning(event.warnings);
           this.bpmnViewer.get('canvas').zoom('fit-viewport');
+          //todo Стоит оптимизировать высоту изображения
+          // const rect = this.bpmnViewer.get('canvas')._viewport.getBoundingClientRect();
         });
       },
       applyContent(content) {
