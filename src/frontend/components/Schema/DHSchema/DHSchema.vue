@@ -100,9 +100,16 @@
     <template v-if="error">
       <text
         v-bind:x="landscape.viewBox.left"
-        v-bind:y="landscape.viewBox.top + 10"
-        alignment-baseline="hanging"
-        class="error">{{ error }}</text>
+        v-bind:y="landscape.viewBox.top + 30"
+        class="error">
+        <tspan
+          v-for="line in errorLines"
+          v-bind:key="line"
+          x="0"
+          dy="1.2em">
+          {{ line }}
+        </tspan>
+      </text>
     </template>
 
     Тут должны была быть схема, но что-то пошло не так...
@@ -199,6 +206,7 @@
 
   const OPACITY = 0.3;
   const IS_DEBUG = false;
+  const CHAR_WIDTH = 16;
 
   export default {
     name: 'DHSchema',
@@ -285,6 +293,26 @@
       };
     },
     computed: {
+      errorLineLength() {
+        return +this.viewBox.split(' ')[2] / CHAR_WIDTH;
+      },
+      // Разбиваем error message на строки
+      errorLines() {
+        const lines = [];
+        let curLineLength = 0;
+        let curLineString = '';
+        this.error.split(' ').forEach(word => {
+          curLineLength += word.length;
+          curLineString = `${curLineString} ${word} `;
+          if(curLineLength > this.errorLineLength) {
+            lines.push(curLineString);
+            curLineLength = 0;
+            curLineString = '';
+          }
+        });
+        lines.push(curLineString);
+        return lines;
+      },
       // Проверяем что в Firefox
       isFirefox() {
         return navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
