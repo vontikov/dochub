@@ -1,19 +1,22 @@
 <template>
-  <div class="bpmnjs">
+  <div v-bind:class="styles">
     <modeler
       v-if="isEdit"
       v-model="content"
       v-bind:profile="profile"
       v-bind:get-content="getContent"
       v-bind:put-content="proxyPutContent" 
-      v-on:onEdit="onEdit" />
+      v-on:onEdit="onEdit" 
+      v-on:click.stop />
     <viewer 
       v-else
       v-model="content"
       v-bind:profile="profile"
       v-bind:get-content="getContent"
       v-bind:put-content="proxyPutContent" 
-      v-on:onEdit="onEdit" />
+      v-on:onEdit="onEdit" 
+      v-on:click.stop />
+    <div v-if="!isEnable" class="placeholder" v-on:click.stop="doEnable" />
   </div>
 </template>
 
@@ -56,10 +59,19 @@
         content: emptyDiagram,
         error: null,
         source: null,
-        updateCommit: 0
+        updateCommit: 0,
+        enable: false
       };
     },
     computed: {
+      // Определяет активность компонента для взаимодействия
+      isEnable() {
+        return this.enable || this.isEdit;
+      },
+      // Стили диаграммы
+      styles() {
+        return 'bpmnjs ' + (this.isEnable ? 'enable' : '');
+      },
       // Обработчик сохранения данных
       // eslint-disable-next-line vue/return-in-computed-property
       proxyPutContent() {
@@ -87,7 +99,20 @@
         source.endsWith(this.profile.source) && this.endUpdate() && this.reload();
       });
     },
+    created() {
+      document.addEventListener('click', this.doDisable);
+    },
+    destroyed() {
+      document.removeEventListener('click', this.doDisable);
+    },
     methods: {
+      // Включаем интерактивный режим
+      doEnable() {
+        this.enable = true;
+      },
+      doDisable() {
+        this.enable = false;
+      },
       // Процесс обновления начат
       beginUpdate() {
         setTimeout(() => this.endUpdate(), 3000); // Таймаут для обновления
@@ -121,11 +146,27 @@
 
 .bpmnjs {
   min-height: 400px;
+  position: relative;
+}
+
+.placeholder {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
 }
 
 .bpmnjs:hover {
   margin: -1px;
   border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 4px;
+}
+
+.bpmnjs.enable,
+.bpmnjs.enable:hover {
+  margin: -2px;
+  border: 2px solid rgba(0, 0, 0, 0.4) !important;
   border-radius: 4px;
 }
 

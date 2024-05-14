@@ -5,10 +5,40 @@
       <v-btn v-if="putContent" icon v-on:click="save">
         <v-icon>mdi-content-save</v-icon>
       </v-btn>
-      <v-btn icon v-on:click="onExit">
+      <v-btn icon v-on:click="onExit(false)">
         <v-icon>mdi-exit-run</v-icon>
       </v-btn>
     </v-toolbar>
+    <v-dialog
+      v-model="saveRequest"
+      width="500">
+      <v-card>
+        <v-card-title class="text-h5 grey lighten-2">
+          Сохранить?
+        </v-card-title>
+
+        <v-card-text>
+          В диаграмму внесены изменения. Если их не сохранить, то они будут утеряны.
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            text
+            v-on:click="saveRequest = false; onExit(true)">
+            Не сохранять
+          </v-btn>
+          <v-btn
+            color="primary"
+            text
+            v-on:click="onExit(true)">
+            Сохранить
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>    
   </div>
 </template>
 
@@ -34,11 +64,20 @@
       return {
         modeler: null,
         descId: `desc-${Date.now()}`,
-        error: null
+        error: null,
+        isChange: false,
+        saveRequest: false
       };
     },
     methods: {
-      onExit() {
+      async onExit(autosave) {
+        if (autosave && this.isChange) await this.save();
+        else if (this.isChange) {
+          this.saveRequest = true;
+          return;
+        } else  {
+          this.saveRequest = false;
+        }
         this.$emit('onEdit', false);
       },
 
@@ -49,26 +88,24 @@
             bindTo: window
           }
         });
+
+        this.modeler.on('element.changed', () => this.isChange = true);
       },
       applyContent(content) {
         this.modeler.importXML(content);
       },
 
       async save() {
-        const { xml } = await this.modeler.saveXML({ format: true });
-        //!!! Нужно перенести в успех сохранения
-        this.$emit('input', xml);
-        this.putContent(this.profile.source, xml)
-          // Если все хорошо, рендерим HTML "как есть"
-          .then(() => {
-            alert('Сохраниль!');
-          })
-          // Если что-то пошло не так, генерируем HTML с ошибкой
-          .catch((error) => {
-            console.error(error);
-            alert(`Полямялася! ${error.message}`);
-          });
-
+        try {
+          const { xml } = await this.modeler.saveXML({ format: true });
+          await this.putContent(this.profile.source, xml);
+          this.isChange = false;
+          this.$emit('input', xml);
+        } catch (err) {
+          window.alert(`При сохранении возникла ошибка: ${err?.message}`);
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
       }
     }
   };
