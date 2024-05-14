@@ -1,5 +1,14 @@
 <template>
-  <div class="bpmnjs-space">
+  <div class="bpmnjs-space bpmnjs-document-viewer">
+    <div
+      v-html="`
+      <style>
+        .bpmnjs-document-viewer .bjs-breadcrumbs {
+          left: 70px !important;
+          top: 34px !important;
+        }    
+      </style>
+    `" />
     <div ref="container" class="bpmnjs-viewer" v-bind:style="{ height}" />
     <v-toolbar
       v-if="putContent"

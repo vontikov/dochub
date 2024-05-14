@@ -1,5 +1,14 @@
 <template>
-  <div class="document">
+  <div class="bpmnjs-document-modeler">
+    <div
+      v-html="`
+      <style>
+        .bpmnjs-document-modeler .bjs-breadcrumbs {
+          left: 180px !important;
+          top: 34px !important;
+        }    
+      </style>
+    `" />
     <div v-bind:id="descId" class="desk" />
     <v-toolbar dense floating elevation="0" color="rgba(0, 0, 0, 0.03)" class="toolbar">
       <v-btn v-if="putContent" icon v-on:click="save">
@@ -110,6 +119,7 @@
     }
   };
 </script>
+
 <style scoped>
 .desk {
   min-height: 1000px;
