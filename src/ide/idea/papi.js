@@ -70,6 +70,14 @@ const PAPI = {
 	},
 	getSettings() {
 		return this.request({ url: 'plugin:/idea/settings/get' });
+	},
+	// Сохраняет файл в проекте
+	pushFile(source, content) {
+		return this.request({ url: 'plugin:/idea/code/push/file', source, content });
+	},
+	// TBD 
+	pushCode(code, metadata) {
+		return this.request({ url: 'plugin:/idea/code/push/code', code, metadata });
 	}
 };
 

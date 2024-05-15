@@ -14,6 +14,7 @@
     <dochub-radar v-else-if="isRadar" v-bind:section="srcStruct.subject" v-bind:alt="srcStruct.alt" v-bind:inline="inline" />
     <dochub-anchor v-else-if="isAnchor" v-bind:id="srcStruct.subject" v-bind:name="srcStruct.subject" v-bind:inline="inline" />
     <dochub-image v-else-if="isImage" v-bind:src="src" v-bind:alt="srcStruct.alt" v-bind:base-u-r-i="baseURI" v-bind:inline="inline" />
+    <dochub-youtube v-else-if="isYoutube" v-bind:src="srcStruct.subject" v-bind:alt="srcStruct.alt" v-bind:base-u-r-i="baseURI" v-bind:inline="inline" />
     <dochub-entity v-else-if="isEntity" v-bind:entity="srcStruct.subject" v-bind:presentation="srcStruct.presentation" v-bind:params="srcStruct.params" v-bind:inline="inline" />
     <div v-else>
       Что-то пошло не так :(
@@ -52,7 +53,8 @@
         };
         try {
           // eslint-disable-next-line no-debugger
-          if (this.src.substr(0, 1) === '@') {
+          const source = this.src.toLowerCase();
+          if (source.startsWith('@')) {
             const url = new URL(this.src.replace('@', '/'), requests.getSourceRoot());
             const path = url.pathname.split('/');
             result.type = path[1];
@@ -65,6 +67,9 @@
               // Иначе воспринимаем как презентацию
               result.presentation = path[3];
             }
+          } else if (source.startsWith('https://www.youtube.com/') || source.startsWith('https://youtu.be/')) {
+            result.type = 'youtube';
+            result.subject = this.src;
           }
         } catch (e) {
           // eslint-disable-next-line no-console
@@ -112,11 +117,13 @@
       isEntity() {
         return this.srcStruct?.type.toLowerCase() === 'entity';
       },
+      isYoutube() {
+        return this.srcStruct?.type.toLowerCase() === 'youtube';
+      },
       documentPath() {
         const path = this.src.split('?')[0].replaceAll('@document/', '');
         return `/docs/${path}`;
       }
-      
     }
   };
 </script>
