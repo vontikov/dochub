@@ -7,10 +7,10 @@ import validators from '../helpers/validators.mjs';
 import entities from '../entities/entities.mjs';
 import objectHash from 'object-hash';
 import lodash from 'lodash';
-import {systemRules, exclude} from './system-rules.mjs';
 
 import jsonataDriver from '../../global/jsonata/driver.mjs';
 import jsonataFunctions from '../../global/jsonata/functions.mjs';
+import path from "path";
 
 const LOG_TAG = 'storage-manager';
 
@@ -59,7 +59,7 @@ export default {
 			return false;
 		};
 
-		let matchExclude = (string) => {
+		let matchExclude = (string, exclude) => {
 			var len = exclude.length, i = 0;
 
 			for (; i < len; i++) {
@@ -70,16 +70,16 @@ export default {
 			return false;
 		}
 
-		function cleanData(manifest, filters) {
+		function cleanData(manifest, filters, exclude) {
 			if (typeof manifest != "object") return;
 			if (!manifest) return;
 
 			for (const key in manifest) {
-				if(matchExclude(key) || typeof manifest[key] != 'object')
+				if(matchExclude(key, exclude) || typeof manifest[key] != 'object')
 					continue;
 
 				if(matchRegex(key, filters))  {
-					cleanData(manifest[key], filters);
+					cleanData(manifest[key], filters, exclude);
 				} else {
 					delete manifest[key];
 				}
@@ -93,11 +93,13 @@ export default {
 			const ids = [];
 
 			let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
-			const response = await cache.request(uri, '/');
 
-			const manifest = response && (typeof response.data === 'object'
-				? response.data
-				: JSON.parse(response.data));
+			const dirname = path.dirname(uri);
+			const defaultRoles = await loader(`${dirname}/default.yaml`);
+			const systemRules = defaultRoles?.roles;
+			const exclude = defaultRoles?.exclude;
+
+			const manifest = await loader(uri);
 
 			for(let rule in app.new_rules) {
 				for(let nRule in manifest?.roles) {
@@ -110,7 +112,7 @@ export default {
 
 			const id = ids.sort((a,b) => {return a.localeCompare(b);}).join('');
 			let rawManifest = lodash.cloneDeep(app.storage.manifests.origin);
-			cleanData(rawManifest, systemRules.concat(mergeRules));
+			cleanData(rawManifest, systemRules.concat(mergeRules), exclude);
 			app.storage.manifests[id] = rawManifest;
 		}
 	},
@@ -142,7 +144,7 @@ export default {
 			return false;
 		};
 
-		let matchExclude = (string) => {
+		let matchExclude = (string, exclude) => {
 			var len = exclude.length, i = 0;
 
 			for (; i < len; i++) {
@@ -153,16 +155,23 @@ export default {
 			return false;
 		}
 
-		function cleanData(manifest, filters) {
+		async function loader(uri) {
+			const response = await cache.request(uri, '/');
+			return response && (typeof response.data === 'object'
+				? response.data
+				: JSON.parse(response.data));
+		}
+
+		function cleanData(manifest, filters, exclude) {
 			if (typeof manifest != "object") return;
 			if (!manifest) return;
 
 			for (const key in manifest) {
-				if(matchExclude(key) || typeof manifest[key] != 'object')
+				if(matchExclude(key, exclude) || typeof manifest[key] != 'object')
 					continue;
 
 				if(matchRegex(key, filters))  {
-					cleanData(manifest[key], filters);
+					cleanData(manifest[key], filters, exclude);
 				} else {
 					delete manifest[key];
 				}
@@ -172,17 +181,22 @@ export default {
 		let createRoleManifest = async function () {
 			try {
 				let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
-				const response = await cache.request(uri, '/');
 
-				const manifest = response && (typeof response.data === 'object'
-					? response.data
-					: JSON.parse(response.data));
+				const dirname = path.dirname(uri);
+				const defaultRoles = await loader(`${dirname}/default.yaml`);
+				const systemRules = defaultRoles?.roles;
+				const exclude = defaultRoles?.exclude;
 
-					for (const key in manifest?.roles) {
-						let rawManifest = lodash.cloneDeep(localStorage.manifests.origin);
-						cleanData(rawManifest, systemRules.concat(manifest?.roles[key]));
-						localStorage.manifests[key] = rawManifest;
-					}
+				const manifest = await loader(uri);
+
+
+				for (const key in manifest?.roles) {
+					let rawManifest = lodash.cloneDeep(localStorage.manifests.origin);
+					cleanData(rawManifest, systemRules.concat(manifest?.roles[key]), exclude);
+					localStorage.manifests[key] = rawManifest;
+				}
+
+
 
 			} catch (e) {
 				this.registerError(e, e.uri || uri);
