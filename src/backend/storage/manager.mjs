@@ -86,6 +86,12 @@ export default {
 			}
 		}
 
+		async function loader(uri) {
+			const response = await cache.request(uri, '/');
+			return response && (typeof response.data === 'object'
+				? response.data
+				: JSON.parse(response.data));
+		}
 
 		if(app.new_rules) {
 
