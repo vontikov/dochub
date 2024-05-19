@@ -83,49 +83,6 @@ export default {
 				default:
 					reject(`Ошибка источника данных [${sourceType}: ${data}]`);
 			}
-			
-			/*
-			// Константные данные
-			if (typeof data === 'object') {
-				resolve(JSON.parse(JSON.stringify(data)));
-			} else if (typeof data === 'string') {
-				// Inline запрос JSONata
-				if (/^(\s+|)\(((.*|\d|\D)+?)(\)(\s+|))$/.test(data)) {
-					const exp = this.jsonataDriver.expression(data, subject, params);
-					exp.onError = reject;
-					exp.evaluate(context)
-						.then((result) => resolve(result))
-						.catch(reject);
-					// Ссылка на файл с данными
-				} else if (data.slice(-8) === '.jsonata') {
-					this.request(data, baseURI).then((response) => {
-						const exp = this.jsonataDriver.expression(typeof response.data === 'string'
-							? response.data
-							: JSON.stringify(response.data), params);
-						exp.onError = reject;
-						exp.evaluate(context)
-							.then((result) => resolve(result))
-							.catch(reject);
-					}).catch(reject);
-					// Идентификатор источника данных
-				} else if (data.slice(-5) === '.yaml' || data.slice(-5) === '.json' || (data.search(':') > 0)) {
-					this.request(data, baseURI)
-						.then((response) => {
-							this.parseSource(context, response.data)
-								.then((result) => resolve(result))
-								.catch((e) => reject(e));
-						}).catch(reject);
-					// Ссылка на файл с запросом
-				} else {
-					const dataSet = this.pathResolver(`/datasets/${data}`);
-					if (dataSet && dataSet.subject) {
-						this.getData(context, dataSet.subject, params, dataSet.baseURI)
-							.then((data) => resolve(data))
-							.catch(reject);
-					} else reject(`Не найден источник данных [${data}]`);
-				}
-			} else reject(`Ошибка источника данных [${data}]`);
-			*/
 		});
 	},
 
