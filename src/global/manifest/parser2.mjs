@@ -11,12 +11,8 @@ import * as semver from 'semver'; // Управление версиями
 
 // Парсер манифестов
 const parser = {
-    // todo !!!!! УДАЛИТЬ УСТАРЕЛО
-    mergeMap: {},
     checkLoaded() { return true; },
     checkAwaitedPackages() { return true; },
-    //
-
     // Слои данных 
     layers: [],
     // Пакеты и их зависимости
@@ -53,7 +49,6 @@ const parser = {
     },
     stopLoad() {
         this.manifest = Object.assign({}, this.getTopLayer()?.object);
-        debugger;
         this.onReloaded && this.onReloaded(this);
     }
 };
@@ -68,6 +63,24 @@ parser.cleanLayers = function() {
         } else layer.free();
     });
 };
+
+
+parser.mergeMap = new Proxy({}, {
+    get(target, path) {
+        let node = parser.manifest;
+        if (!node || (typeof path !== 'string')) 
+            return target[path];
+        let uri = null;
+        const nodes = path.split('/');
+        for (const i in nodes) {
+            const nodeId = nodes[i];
+            if (!nodeId) continue;
+            node = node[nodeId];
+            typeof node === 'object' && (uri = node.__uri__);
+        }
+        return uri ? [uri] : [];
+    }
+});
 
 
 // Создает управляемый объект
@@ -111,30 +124,6 @@ function ManifestObject(destination, source, owner) {
         this.__proto__ = destination.__self__;
         // destination.__child__ = this;
     } else this.__proto__;
-    /*
-[
-    "dochub/root.yaml",
-    "entities/root.yaml",
-    "rules/root.yaml",
-    "functions/root.yaml",
-    "tools.yaml",
-    "validators.yaml",
-    "components/root.yaml",
-    "aspects/root.yaml",
-    "contexts/root.yaml",
-    "documents/root.yaml",
-    "base.yaml",
-    "blank.yaml",
-    "plantuml.yaml",
-    "smartants.yaml",
-    "tree.yaml",
-    "contexts.yaml",
-    "summary.yaml",
-    "hierarchy.yaml",
-    "docs.yaml",
-    "components.yaml"
-]    
-    */
 
     const makeProp = (propName, value, oldValue) => {
         if (Array.isArray(value)) {
@@ -195,7 +184,13 @@ const createManifestObject = (destination, source, owner) => {
     };
 
     return new Proxy(subject, {
-        get: (target, propId) => propId === '__self__' ? subject : subject[propId],
+        get: (target, propId) => {
+            switch(propId) {
+                case '__self__': return subject;
+                case '__uri__': return owner.uri;
+                default: return subject[propId];
+            }
+        },
         enumerate: () => allProps(),
         iterate: () => allProps(),
         ownKeys: () => allProps(),
