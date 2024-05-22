@@ -2,6 +2,8 @@
 // предназначен для максимально быстрого применения изменений
 // в манифестах
 
+// НАСЛЕДОВАНИЕ НУЖНо СДЕЛАТЬ
+
 import cache from './services/cache.mjs'; // Сервис управления кэшем
 import * as semver from 'semver'; // Управление версиями  
 
@@ -68,7 +70,7 @@ parser.cleanLayers = function() {
 parser.mergeMap = new Proxy({}, {
     get(target, path) {
         let node = parser.manifest;
-        if (!node || (typeof path !== 'string')) 
+        if (!node || (typeof path !== 'string'))
             return target[path];
         let uri = null;
         const nodes = path.split('/');
@@ -185,7 +187,7 @@ const createManifestObject = (destination, source, owner) => {
 
     return new Proxy(subject, {
         get: (target, propId) => {
-            switch(propId) {
+            switch (propId) {
                 case '__self__': return subject;
                 case '__uri__': return owner.uri;
                 default: return subject[propId];
@@ -267,29 +269,38 @@ function ManifestLayer() {
 
     // Подключаем импортируемые манифесты
     const imports = async(manifest, baseURI) => {
-        const imports = manifest?.imports || [];
-        const limit = Math.max(imports.length, imported.length);
-        for (let i = 0; i < limit; i++) {
-            const import_ = manifest.imports[i];
-            let imported_ = imported[i];
-            const uri = import_ ? cache.makeURIByBaseURI(import_, baseURI) : null;
-            if (!uri && imported_) { // Если ресурс вышел из игры очищаем его, но не перестраиваем стек слоев
-                imported_.free();
-            } else if (imported_?.uri === !!uri) { // !!!!!!!!!!!!!!!!!!!!
-                const message = `Манифест [${uri}] уже подключен в [${parser.loaded[uri].parent.uri}].`;
-                // eslint-disable-next-line no-console
-                console.warn(message);
-            } else if (uri !== imported_?.uri) { // Если слой занят другим манифестом перестраиваем его или создаем новый
-                // Если последовательность слоев разрушена - отчищаем весь незадействованный стек
-                parser.cleanLayers();
-                // И начинаем строить заново
-                !imported_ && await (imported[i] = new ManifestLayer(this))
-                    .reload(uri);
-            }  // Иначе не трогаем слой
+        return new Promise((success, reject) => {
+            const imports = manifest?.imports || [];
+            const limit = Math.max(imports.length, imported.length);
+            if (!limit) {
+                success();
+                return;
+            }
+            let counter = 0; // Счетчик отложенных запросов на загрузку слоев
+            for (let i = 0; i < limit; i++) {
+                const import_ = manifest.imports[i];
+                let imported_ = imported[i];
+                const uri = import_ ? cache.makeURIByBaseURI(import_, baseURI) : null;
+                if (!uri && imported_) { // Если ресурс вышел из игры очищаем его, но не перестраиваем стек слоев
+                    imported_.free();
+                } else if (imported_?.uri === !!uri) { // !!!!!!!!!!!!!!!!!!!!
+                    const message = `Манифест [${uri}] уже подключен в [${parser.loaded[uri].parent.uri}].`;
+                    // eslint-disable-next-line no-console
+                    console.warn(message);
+                } else if (uri !== imported_?.uri) { // Если слой занят другим манифестом перестраиваем его или создаем новый
+                    // Если последовательность слоев разрушена - отчищаем весь незадействованный стек
+                    parser.cleanLayers();
+                    // И начинаем строить заново
+                    counter++;
+                    !imported_ && (imported[i] = new ManifestLayer(this)) 
+                        .reload(uri)   // Запускаем загрузку слоя
+                        .catch(reject) 
+                        .finally(() => !--counter && success()); // Если все слои прогрузились, возвращаемся
+                }  // Иначе не трогаем слой
 
-            imported_ && (imported_.transaction = parser.transaction);
-        }
-        // 
+                imported_ && (imported_.transaction = parser.transaction);
+            }
+        });
     };
 
     // Загружает слой 
@@ -401,6 +412,7 @@ parser.pushRequest = function(uri) {
         state.success = success;
         state.reject = reject;
         this.requests.push(state);
+        console.info('>>>>> COUNT ', this.requests.length);
         request.then((response) => {
             state.manifest = response && (typeof response.data === 'object'
                 ? response.data
