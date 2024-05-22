@@ -257,11 +257,13 @@ export default {
 				}
 			};
 
+			/* Зачем это здесь? 
 			if (env.isPlugin()) {
 				storageManager.onPullSource = (url, path, parser) => {
 					return parser.cache.request(url, path);
 				};
 			}
+			*/
 
 			context.dispatch('reloadAll');
 

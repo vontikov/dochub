@@ -1,7 +1,11 @@
-import manifestParser from '@global/manifest/parser.mjs';
 import cache from '@front/manifest/cache';
 import requests from '@front/helpers/requests';
 import env from '@front/helpers/env';
+
+import manifestParserV1 from '@global/manifest/parser.mjs';
+import manifestParserV2 from '@global/manifest/parser2.mjs';
+
+const manifestParser = env.isPlugin() ? manifestParserV2 : manifestParserV1;
 
 manifestParser.cache = cache;
 
