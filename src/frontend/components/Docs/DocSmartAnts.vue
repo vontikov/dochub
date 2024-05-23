@@ -415,8 +415,6 @@
   left: 6px;
   margin-left: 6px;
   max-width: calc(100% - 32px);
-  position: sticky;
-  top: 65px;
   display: inline-flex;
   left: 10px;
 }
@@ -426,7 +424,6 @@
 }
 
 .markdown-document .toolbar {
-  position: static;
   margin-left: 0;
 }
 </style>
