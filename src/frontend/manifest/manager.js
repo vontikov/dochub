@@ -5,7 +5,7 @@ import env from '@front/helpers/env';
 import manifestParserV1 from '@global/manifest/parser.mjs';
 import manifestParserV2 from '@global/manifest/parser2.mjs';
 
-const manifestParser = env.isPlugin() ? manifestParserV2 : manifestParserV1;
+const manifestParser = env.isBackendMode() ? manifestParserV1 : manifestParserV2;
 
 manifestParser.cache = cache;
 

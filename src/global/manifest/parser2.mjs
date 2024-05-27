@@ -2,7 +2,10 @@
 // предназначен для максимально быстрого применения изменений
 // в манифестах
 
-// НАСЛЕДОВАНИЕ НУЖНо СДЕЛАТЬ
+/* ПРОБЛЕМЫ 
+1. Не реализован функционал наследования
+2. Пример seaf не работает. Считает, что нет корневого манифеста (зависимости?).
+*/
 
 import cache from './services/cache.mjs'; // Сервис управления кэшем
 import * as semver from 'semver'; // Управление версиями  
@@ -11,10 +14,20 @@ import * as semver from 'semver'; // Управление версиями
 // https://github.com/douglascrockford/JSON-js
 
 
+class PackageError extends Error {
+	constructor(uri, message) {
+		super(message);
+		this.name = 'Package';
+		this.uri = uri;
+	}
+}
+
 // Парсер манифестов
 const parser = {
     checkLoaded() { return true; },
     checkAwaitedPackages() { return true; },
+    // Корневые страницы
+    rootLayers: [],
     // Слои данных 
     layers: [],
     // Пакеты и их зависимости
@@ -39,6 +52,8 @@ const parser = {
         this.transaction++;
         this.cleanLayers();
         this.packages = {};
+        this.rootLayers = [];
+        this.layers = [];
     },
     startLoad() {
         // Обновляем счетчик операций
@@ -50,14 +65,14 @@ const parser = {
         return this.layers[this.layers.length - 1];
     },
     stopLoad() {
-        this.manifest = Object.assign({}, this.getTopLayer()?.object);
+        this.rebuildLayers();
         this.onReloaded && this.onReloaded(this);
     }
 };
 
 //  
 // Очищает незадействованные слои в текущей транзакции
-parser.cleanLayers = function() {
+parser.cleanLayers = function () {
     const result = [];
     this.layers.map((layer) => {
         if (layer.transaction === this.transaction) {
@@ -77,7 +92,7 @@ parser.mergeMap = new Proxy({}, {
         for (const i in nodes) {
             const nodeId = nodes[i];
             if (!nodeId) continue;
-            node = node[nodeId];
+            node = node?.[nodeId];
             typeof node === 'object' && (uri = node.__uri__);
         }
         return uri ? [uri] : [];
@@ -90,42 +105,11 @@ parser.mergeMap = new Proxy({}, {
 // source - Объект с которым происходит объединение. Высокий приоритет.
 
 function ManifestObject(destination, source, owner) {
-
-    /*
-    // Хранит информацию об объекте потомке
-    let child = null;
-    Object.defineProperty(this, '__child__', {
-        enumerable: false,
-        configurable: false,
-        get: () => {
-            return child;
-        },
-        set: (value) => {
-            child = value;
-        }
-    });
-
-    // Освобождение данных объекта 
-    Object.defineProperty(this, 'free', {
-        enumerable: false,
-        configurable: false,
-        get: () => {
-            return () => {
-                for (const propName in this)
-                    delete this[propName];
-                child && (child.__proto__ = this.__proto__);
-                this.__proto__ = null;
-                child = null;
-            };
-        }
-    });
-    */
-
     // Если объект уже ранее создан другим слоем, встраиваемся в цепочку
     if (destination) {
         this.__proto__ = destination.__self__;
         // destination.__child__ = this;
-    } else this.__proto__;
+    }
 
     const makeProp = (propName, value, oldValue) => {
         if (Array.isArray(value)) {
@@ -213,14 +197,18 @@ function ManifestLayer() {
     this.uri = null;
     // Текущий статус слоя
     this.status = null;
+    // Импорты
+    this.imported = [];
     // Объекты манифеста принадлежащие слою
     const objects = [];
+    // Данные манифеста
+    this.manifest = null;
     this.appendObject = (object) => {
         objects.push(object);
     };
     // Признак участие в транзакции
     this.transaction = parser.transaction;
-    // Корневой объект слоя
+    // Корневой объект данных
     let rootObject = null;
     Object.defineProperty(this, 'object', {
         enumerable: false,
@@ -230,57 +218,83 @@ function ManifestLayer() {
         }
     });
 
-    // Разбираем контент
-    const parseContent = (manifest) => {
-        // Создаем корневой объект слоя
-        rootObject = createManifestObject(parser.getTopLayer()?.object, manifest, this);
-    };
-
     // Разрешаем зависимости
-    const resolveDeps = (manifest) => {
-        const result = [];
-        const deps = manifest.$package?.dependencies || [];
-        for (const packageId in deps) {
-            let package_ = parser.packages[packageId];
-            !package_ && (parser.packages[packageId] = (package_ = { layer: null, captives: {} }));
-            if (semver.satisfies(package_.package[packageId]?.version, deps[packageId])) {
-                delete package_.captives[this.uri];
-            } else {
-                package_.captives[this.uri] = () => {
-                    parseContent(manifest);
-                };
-                result.push(packageId);
+    const resolveDeps = (manifest, callback, uri) => {
+        let unresolved = 0;
+        // Обходим задекларированные пакеты в манифесте
+        const $package = manifest.$package || {};
+        for (const packageId in $package) {
+            // Анализируем зависимости
+            const deps = manifest.$package[packageId].dependencies || [];
+            for (const depId in deps) {
+                let package_ = parser.packages[depId];
+                // Если требуемый пакет еще не загружен, встаем в ожидание
+                if (!semver.satisfies(package_?.version, deps[depId])) {
+                    // Если пакет уже подключен но не подходит - валимся в ошибку
+                    if (package_?.version) 
+                        throw new PackageError(uri, 
+                            `Пакет [${packageId}] подключен, но его версия [${package_.version}] не удовлетворяет зависимости [${deps[depId]}].`
+                        );
+                    // Если пакет не зарегистрирован, создаем запись для ждунов
+                    !package_ && (parser.packages[depId] = (package_ = { captives: [] }));
+                    package_.captives.push({ version: deps[depId], callback });
+                    // Отражаем неразрешенную зависимость
+                    ++unresolved;
+                }
             }
         }
-        return result;
+        // Если неразрешенных зависимостей нет, вызываем обработчик
+        return !unresolved;
     };
 
-    // Разрешаем зависимости
-    const liberationDeps = ($package) => {
-        for (const packageId in $package) {
-            const captives = parser.packages[packageId]?.captives || [];
-            for (const uri in captives) captives[uri]();
+    // Разрешаем ожидающие зависимости
+    const liberationDeps = (manifest, uri) => {
+        for (const packageId in manifest?.$package) {
+            // Если версия пакета уже подключена кидаем ошибку
+            if (parser.packages[packageId]?.version)
+                throw new PackageError(uri, 
+                    `Конфликт версий пакета [${packageId}].`
+                    +` Попытка подключения версии [${package_.version}]`
+                    +` при наличии [${parser.packages[packageId].version}].`);
+
+            // Если все хорошо, получаем запись о подключенном пакете
+            const package_ = manifest?.$package[packageId];
+            // Если ее нет - создаем
+            !parser.packages[packageId] && (parser.packages[packageId] = { captives: {} });
+                    
+            // Устанавливаем версию подключенного пакета
+            parser.packages[packageId].version = package_.version;
+
+            // Получаем список неразрешенных зависимостей
+            const captives = parser.packages[packageId].captives || {};
+            for (const index in captives) {
+                const captive = captives[index];
+                // Проверяем версию и падаем, если версия не удовлетворяет
+                if (semver.satisfies(package_.version, captive.version)) {
+                    captive.callback();
+                } else
+                    throw new PackageError(uri, 
+                        `Пакет [${packageId}] подключен, но его версия [${package_.version}] не удовлетворяет зависимости [${captive.version}].`
+                    );
+            }
+            parser.packages[packageId].captives = [];
         }
     };
 
-
-    // Импортированные слои
-    let imported = [];
-
     // Подключаем импортируемые манифесты
-    const imports = async(manifest, baseURI) => {
+    const imports = () => {
         return new Promise((success, reject) => {
-            const imports = manifest?.imports || [];
-            const limit = Math.max(imports.length, imported.length);
+            const imports = this.manifest.imports || [];
+            const limit = Math.max(imports.length, this.imported.length);
+            let counter = 0; // Счетчик отложенных запросов на загрузку слоев
             if (!limit) {
                 success();
                 return;
             }
-            let counter = 0; // Счетчик отложенных запросов на загрузку слоев
             for (let i = 0; i < limit; i++) {
-                const import_ = manifest.imports[i];
-                let imported_ = imported[i];
-                const uri = import_ ? cache.makeURIByBaseURI(import_, baseURI) : null;
+                const import_ = this.manifest.imports[i];
+                let imported_ = this.imported[i];
+                const uri = import_ ? cache.makeURIByBaseURI(import_, this.uri) : null;
                 if (!uri && imported_) { // Если ресурс вышел из игры очищаем его, но не перестраиваем стек слоев
                     imported_.free();
                 } else if (imported_?.uri === !!uri) { // !!!!!!!!!!!!!!!!!!!!
@@ -288,19 +302,22 @@ function ManifestLayer() {
                     // eslint-disable-next-line no-console
                     console.warn(message);
                 } else if (uri !== imported_?.uri) { // Если слой занят другим манифестом перестраиваем его или создаем новый
-                    // Если последовательность слоев разрушена - отчищаем весь незадействованный стек
-                    parser.cleanLayers();
-                    // И начинаем строить заново
-                    counter++;
-                    !imported_ && (imported[i] = new ManifestLayer(this)) 
-                        .reload(uri)   // Запускаем загрузку слоя
-                        .catch(reject) 
-                        .finally(() => !--counter && success()); // Если все слои прогрузились, возвращаемся
+                    ++counter;
+                    !imported_ && (this.imported[i] = imported_ = new ManifestLayer());
+                    imported_
+                        .reload(uri)
+                        .then(() => !--counter && success())
+                        .catch(reject);
                 }  // Иначе не трогаем слой
 
                 imported_ && (imported_.transaction = parser.transaction);
             }
         });
+    };
+
+    // Монтирует слой в стек
+    this.mounted = (parent) => {
+        rootObject = createManifestObject(parent?.object, this.manifest, this);
     };
 
     // Загружает слой 
@@ -310,23 +327,18 @@ function ManifestLayer() {
             this.transaction = parser.transaction;
             // Устанавливаем текущий идентификатор ресурса
             this.uri = uri;
-
             // Отправляем загрузку манифеста в очередь
             parser.pushRequest(uri).then((manifest) => {
-                // Сначала загружаем все импорты
-                imports(manifest, uri).then(() => {
-                    // Разрешаем зависимости
-                    if (!resolveDeps(manifest.$package?.dependencies || []).length) {
-                        // Если зависимости разрешены, парсим собственный контент
-                        parseContent(manifest);
-                        // и выпускаем пленников зависящих от текущего пакета
-                        liberationDeps(manifest.$package || {});
-                        // Помещаем слой в стек
-                        parser.layers.push(this);
-                    }
-                    // Считаем загрузку выполненной
+                // Сохраняем полученные данные манифеста
+                this.manifest = manifest;
+                // Проверяем пустой ли манифест
+                if (!manifest) {
+                    // todo возможно стоит сообщать о том, что подключен пустой манифест
                     success();
-                }).catch(reject);
+                    return;
+                }
+                // Загружаем все импорты
+                imports().then(success).catch(reject);
             }).catch(reject);
         });
     };
@@ -340,8 +352,8 @@ function ManifestLayer() {
         }
         this.objects = [];
         // Освобождаем все связанные слои
-        imported.map((item) => item.free());
-        imported = [];
+        this.imported.map((item) => item.free());
+        this.imported = [];
         // Освобождаем ссылку на ресурс
         this.uri = null;
     };
@@ -355,7 +367,7 @@ function ManifestLayer() {
 //Регистрирует ошибку
 // e - объект ошибки
 // uri - источник ошибки
-parser.registerError = function(e, uri) {
+parser.registerError = function (e, uri) {
     const errorPath = `$errors/requests/${new Date().getTime()}`;
     // eslint-disable-next-line no-console
     console.error(e, `Ошибка запроса [${errorPath}:${uri}]`, e);
@@ -365,6 +377,8 @@ parser.registerError = function(e, uri) {
             case 'YAMLSyntaxError':
             case 'YAMLSemanticError':
                 return 'syntax';
+            case 'TypeError':
+                return 'core';
             case 'EntryIsADirectory (FileSystemError)':
                 return 'file-system';
             case 'Package':
@@ -389,19 +403,7 @@ parser.registerError = function(e, uri) {
     // По умолчанию используется request модуль
     parser.onPullSource = null;
 
-// Очередь запросов
-parser.requests = [];
-
 parser.pushRequest = function(uri) {
-    const state = {
-        uri,
-        manifest: null,
-        error: null,
-        ready: false,
-        success: null,
-        reject: null
-    };
-
     let request;
     if (this.onPullSource)
         request = this.onPullSource(uri, '/', this);
@@ -409,33 +411,27 @@ parser.pushRequest = function(uri) {
         request = this.cache.request(uri, '/');
 
     return new Promise((success, reject) => {
-        state.success = success;
-        state.reject = reject;
-        this.requests.push(state);
-        console.info('>>>>> COUNT ', this.requests.length);
         request.then((response) => {
-            state.manifest = response && (typeof response.data === 'object'
+            success(response && (typeof response.data === 'object'
                 ? response.data
-                : JSON.parse(response.data));
-        })
-            .catch((err) => state.error = err)
-            .finally(() => {
-                state.ready = true;
-                this.shiftRequest();
-            });
+                : JSON.parse(response.data))
+            );
+        }).catch(reject);
     });
 };
 
-parser.shiftRequest = function() {
-    for (let state = this.requests[0]; state?.ready; state = this.requests[0]) {
-        this.requests.shift();
-        if (state.error) {
-            this.registerError(state.error, state.uri);
-            state.reject(state.error);
-        } else {
-            state.success(state.manifest);
-        }
-    }
+// Пересобирает слои из графа страниц
+parser.rebuildLayers = function() {
+    let level = 0;
+    const expandItem = (item) => {
+        item.imported.map(expandItem);
+        console.info('>>>>>>>>>', item.uri);
+        item.mounted(this.layers[level - 1]);
+        this.layers[level] = item;
+        ++level;
+    };
+    this.rootLayers.map(expandItem);
+    this.manifest = Object.assign({}, this.layers[level - 1]?.object);
 };
 
 
@@ -443,7 +439,13 @@ parser.shiftRequest = function() {
 //	uri - идентификатор ресурса
 parser.import = async function(uri) {
     try {
-        await (new ManifestLayer()).reload(uri);
+        // Создаем руктовую страницу
+        const rooLayer = new ManifestLayer();
+        // Кладем ее в каталог
+        this.rootLayers.push(rooLayer);
+        // И запускаем загрузку
+        await rooLayer.reload(uri);
+        console.info('>>>>>>>>>>', parser.packages);
     } catch (e) {
         this.registerError(e, e?.uri || uri);
     }
