@@ -15,11 +15,11 @@ import * as semver from 'semver'; // Управление версиями
 
 
 class PackageError extends Error {
-	constructor(uri, message) {
-		super(message);
-		this.name = 'Package';
-		this.uri = uri;
-	}
+    constructor(uri, message) {
+        super(message);
+        this.name = 'Package';
+        this.uri = uri;
+    }
 }
 
 // Парсер манифестов
@@ -231,8 +231,8 @@ function ManifestLayer() {
                 // Если требуемый пакет еще не загружен, встаем в ожидание
                 if (!semver.satisfies(package_?.version, deps[depId])) {
                     // Если пакет уже подключен но не подходит - валимся в ошибку
-                    if (package_?.version) 
-                        throw new PackageError(uri, 
+                    if (package_?.version)
+                        throw new PackageError(uri,
                             `Пакет [${packageId}] подключен, но его версия [${package_.version}] не удовлетворяет зависимости [${deps[depId]}].`
                         );
                     // Если пакет не зарегистрирован, создаем запись для ждунов
@@ -252,16 +252,16 @@ function ManifestLayer() {
         for (const packageId in manifest?.$package) {
             // Если версия пакета уже подключена кидаем ошибку
             if (parser.packages[packageId]?.version)
-                throw new PackageError(uri, 
+                throw new PackageError(uri,
                     `Конфликт версий пакета [${packageId}].`
-                    +` Попытка подключения версии [${package_.version}]`
-                    +` при наличии [${parser.packages[packageId].version}].`);
+                    + ` Попытка подключения версии [${package_.version}]`
+                    + ` при наличии [${parser.packages[packageId].version}].`);
 
             // Если все хорошо, получаем запись о подключенном пакете
             const package_ = manifest?.$package[packageId];
             // Если ее нет - создаем
             !parser.packages[packageId] && (parser.packages[packageId] = { captives: {} });
-                    
+
             // Устанавливаем версию подключенного пакета
             parser.packages[packageId].version = package_.version;
 
@@ -273,7 +273,7 @@ function ManifestLayer() {
                 if (semver.satisfies(package_.version, captive.version)) {
                     captive.callback();
                 } else
-                    throw new PackageError(uri, 
+                    throw new PackageError(uri,
                         `Пакет [${packageId}] подключен, но его версия [${package_.version}] не удовлетворяет зависимости [${captive.version}].`
                     );
             }
@@ -395,15 +395,16 @@ parser.registerError = function (e, uri) {
 },
 
 
-    // ************************************************************************
-    // 				Загрузка контента и разрешение зависимостей
-    // ************************************************************************
+// ************************************************************************
+// 				Загрузка контента и разрешение зависимостей
+// ************************************************************************
 
-    // Если обработчик определен, он вызывается при запросе ресурса
-    // По умолчанию используется request модуль
-    parser.onPullSource = null;
+// Если обработчик определен, он вызывается при запросе ресурса
+// По умолчанию используется request модуль
 
-parser.pushRequest = function(uri) {
+parser.onPullSource = null;
+
+parser.pushRequest = function (uri) {
     let request;
     if (this.onPullSource)
         request = this.onPullSource(uri, '/', this);
@@ -421,23 +422,104 @@ parser.pushRequest = function(uri) {
 };
 
 // Пересобирает слои из графа страниц
-parser.rebuildLayers = function() {
+parser.rebuildLayers = function () {
     let level = 0;
-    const expandItem = (item) => {
-        item.imported.map(expandItem);
-        console.info('>>>>>>>>>', item.uri);
-        item.mounted(this.layers[level - 1]);
-        this.layers[level] = item;
+
+    // Страницы ожидающие разрешения зависимостей
+    let captives = [];
+
+    // Очищаем информацию о подключенных пакетах
+    this.packages = {};
+
+    // Проверяет подключен ли нужный пакет
+    const getUnresolvedDeps = (layer) => {
+        const unresolved = [];
+        const $package = layer.manifest?.$package || {};
+        for (const packageId in $package) {
+            const dependencies = $package[packageId].dependencies || {};
+            for (const depId in dependencies) {
+                const version = this.packages[depId];
+                const depVersion = dependencies[depId];
+                if (!semver.satisfies(version, depVersion)) {
+                    if (this.packages[depId])
+                        throw new PackageError(layer.uri,
+                            `Пакет [${packageId}] подключен, но его версия [${version}] не удовлетворяет зависимости [${depVersion}].`
+                        );
+                    else unresolved.push({ depId, version: depVersion, layer });
+                }
+            }
+        }
+
+        return unresolved.length ? unresolved : null;
+    };
+
+    // Функция монтирования слоя
+    const mountLayer = (layer) => {
+        console.info('>>>>>>>>>', layer.uri);
+        layer.mounted(this.layers[level - 1]);
+        this.layers[level] = layer;
         ++level;
     };
+
+    // Функция разрешения зависимостей
+    const resolveDeps = (layer) => {
+        // Если все зависимости разрешены
+        if (getUnresolvedDeps(layer)) {
+            captives.indexOf(layer) < 0 && captives.push(layer); // Если не вышло, записываемся в ждуны
+            return false;
+        } else {
+            mountLayer(layer); // Иначе монтируем слой
+        }
+        // Подключаем пакет и разрешаем ожидающие зависимости
+        const $package = layer.manifest?.$package;
+        // Если в манифесте задекларированы пакеты
+        if ($package) {
+            // Сканируем их
+            for (const packageId in $package) {
+                const version = $package[packageId].version;
+                if (!version)
+                    throw new PackageError(layer.uri,
+                        `Не определена версия пакета для [${packageId}]!`);
+                if (this.packages[packageId])
+                    throw new PackageError(layer.uri,
+                        `Конфликт версий пакета [${packageId}] в манифесте [${layer.uri}].`
+                        + ` Попытка подключения версии [${version}]`
+                        + ` при наличии [${this.packages[packageId]}].`);
+                // Устанавливаем флаг подключенного пакета
+                this.packages[packageId] = version;
+            }
+            (captives = captives.map((item) => item && resolveDeps(item) ? item : undefined));
+        }
+        return true;
+    };
+
+    const expandItem = (item) => {
+        try {
+            item.imported.map(expandItem);
+            resolveDeps(item);
+        } catch (e) {
+            this.registerError(e, e?.uri || item.uri);
+        }
+    };
+
     this.rootLayers.map(expandItem);
+
+    // Выводим ошибки по неразрешенным зависимостям
+    captives.map((layer) => {
+        getUnresolvedDeps(layer).map((problem) => {
+            this.registerError(new PackageError(layer.uri,
+                `Неразрешена зависимость для [${problem.depId}@${problem.version}]!`)
+            , layer.uri);
+        });
+    });
+
     this.manifest = Object.assign({}, this.layers[level - 1]?.object);
 };
 
 
 // Импорт манифеста по идентификатору ресурса
 //	uri - идентификатор ресурса
-parser.import = async function(uri) {
+parser.import = async function (uri) {
     try {
         // Создаем руктовую страницу
         const rooLayer = new ManifestLayer();
@@ -445,7 +527,6 @@ parser.import = async function(uri) {
         this.rootLayers.push(rooLayer);
         // И запускаем загрузку
         await rooLayer.reload(uri);
-        console.info('>>>>>>>>>>', parser.packages);
     } catch (e) {
         this.registerError(e, e?.uri || uri);
     }
