@@ -6,11 +6,10 @@ import events from '../helpers/events.mjs';
 import validators from '../helpers/validators.mjs';
 import entities from '../entities/entities.mjs';
 import objectHash from 'object-hash';
-import lodash from 'lodash';
+import '../helpers/env.mjs';
 
 import jsonataDriver from '../../global/jsonata/driver.mjs';
 import jsonataFunctions from '../../global/jsonata/functions.mjs';
-import path from "path";
 
 const LOG_TAG = 'storage-manager';
 
@@ -98,14 +97,14 @@ export default {
 			let mergeRules = [];
 			const ids = [];
 
-			let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
-
-			const dirname = path.dirname(uri);
-			const defaultRoles = await loader(`${dirname}/default.yaml`);
+			const {URI} =  global.$roles;
+			const url = new URL(URI);
+			const defaultUrl = new URL( 'default.yaml', URI);
+			const defaultRoles = await loader(defaultUrl);
 			const systemRules = defaultRoles?.roles;
 			const exclude = defaultRoles?.exclude;
 
-			const manifest = await loader(uri);
+			const manifest = await loader(url);
 
 			for(let rule in app.new_rules) {
 				for(let nRule in manifest?.roles) {
@@ -117,7 +116,7 @@ export default {
 			}
 
 			const id = ids.sort((a,b) => {return a.localeCompare(b);}).join('');
-			let rawManifest = lodash.cloneDeep(app.storage.manifests.origin);
+			let rawManifest = JSON.parse(JSON.stringify(app.storage.manifests.origin));
 			cleanData(rawManifest, systemRules.concat(mergeRules), exclude);
 			app.storage.manifests[id] = rawManifest;
 		}
@@ -128,7 +127,7 @@ export default {
 		logger.log('Run full reload manifest', LOG_TAG);
 		// Загрузку начинаем с виртуального манифеста
 		cache.errorClear();
-		let localStorage = {};
+		let storageManifest = {};
 		let createManifest = async function() {
 			await manifestParser.clean();
 			await manifestParser.startLoad();
@@ -140,9 +139,9 @@ export default {
 
 		let matchRegex = (string, filters) => {
 
-			var len = filters.length, i = 0;
+			const len = filters.length;
 
-			for (; i < len; i++) {
+			for (let i = 0; i < len; i++) {
 				if (string.match(filters[i])) {
 					return true;
 				}
@@ -151,9 +150,9 @@ export default {
 		};
 
 		let matchExclude = (string, exclude) => {
-			var len = exclude.length, i = 0;
+			const len = exclude.length;
 
-			for (; i < len; i++) {
+			for (let i = 0; i < len; i++) {
 				if (string === exclude[i]) {
 					return true;
 				}
@@ -186,44 +185,41 @@ export default {
 
 		let createRoleManifest = async function () {
 			try {
-				let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
-
-				const dirname = path.dirname(uri);
-				const defaultRoles = await loader(`${dirname}/default.yaml`);
+				const {URI} =  global.$roles;
+				const url = new URL(URI);
+				const defaultUrl = new URL( 'default.yaml', URI);
+				const defaultRoles = await loader(defaultUrl);
 				const systemRules = defaultRoles?.roles;
 				const exclude = defaultRoles?.exclude;
 
-				const manifest = await loader(uri);
+				const manifest = await loader(url);
 
 
 				for (const key in manifest?.roles) {
-					let rawManifest = lodash.cloneDeep(localStorage.manifests.origin);
+					let rawManifest = JSON.parse(JSON.stringify(storageManifest.manifests.origin));
 					cleanData(rawManifest, systemRules.concat(manifest?.roles[key]), exclude);
-					localStorage.manifests[key] = rawManifest;
+					storageManifest.manifests[key] = rawManifest;
 				}
-
-
-
 			} catch (e) {
 				this.registerError(e, e.uri || uri);
 			}
 		}
 
 		await createManifest();
-		localStorage.manifests = {origin: manifestParser.manifest};
+		storageManifest.manifests = {origin: manifestParser.manifest};
 		await createRoleManifest();
 
-		console.log('manifestParser.manifest', localStorage.manifests.origin);
+		console.log('manifestParser.manifest', storageManifest.manifests.origin);
 
-		entities(localStorage.manifests['default']);
+		entities(storageManifest.manifests['default']);
 
 		logger.log('Full reload is done', LOG_TAG);
 		const result = {
-			manifest: localStorage.manifests['default'],			// Сформированный манифест
-			hash: objectHash(localStorage.manifests['default']),	// HASH состояния для контроля в кластере
+			manifest: storageManifest.manifests['default'],			// Сформированный манифест
+			hash: objectHash(storageManifest.manifests['default']),	// HASH состояния для контроля в кластере
 			mergeMap: {},								// Карта склейки объектов
 			md5Map: {}, 								// Карта путей к ресурсам по md5 пути
-			manifests: {...localStorage.manifests},
+			manifests: {...storageManifest.manifests},
 			roleId: 'default',
 			// Ошибки, которые возникли при загрузке манифестов
 			// по умолчанию заполняем ошибками, которые возникли при загрузке

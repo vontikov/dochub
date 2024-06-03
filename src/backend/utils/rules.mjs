@@ -1,12 +1,14 @@
 import cache from "../storage/cache.mjs";
+import path from "path";
 
 export async function getCurrentRuleId(rules) {
     if(rules.length === 0) return 'default';
 
     const ids = [];
 
-    let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
-    const response = await cache.request(uri, '/');
+    const {URI} =  global.$roles;
+    const url = new URL(URI);
+    const response = await cache.request(url, '/');
 
     const manifest = response && (typeof response.data === 'object'
         ? response.data
@@ -28,9 +30,9 @@ export async function getCurrentRules(rules) {
     if(rules.length === 0) return [];
 
     const result = [];
-
-    let uri = `${process.env.VUE_APP_DOCHUB_ROLES}`;
-    const response = await cache.request(uri, '/');
+    const {URI} =  global.$roles;
+    const url = new URL(URI);
+    const response = await cache.request(url, '/');
 
     const manifest = response && (typeof response.data === 'object'
         ? response.data
