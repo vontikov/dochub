@@ -69,22 +69,6 @@ export default {
 			return false;
 		}
 
-		function cleanData(manifest, filters, exclude) {
-			if (typeof manifest != "object") return;
-			if (!manifest) return;
-
-			for (const key in manifest) {
-				if(matchExclude(key, exclude) || typeof manifest[key] != 'object')
-					continue;
-
-				if(matchRegex(key, filters))  {
-					cleanData(manifest[key], filters, exclude);
-				} else {
-					delete manifest[key];
-				}
-			}
-		}
-
 		async function loader(uri) {
 			const response = await cache.request(uri, '/');
 			return response && (typeof response.data === 'object'
@@ -116,9 +100,19 @@ export default {
 			}
 
 			const id = ids.sort((a,b) => {return a.localeCompare(b);}).join('');
-			let rawManifest = JSON.parse(JSON.stringify(app.storage.manifests.origin));
-			cleanData(rawManifest, systemRules.concat(mergeRules), exclude);
-			app.storage.manifests[id] = rawManifest;
+
+			const filters = systemRules.concat(mergeRules);
+			const newManifest = (obj)=> Object.entries(obj)
+				.filter(([key, value]) => matchExclude(key, exclude) || matchRegex(key, filters))
+				.reduce((acc, [key, value]) => {
+					if(value != null && typeof value === 'object') {
+						acc[key] = newManifest(value);
+						return acc;
+					}
+					return ({...acc, [key]: obj[key]});
+				}, {});
+
+			app.storage.manifests[id] = newManifest(app.storage.manifests.origin);
 		}
 	},
 	reloadManifest: async function(app) {
@@ -167,23 +161,6 @@ export default {
 				: JSON.parse(response.data));
 		}
 
-		function makeData(manifest, filters, exclude) {
-			if (typeof manifest != "object") return;
-			if (!manifest) return;
-
-			for (const key in manifest) {
-				if(matchExclude(key, exclude) || typeof manifest[key] != 'object')
-					continue;
-
-				if(matchRegex(key, filters))  {
-					cleanData(manifest[key], filters, exclude);
-				} else {
-					delete manifest[key];
-				}
-			}
-			return {}
-		}
-
 		let createRoleManifest = async function () {
 			try {
 				// загружаю основной файл с ролями
@@ -197,14 +174,21 @@ export default {
 				const exclude = defaultRoles?.exclude;
 
 
+				//Object.entries(storageManifest.manifests.origin).filter(([key, value]) => key !== 'config').reduce((acc, [key]) => ({...acc, [key]: storageManifest.manifests.origin[key]}), {})
 
 
-
-				for (const key in manifest?.roles) {
-					const subset = Object.keys(storageManifest.manifests.origin)
-						.filter(key => ['baz', 'qux'].indexOf(key) < 0)
-						.reduce((obj2, key) => (obj2[key] = obj[key], obj2), {});
-					storageManifest.manifests[key] = makeData(storageManifest.manifests.origin, systemRules.concat(manifest?.roles[key]), exclude);
+				for (const role in manifest?.roles) {
+					const filters = systemRules.concat(manifest?.roles[role]);
+					const newManifest = (obj)=> Object.entries(obj)
+						.filter(([key, value]) => matchExclude(key, exclude) || matchRegex(key, filters))
+						.reduce((acc, [key, value]) => {
+							if(value != null && typeof value === 'object') {
+								acc[key] = newManifest(value);
+								return acc;
+							}
+							return ({...acc, [key]: obj[key]});
+						}, {});
+					storageManifest.manifests[role] = newManifest(storageManifest.manifests.origin);
 				}
 			} catch (e) {
 				this.registerError(e, e.uri || uri);
