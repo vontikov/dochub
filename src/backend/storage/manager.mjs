@@ -167,7 +167,7 @@ export default {
 				: JSON.parse(response.data));
 		}
 
-		function cleanData(manifest, filters, exclude) {
+		function makeData(manifest, filters, exclude) {
 			if (typeof manifest != "object") return;
 			if (!manifest) return;
 
@@ -181,24 +181,30 @@ export default {
 					delete manifest[key];
 				}
 			}
+			return {}
 		}
 
 		let createRoleManifest = async function () {
 			try {
+				// загружаю основной файл с ролями
 				const {URI} =  global.$roles;
 				const url = new URL(URI);
-				const defaultUrl = new URL( 'default.yaml', URI);
+				const manifest = await loader(url);
+				// загружаю правила по умолчанию
+				const defaultUrl = new URL('default.yaml', URI);
 				const defaultRoles = await loader(defaultUrl);
 				const systemRules = defaultRoles?.roles;
 				const exclude = defaultRoles?.exclude;
 
-				const manifest = await loader(url);
+
+
 
 
 				for (const key in manifest?.roles) {
-					let rawManifest = JSON.parse(JSON.stringify(storageManifest.manifests.origin));
-					cleanData(rawManifest, systemRules.concat(manifest?.roles[key]), exclude);
-					storageManifest.manifests[key] = rawManifest;
+					const subset = Object.keys(storageManifest.manifests.origin)
+						.filter(key => ['baz', 'qux'].indexOf(key) < 0)
+						.reduce((obj2, key) => (obj2[key] = obj[key], obj2), {});
+					storageManifest.manifests[key] = makeData(storageManifest.manifests.origin, systemRules.concat(manifest?.roles[key]), exclude);
 				}
 			} catch (e) {
 				this.registerError(e, e.uri || uri);
@@ -207,6 +213,7 @@ export default {
 
 		await createManifest();
 		storageManifest.manifests = {origin: manifestParser.manifest};
+		Object.freeze(storageManifest.manifests.origin);
 		await createRoleManifest();
 
 		console.log('manifestParser.manifest', storageManifest.manifests.origin);
