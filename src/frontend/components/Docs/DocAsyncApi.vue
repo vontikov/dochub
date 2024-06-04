@@ -12,6 +12,7 @@
   import { getAsyncApiContext } from '@front/helpers/misc';
 
   export default {
+    name: 'DocAsyncApi',
     mixins: [DocMixin],
     methods: {
       renderRefSection(res) {

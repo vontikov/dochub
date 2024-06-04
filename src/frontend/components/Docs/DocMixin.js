@@ -14,6 +14,7 @@ export default {
 			template: `
 			<div v-on:contextmenu="onContextMenu">
 				<v-alert v-for="error in errors" v-bind:key="error.key" type="error" style="line-height: 18px; overflow-x: auto;">
+					Компонент: {{error.componentName}}<br>
 					Источник: {{$parent.path}}<br><br>
 					Ошибка:
 					<div style="background-color:#FDD835; white-space: pre-wrap; padding: 8px; color: #000;" v-html="error.message">
@@ -23,7 +24,7 @@ export default {
 			</div>`,
 
 			created: function() {
-				this.$parent.$on('appendError', (error) => {
+				this.$parent.$on('appendError', (error, componentName) => {
 					let message = (error?.message || error);
 					if (error.response) {
 						const description = error.response?.data?.error || JSON.stringify(error.response?.data);
@@ -36,7 +37,8 @@ export default {
 					this.errors.push(
 						{
 							key: Date.now(),
-							message: message.slice(0, 1024).toString()
+							message: message.slice(0, 1024).toString(),
+							componentName
 						}
 					);
 				});
@@ -207,7 +209,7 @@ export default {
 			if (error) {
 				// eslint-disable-next-line no-console
 				console.error(error, this.url ? `Ошибка запроса [${this.url}]` : undefined);
-				this.$emit('appendError', error);
+				this.$emit('appendError', error, this.$options?.name || 'unknown');
 			} else
 				this.$emit('clearErrors');
 		}

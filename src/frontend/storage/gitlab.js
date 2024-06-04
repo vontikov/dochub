@@ -3,7 +3,6 @@ import cookie from 'vue-cookie';
 // import GitHelper from '../helpers/gitlab';
 import storageManager from '@front/manifest/manager';
 import Vue from 'vue';
-import requests from '@front/helpers/requests';
 import gateway from '@idea/gateway';
 import consts from '@front/consts';
 import rules from '@front/helpers/rules';
@@ -131,7 +130,12 @@ export default {
             let diff_format = cookie.get('diff_format');
             context.commit('setDiffFormat', diff_format ? diff_format : context.state.diff_format);
 
+            let tickCounter = 0;
+            let rulesContext = null;
+
             storageManager.onReloaded = (parser) => {
+                // eslint-disable-next-line no-console
+                console.info('TIME OF RELOAD SOURCES = ', (Number.parseFloat((Date.now() - tickCounter) / 1000)).toFixed(4));
                 // Очищаем прошлую загрузку
                 context.commit('clean');
                 // Регистрируем обнаруженные ошибки
@@ -151,15 +155,24 @@ export default {
 
                 entities(manifest);
                 context.commit('setIsReloading', false);
-                rules(manifest,
+                const startRules = Date.now();
+                rulesContext = rules(manifest,
                     (problems) => context.commit('appendProblems', problems),
                     (error) => {
                         // eslint-disable-next-line no-console
                         console.error(error);
                         context.commit('appendProblems', error);
                     });
+                // eslint-disable-next-line no-console
+                console.info('TIME OF EXECUTE RULES = ', (Number.parseFloat((Date.now() - startRules) / 1000)).toFixed(4));
+                // eslint-disable-next-line no-console
+                console.info('TIME OF FULL RELOAD = ', (Number.parseFloat((Date.now() - tickCounter) / 1000)).toFixed(4));
+                // eslint-disable-next-line no-console
+                console.info('MEMORY STATUS ', window?.performance?.memory);
             };
             storageManager.onStartReload = () => {
+                rulesContext && rulesContext.stop();
+                tickCounter = Date.now();
                 errors.syntax = null;
                 errors.net = null;
                 errors.missing_files = null;
@@ -290,35 +303,27 @@ export default {
             let changes = {};
             let refreshTimer = null;
 
-            function reloadSourceAll(data) {
+            const reloadSourceAll = (data) => {
                 if (data) {
                     changes = Object.assign(changes, data);
                     if (refreshTimer) clearTimeout(refreshTimer);
                     refreshTimer = setTimeout(() => {
-                        const sources = context.state.sources['/'] || [];
+                        rulesContext && rulesContext.stop();
+                        tickCounter = Date.now();
+                        // eslint-disable-next-line no-console
+                        console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
+                        if (storageManager.onChange)
+                            storageManager.onChange(Object.keys(changes));
+                        else 
+                            context.dispatch('reloadAll');
+
                         for (const source in changes) {
-                            if (source === consts.plugin.ROOT_MANIFEST) {
-                                // eslint-disable-next-line no-console
-                                console.info('>>>>>> GO RELOAD BY ROOT MANIFEST <<<<<<<<<<');
-                                context.dispatch('reloadAll');
-                                return;
-                            } else if (requests.isUsedURL(source)) {
-                                if (sources.indexOf(requests.getIndexURL(source)) >= 0) {
-                                    // eslint-disable-next-line no-console
-                                    console.info('>>>>>> GO RELOAD BY SOURCE <<<<<<<<<<', source);
-                                    context.dispatch('reloadAll');
-                                    return;
-                                } else {
-                                    // eslint-disable-next-line no-console
-                                    console.info('>>>>>> ON CHANGED SOURCE <<<<<<<<<<', source);
-                                    // Уведомляем об изменениях всех подписчиков
-                                    window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
-                                }
-                            }
+                            // Уведомляем об изменениях всех подписчиков
+                            window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
                         }
                     }, 350);
                 }
-            }
+            };
 
             gateway.appendListener('source/changed', reloadSourceAll);
         },

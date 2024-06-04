@@ -9,7 +9,7 @@
   import { getAsyncApiContext } from '@front/helpers/misc';
 
   export default {
-    name: 'Swagger',
+    name: 'DocSwagger',
     mixins: [DocMixin],
     data() {
       return {

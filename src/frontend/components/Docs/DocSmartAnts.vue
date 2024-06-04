@@ -130,7 +130,7 @@
   import env from '@front/helpers/env';
 
   export default {
-    name: 'DocHubViewpoint',
+    name: 'DocSmartAnts',
     components: {
       Schema
     },

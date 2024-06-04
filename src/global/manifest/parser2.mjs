@@ -4,11 +4,13 @@
 
 /* ПРОБЛЕМЫ 
 1. Не реализован функционал наследования
-2. Пример seaf не работает. Считает, что нет корневого манифеста (зависимости?).
+2. onChange для парсера v1 не реализован
 */
 
 import cache from './services/cache.mjs'; // Сервис управления кэшем
 import * as semver from 'semver'; // Управление версиями  
+import prototype from './prototype.mjs';
+
 
 // Кладовка
 // https://github.com/douglascrockford/JSON-js
@@ -89,6 +91,7 @@ parser.mergeMap = new Proxy({}, {
             return target[path];
         let uri = null;
         const nodes = path.split('/');
+        if (path.endsWith('summary')) debugger;
         for (const i in nodes) {
             const nodeId = nodes[i];
             if (!nodeId) continue;
@@ -141,12 +144,14 @@ function ManifestObject(destination, source, owner) {
             Object.defineProperty(this, propName, {
                 enumerable: true,
                 configurable: true,
+                writable: true,
                 value: createManifestObject(typeof oldValue === 'object' ? oldValue : null, value, owner)
             });
         } else {
             Object.defineProperty(this, propName, {
                 enumerable: true,
                 configurable: true,
+                writable: true,
                 value
             });
         }
@@ -162,10 +167,23 @@ function ManifestObject(destination, source, owner) {
 // Прокси для объектов манифестов
 const createManifestObject = (destination, source, owner) => {
     const subject = new ManifestObject(destination, source, owner);
+    let $prototype = null;
+
+    // Устанавливает прототип по свойству $prototype
+    const setPrototype = (section, key) => {
+        debugger;
+        $prototype = { section, key };
+    };
 
     const allProps = () => {
         const result = [];
         for (const propId in subject) result.push(propId);
+        // Подмешиваем свойства прототипа если он задан
+        if ($prototype && parser.manifest) {
+            const prototype = parser.manifest[$prototype.section]?.[$prototype.key] || {};
+            for (const propId in prototype)
+                result.indexOf(propId) < 0 && result.push(propId);
+        }
         return result;
     };
 
@@ -174,7 +192,13 @@ const createManifestObject = (destination, source, owner) => {
             switch (propId) {
                 case '__self__': return subject;
                 case '__uri__': return owner.uri;
-                default: return subject[propId];
+                case '__setPrototype__': return setPrototype;
+                default: {
+                    let result = subject[propId];
+                    $prototype && (result === undefined)
+                        && (result = parser.manifest[$prototype.section]?.[$prototype.key]?.[propId]);
+                    return result;
+                }
             }
         },
         enumerate: () => allProps(),
@@ -217,69 +241,6 @@ function ManifestLayer() {
             return rootObject;
         }
     });
-
-    // Разрешаем зависимости
-    const resolveDeps = (manifest, callback, uri) => {
-        let unresolved = 0;
-        // Обходим задекларированные пакеты в манифесте
-        const $package = manifest.$package || {};
-        for (const packageId in $package) {
-            // Анализируем зависимости
-            const deps = manifest.$package[packageId].dependencies || [];
-            for (const depId in deps) {
-                let package_ = parser.packages[depId];
-                // Если требуемый пакет еще не загружен, встаем в ожидание
-                if (!semver.satisfies(package_?.version, deps[depId])) {
-                    // Если пакет уже подключен но не подходит - валимся в ошибку
-                    if (package_?.version)
-                        throw new PackageError(uri,
-                            `Пакет [${packageId}] подключен, но его версия [${package_.version}] не удовлетворяет зависимости [${deps[depId]}].`
-                        );
-                    // Если пакет не зарегистрирован, создаем запись для ждунов
-                    !package_ && (parser.packages[depId] = (package_ = { captives: [] }));
-                    package_.captives.push({ version: deps[depId], callback });
-                    // Отражаем неразрешенную зависимость
-                    ++unresolved;
-                }
-            }
-        }
-        // Если неразрешенных зависимостей нет, вызываем обработчик
-        return !unresolved;
-    };
-
-    // Разрешаем ожидающие зависимости
-    const liberationDeps = (manifest, uri) => {
-        for (const packageId in manifest?.$package) {
-            // Если версия пакета уже подключена кидаем ошибку
-            if (parser.packages[packageId]?.version)
-                throw new PackageError(uri,
-                    `Конфликт версий пакета [${packageId}].`
-                    + ` Попытка подключения версии [${package_.version}]`
-                    + ` при наличии [${parser.packages[packageId].version}].`);
-
-            // Если все хорошо, получаем запись о подключенном пакете
-            const package_ = manifest?.$package[packageId];
-            // Если ее нет - создаем
-            !parser.packages[packageId] && (parser.packages[packageId] = { captives: {} });
-
-            // Устанавливаем версию подключенного пакета
-            parser.packages[packageId].version = package_.version;
-
-            // Получаем список неразрешенных зависимостей
-            const captives = parser.packages[packageId].captives || {};
-            for (const index in captives) {
-                const captive = captives[index];
-                // Проверяем версию и падаем, если версия не удовлетворяет
-                if (semver.satisfies(package_.version, captive.version)) {
-                    captive.callback();
-                } else
-                    throw new PackageError(uri,
-                        `Пакет [${packageId}] подключен, но его версия [${package_.version}] не удовлетворяет зависимости [${captive.version}].`
-                    );
-            }
-            parser.packages[packageId].captives = [];
-        }
-    };
 
     // Подключаем импортируемые манифесты
     const imports = () => {
@@ -395,14 +356,14 @@ parser.registerError = function (e, uri) {
 },
 
 
-// ************************************************************************
-// 				Загрузка контента и разрешение зависимостей
-// ************************************************************************
+    // ************************************************************************
+    // 				Загрузка контента и разрешение зависимостей
+    // ************************************************************************
 
-// Если обработчик определен, он вызывается при запросе ресурса
-// По умолчанию используется request модуль
+    // Если обработчик определен, он вызывается при запросе ресурса
+    // По умолчанию используется request модуль
 
-parser.onPullSource = null;
+    parser.onPullSource = null;
 
 parser.pushRequest = function (uri) {
     let request;
@@ -455,7 +416,6 @@ parser.rebuildLayers = function () {
 
     // Функция монтирования слоя
     const mountLayer = (layer) => {
-        console.info('>>>>>>>>>', layer.uri);
         layer.mounted(this.layers[level - 1]);
         this.layers[level] = layer;
         ++level;
@@ -509,11 +469,45 @@ parser.rebuildLayers = function () {
         getUnresolvedDeps(layer).map((problem) => {
             this.registerError(new PackageError(layer.uri,
                 `Неразрешена зависимость для [${problem.depId}@${problem.version}]!`)
-            , layer.uri);
+                , layer.uri);
         });
     });
 
-    this.manifest = Object.assign({}, this.layers[level - 1]?.object);
+    // Обновляем ссылку на манифест
+    this.manifest = prototype.expandAll(Object.assign({}, this.layers[level - 1]?.object));
+
+};
+
+
+// ************************************************************************
+// 				Обработка событий точечных изменений
+// ************************************************************************
+// Функция вызывается извне при изменении в источника
+// sources - массив с URI изменившихся источников
+parser.onChange = function (sources) {
+    if (!sources && !sources.length) return;
+    // Флаг изменений
+    let isAffected = false;
+    // Увеличиваем индекс транзакции
+    this.transaction++;
+
+    this.layers.map((layer) => {
+        // Если слой уже был затронут текущей транзакцией не трогаем его
+        if (layer.transaction === this.transaction) return;
+        // Если слой входит в список изменений - перезагружаем его
+        if (sources.indexOf(layer.uri) >= 0) {
+            layer.reload(layer.uri);
+            isAffected = true;
+        }
+    });
+
+    // Если в данных есть изменения - перестраиваем слои
+    if (isAffected) {
+        parser.rebuildLayers();
+        // Вызываем слушателя обновления данных в манифесте
+        this.onReloaded && this.onReloaded(this);
+        console.info('===== MANIFEST REFRESHED =====');
+    }
 };
 
 

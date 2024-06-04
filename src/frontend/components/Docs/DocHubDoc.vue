@@ -68,7 +68,7 @@
 
   
   export default {
-    name: 'Document',
+    name: 'DocHubDoc',
     components: {
       AsyncApiComponent,
       Plantuml,
