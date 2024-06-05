@@ -76,6 +76,14 @@
         get() {
           return this.$store.state.isPrintVersion;
         }
+      },
+      isFullScreenMode: {
+        set(value) {
+          this.$store.commit('setFullScreenMode', value);
+        },
+        get() {
+          return this.$store.state.isFullScreenMode;
+        }
       }
     },
     methods: {

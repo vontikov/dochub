@@ -1,7 +1,29 @@
 <template>
-  <div 
+  <div
+    ref="place"
     class="plantuml-place"
     v-on:contextmenu="showMenu">
+    <div class="fullscreen-icon">
+      <v-icon v-on:click="openDialog">
+        fullscreen
+      </v-icon>
+    </div>
+    <v-dialog
+      ref="dialog"
+      v-model="dialog"
+      style="z-index: 9999">
+      <v-card>
+        <div
+          ref="plant"
+          class="plantuml-schema"
+          v-on:mousedown.prevent="zoomAndPanMouseDown"
+          v-on:mousemove.prevent="zoomAndPanMouseMove"
+          v-on:mouseup.prevent="zoomAndPanMouseUp"
+          v-on:mouseleave.prevent="zoomAndPanMouseUp"
+          v-on:wheel="zoomAndPanWheelHandler"
+          v-html="svg" />
+      </v-card>
+    </v-dialog>
     <error-boundary
       v-bind:params="{error}"
       stop-propagation>
@@ -78,6 +100,8 @@
     ],
     data() {
       return {
+        dialog: false,
+        original: null,
         menu: { // Контекстное меню
           show: false,  // Признак отображения
           x : 0,  // Позиция x
@@ -131,12 +155,17 @@
       }
     },
     watch: {
+      dialog(value) {
+        this.$store.commit('setFullScreenMode', value);
+      },
       uml() {
         this.reloadSVG();
+      },
+      '$store.state.isFullScreenMode'() {
+        this.reRender();
       }
     },
     mounted() {
-
       window.addEventListener('resize', this.reRender);
       this.reloadSVG();
       let oldClientHeight = this.$el.clientHeight;
@@ -152,6 +181,9 @@
       window.removeEventListener('resize', this.reRender);
     },
     methods: {
+      openDialog() {
+        this.dialog = true;
+      },
       reRender() {
         if (this.rerenderTimer) clearTimeout(this.rerenderTimer);
         this.rerenderTimer = setTimeout(() => {
@@ -160,20 +192,28 @@
             this.render = true;
             this.$nextTick(() => this.prepareSVG());
           });
-        }, 300);
+        }, 0);
       },
       doResize() {
         if (!this.svgEl || !this.svgEl.clientWidth || !this.svgEl.clientHeight) return;
 
         const originWidth = this.viewBox.width;
 
-        if (this.$el.clientWidth > this.viewBox.width) {
+        if (this.$el.clientWidth > this.viewBox.width && !this.$store.state.isFullScreenMode) {
           this.viewBox.width = this.$el.clientWidth;
+        }
+        if (this.svgEl.clientWidth > this.viewBox.width && this.$store.state.isFullScreenMode) {
+          this.viewBox.width = this.svgEl.clientWidth;
+        }
+        if (this.svgEl.clientHeight > this.viewBox.height && this.$store.state.isFullScreenMode) {
+          this.viewBox.height = this.svgEl.clientHeight;
         }
 
         const originalHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
 
-        this.svgEl.style.height = originalHeight;
+        this.svgEl.style.height = this.$store.state.isFullScreenMode
+          ? Math.max(originalHeight, window.innerHeight * 0.89)
+          : originalHeight;
 
         if (originalHeight < this.$el.clientHeight) {
           const k = this.viewBox.height / originalHeight;
@@ -181,16 +221,37 @@
           this.viewBox.height = this.$el.clientHeight * k;
         }
 
+
         const offset = (this.viewBox.width - originWidth) / 2;
         this.viewBox.x -= offset;
       },
+      saveOriginal() {
+        const originalHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
+        this.original = {
+          height: originalHeight,
+          viewBoxHeight: this.$el.clientHeight * this.viewBox.height / originalHeight
+        };
+      },
+      resetToDefault() {
+        this.viewBox.height = this.original.viewBoxHeight;
+        this.svgEl.style.height = this.original.height;
+      },
       prepareSVG() {
-        this.svgEl = this.$el.querySelectorAll('svg')[0];
+        this.svgEl = this.$store.state.isFullScreenMode ?
+          this.$refs['plant']?.querySelectorAll('svg')?.[0]
+          : this.$el.querySelectorAll('svg')[0];
         this.cacheViewBox = null;
         if (this.svgEl) {
           this.svgEl.style = null;
           this.svgEl.setAttribute('encoding', 'UTF-8');
-          this.doResize();
+          if(this.original && !this.$store.state.isFullScreenMode)
+            this.resetToDefault();
+          else {
+            if(!this.original)
+              this.saveOriginal();
+            this.doResize();
+          }
+
           href.elProcessing(this.svgEl);
           if (this.postrender) this.postrender(this.svgEl);
         }
@@ -251,5 +312,15 @@
   width: 100%;
   height: auto;
 }
-
+.plantuml-place {
+  position: relative;
+}
+.plantuml-place:hover > .fullscreen-icon {
+  display:block;
+}
+.fullscreen-icon {
+  position: absolute;
+  right: 20px;
+  display: none;
+}
 </style>
