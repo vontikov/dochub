@@ -186,7 +186,7 @@
           };
           worker.postMessage({
             queryID,
-            params
+            params: JSON.parse(JSON.stringify(params))
           });
         }
       });

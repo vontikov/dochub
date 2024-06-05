@@ -74,7 +74,7 @@ const parser = {
 
 //  
 // Очищает незадействованные слои в текущей транзакции
-parser.cleanLayers = function () {
+parser.cleanLayers = function() {
     const result = [];
     this.layers.map((layer) => {
         if (layer.transaction === this.transaction) {
@@ -87,16 +87,18 @@ parser.cleanLayers = function () {
 parser.mergeMap = new Proxy({}, {
     get(target, path) {
         let node = parser.manifest;
-        if (!node || (typeof path !== 'string'))
+        if (!node || (typeof path !== 'string') || path.startsWith('__'))
             return target[path];
         let uri = null;
         const nodes = path.split('/');
-        if (path.endsWith('summary')) debugger;
+        // if (path.endsWith('summary')) debugger;
         for (const i in nodes) {
             const nodeId = nodes[i];
             if (!nodeId) continue;
+            if (typeof node === 'object') {
+                uri = node.__uriOf__(nodeId);
+            } else break;
             node = node?.[nodeId];
-            typeof node === 'object' && (uri = node.__uri__);
         }
         return uri ? [uri] : [];
     }
@@ -124,7 +126,8 @@ function ManifestObject(destination, source, owner) {
                     let result = [];
                     if (Array.isArray(oldValue)) {
                         const temp = [];
-                        oldValue.map((distItem) => {
+                        for (const i in oldValue) {
+                            const distItem = oldValue[i];
                             const distContent = JSON.stringify(distItem);
                             if (!value.find((srcItem, index) => {
                                 !temp[index] && (temp[index] = JSON.stringify(srcItem));
@@ -132,7 +135,7 @@ function ManifestObject(destination, source, owner) {
                             })) {
                                 result.push(distItem);
                             }
-                        });
+                        }
                         result = value.concat(result);
                     } else {
                         result = value;
@@ -161,6 +164,7 @@ function ManifestObject(destination, source, owner) {
     for (const propName in source) {
         makeProp(propName, source[propName], destination?.[propName]);
     }
+
     owner.appendObject(this);
 }
 
@@ -171,7 +175,6 @@ const createManifestObject = (destination, source, owner) => {
 
     // Устанавливает прототип по свойству $prototype
     const setPrototype = (section, key) => {
-        debugger;
         $prototype = { section, key };
     };
 
@@ -192,6 +195,11 @@ const createManifestObject = (destination, source, owner) => {
             switch (propId) {
                 case '__self__': return subject;
                 case '__uri__': return owner.uri;
+                case '__uriOf__': return (propId) => {
+                    if (source && Object.hasOwn(source, propId)) return owner.uri;
+                    else if (destination) return destination.__uriOf__(propId);
+                    else return null;
+                };
                 case '__setPrototype__': return setPrototype;
                 default: {
                     let result = subject[propId];
@@ -253,7 +261,7 @@ function ManifestLayer() {
                 return;
             }
             for (let i = 0; i < limit; i++) {
-                const import_ = this.manifest.imports[i];
+                const import_ = imports[i];
                 let imported_ = this.imported[i];
                 const uri = import_ ? cache.makeURIByBaseURI(import_, this.uri) : null;
                 if (!uri && imported_) { // Если ресурс вышел из игры очищаем его, но не перестраиваем стек слоев
@@ -273,6 +281,8 @@ function ManifestLayer() {
 
                 imported_ && (imported_.transaction = parser.transaction);
             }
+            // Если мы не ждем загрузку, сразу разрешаем промис
+            !counter && success();
         });
     };
 
@@ -306,15 +316,14 @@ function ManifestLayer() {
 
     // Освобождает слой от данных
     this.free = () => {
-        // Освобождаем данные
-        for (const i in this.objects) {
-            this.objects[i].free();
-            delete this.objects[i];
-        }
-        this.objects = [];
         // Освобождаем все связанные слои
         this.imported.map((item) => item.free());
         this.imported = [];
+        // Освобождаем данные
+        for (const i in objects) {
+            delete objects[i];
+        }
+        this.objects = [];
         // Освобождаем ссылку на ресурс
         this.uri = null;
     };
@@ -328,7 +337,7 @@ function ManifestLayer() {
 //Регистрирует ошибку
 // e - объект ошибки
 // uri - источник ошибки
-parser.registerError = function (e, uri) {
+parser.registerError = function(e, uri) {
     const errorPath = `$errors/requests/${new Date().getTime()}`;
     // eslint-disable-next-line no-console
     console.error(e, `Ошибка запроса [${errorPath}:${uri}]`, e);
@@ -365,7 +374,7 @@ parser.registerError = function (e, uri) {
 
     parser.onPullSource = null;
 
-parser.pushRequest = function (uri) {
+parser.pushRequest = function(uri) {
     let request;
     if (this.onPullSource)
         request = this.onPullSource(uri, '/', this);
@@ -383,7 +392,7 @@ parser.pushRequest = function (uri) {
 };
 
 // Пересобирает слои из графа страниц
-parser.rebuildLayers = function () {
+parser.rebuildLayers = function() {
     let level = 0;
 
     // Страницы ожидающие разрешения зависимостей
@@ -474,8 +483,9 @@ parser.rebuildLayers = function () {
     });
 
     // Обновляем ссылку на манифест
-    this.manifest = prototype.expandAll(Object.assign({}, this.layers[level - 1]?.object));
-
+    //this.manifest = prototype.expandAll({__proto__: this.layers[level - 1]?.object});
+    const topObject = this.layers[level - 1]?.object;
+    this.manifest = prototype.expandAll(Object.assign({__uriOf__: topObject.__uriOf__}, topObject));
 };
 
 
@@ -484,23 +494,22 @@ parser.rebuildLayers = function () {
 // ************************************************************************
 // Функция вызывается извне при изменении в источника
 // sources - массив с URI изменившихся источников
-parser.onChange = function (sources) {
+parser.onChange = async function(sources) {
     if (!sources && !sources.length) return;
     // Флаг изменений
     let isAffected = false;
     // Увеличиваем индекс транзакции
     this.transaction++;
-
-    this.layers.map((layer) => {
+    for (const i in this.layers) {
+        const layer = this.layers[i];
         // Если слой уже был затронут текущей транзакцией не трогаем его
-        if (layer.transaction === this.transaction) return;
+        if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
         if (sources.indexOf(layer.uri) >= 0) {
-            layer.reload(layer.uri);
+            await layer.reload(layer.uri);
             isAffected = true;
         }
-    });
-
+    }
     // Если в данных есть изменения - перестраиваем слои
     if (isAffected) {
         parser.rebuildLayers();
@@ -513,7 +522,7 @@ parser.onChange = function (sources) {
 
 // Импорт манифеста по идентификатору ресурса
 //	uri - идентификатор ресурса
-parser.import = async function (uri) {
+parser.import = async function(uri) {
     try {
         // Создаем руктовую страницу
         const rooLayer = new ManifestLayer();
