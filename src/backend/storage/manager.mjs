@@ -180,7 +180,7 @@ export default {
 				for (const role in manifest?.roles) {
 					const filters = systemRules.concat(manifest?.roles[role]);
 					const newManifest = (obj)=> Object.entries(obj)
-						.filter(([key, value]) => matchExclude(key, exclude) || matchRegex(key, filters))
+						.filter(([key, value]) => (typeof value != 'object' || Array.isArray(value) || matchExclude(key, exclude)) || matchRegex(key, filters))
 						.reduce((acc, [key, value]) => {
 							if(value != null && typeof value === 'object') {
 								acc[key] = newManifest(value);
