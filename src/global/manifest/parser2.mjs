@@ -2,19 +2,12 @@
 // предназначен для максимально быстрого применения изменений
 // в манифестах
 
-/* ПРОБЛЕМЫ 
-1. Не реализован функционал наследования
-2. onChange для парсера v1 не реализован
-*/
-
 import cache from './services/cache.mjs'; // Сервис управления кэшем
 import * as semver from 'semver'; // Управление версиями  
 import prototype from './prototype.mjs';
 
-
 // Кладовка
 // https://github.com/douglascrockford/JSON-js
-
 
 class PackageError extends Error {
     constructor(uri, message) {
@@ -108,7 +101,6 @@ parser.mergeMap = new Proxy({}, {
 // Создает управляемый объект
 // destination - Объект с которым происходит объединение. Низкий приоритет.
 // source - Объект с которым происходит объединение. Высокий приоритет.
-
 function ManifestObject(destination, source, owner) {
     // Если объект уже ранее создан другим слоем, встраиваемся в цепочку
     if (destination) {
