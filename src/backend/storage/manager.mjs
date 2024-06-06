@@ -154,7 +154,6 @@ export default {
 		Object.freeze(app.storage);
 		this.resetCustomFunctions(storage.manifest);
 		this.onApplyManifest.map((listener) => listener(app));
-		console.log('applyManifest');
 	},
 	cleanStorage(app) {
 		this.cacheFunction = null;
