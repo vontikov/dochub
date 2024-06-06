@@ -182,11 +182,11 @@ export default {
 					const newManifest = (obj)=> Object.entries(obj)
 						.filter(([key, value]) => (typeof value != 'object' || Array.isArray(value) || matchExclude(key, exclude)) || matchRegex(key, filters))
 						.reduce((acc, [key, value]) => {
-							if(value != null && typeof value === 'object') {
+							if(value != null && typeof value === 'object' && !Array.isArray(value)) {
 								acc[key] = newManifest(value);
 								return acc;
 							}
-							return ({...acc, [key]: obj[key]});
+							return Array.isArray(obj) ?  [...acc, ...obj] : ({...acc, [key]: obj[key]});
 						}, {});
 					storageManifest.manifests[role] = newManifest(storageManifest.manifests.origin);
 				}
