@@ -10,6 +10,7 @@ import '../helpers/env.mjs';
 
 import jsonataDriver from '../../global/jsonata/driver.mjs';
 import jsonataFunctions from '../../global/jsonata/functions.mjs';
+import {newManifest, loader} from "../utils/rules.mjs";
 
 const LOG_TAG = 'storage-manager';
 
@@ -46,36 +47,6 @@ export default {
 	// Стек обработчиков события на обновление манифеста
 	onApplyManifest: [],
 	createNewManifest: async function(app) {
-		let matchRegex = (string, filters) => {
-
-			var len = filters.length, i = 0;
-
-			for (; i < len; i++) {
-				if (string.match(filters[i])) {
-					return true;
-				}
-			}
-			return false;
-		};
-
-		let matchExclude = (string, exclude) => {
-			var len = exclude.length, i = 0;
-
-			for (; i < len; i++) {
-				if (string === exclude[i]) {
-					return true;
-				}
-			}
-			return false;
-		}
-
-		async function loader(uri) {
-			const response = await cache.request(uri, '/');
-			return response && (typeof response.data === 'object'
-				? response.data
-				: JSON.parse(response.data));
-		}
-
 		if(app.new_rules) {
 
 			let mergeRules = [];
@@ -102,22 +73,11 @@ export default {
 			const id = ids.sort((a,b) => {return a.localeCompare(b);}).join('');
 
 			const filters = systemRules.concat(mergeRules);
-			const newManifest = (obj)=> Object.entries(obj)
-				.filter(([key, value]) => matchExclude(key, exclude) || matchRegex(key, filters))
-				.reduce((acc, [key, value]) => {
-					if(value != null && typeof value === 'object') {
-						acc[key] = newManifest(value);
-						return acc;
-					}
-					return ({...acc, [key]: obj[key]});
-				}, {});
-
-			app.storage.manifests[id] = newManifest(app.storage.manifests.origin);
+			app.storage.manifests[id] = newManifest(app.storage.manifests.origin, exclude, filters);
 		}
 	},
 	reloadManifest: async function(app) {
 
-		console.log('reloadManifest');
 		logger.log('Run full reload manifest', LOG_TAG);
 		// Загрузку начинаем с виртуального манифеста
 		cache.errorClear();
@@ -131,36 +91,6 @@ export default {
 			await manifestParser.stopLoad();
 		};
 
-		let matchRegex = (string, filters) => {
-
-			const len = filters.length;
-
-			for (let i = 0; i < len; i++) {
-				if (string.match(filters[i])) {
-					return true;
-				}
-			}
-			return false;
-		};
-
-		let matchExclude = (string, exclude) => {
-			const len = exclude.length;
-
-			for (let i = 0; i < len; i++) {
-				if (string === exclude[i]) {
-					return true;
-				}
-			}
-			return false;
-		}
-
-		async function loader(uri) {
-			const response = await cache.request(uri, '/');
-			return response && (typeof response.data === 'object'
-				? response.data
-				: JSON.parse(response.data));
-		}
-
 		let createRoleManifest = async function () {
 			try {
 				// загружаю основной файл с ролями
@@ -173,22 +103,9 @@ export default {
 				const systemRules = defaultRoles?.roles;
 				const exclude = defaultRoles?.exclude;
 
-
-				//Object.entries(storageManifest.manifests.origin).filter(([key, value]) => key !== 'config').reduce((acc, [key]) => ({...acc, [key]: storageManifest.manifests.origin[key]}), {})
-
-
 				for (const role in manifest?.roles) {
 					const filters = systemRules.concat(manifest?.roles[role]);
-					const newManifest = (obj)=> Object.entries(obj)
-						.filter(([key, value]) => (typeof value != 'object' || Array.isArray(value) || matchExclude(key, exclude)) || matchRegex(key, filters))
-						.reduce((acc, [key, value]) => {
-							if(value != null && typeof value === 'object' && !Array.isArray(value)) {
-								acc[key] = newManifest(value);
-								return acc;
-							}
-							return Array.isArray(obj) ?  [...acc, ...obj] : ({...acc, [key]: obj[key]});
-						}, {});
-					storageManifest.manifests[role] = newManifest(storageManifest.manifests.origin);
+					storageManifest.manifests[role] = newManifest(storageManifest.manifests.origin, exclude, filters);
 				}
 			} catch (e) {
 				this.registerError(e, e.uri || uri);
@@ -199,8 +116,6 @@ export default {
 		storageManifest.manifests = {origin: manifestParser.manifest};
 		Object.freeze(storageManifest.manifests.origin);
 		await createRoleManifest();
-
-		console.log('manifestParser.manifest', storageManifest.manifests.origin);
 
 		entities(storageManifest.manifests['default']);
 

@@ -1,5 +1,4 @@
 import cache from "../storage/cache.mjs";
-import path from "path";
 
 export async function getCurrentRuleId(rules) {
     if(rules.length === 0) return 'default';
@@ -47,5 +46,47 @@ export async function getCurrentRules(rules) {
     }
     return result;
 }
+
+export const newManifest = (obj, exclude, filters)=> Object.entries(obj)
+    .filter(([key, value]) => (typeof value != 'object' || Array.isArray(value) || matchExclude(key, exclude)) || matchRegex(key, filters))
+    .reduce((acc, [key, value]) => {
+        if(value != null && typeof value === 'object' && !Array.isArray(value)) {
+            acc[key] = newManifest(value, exclude, filters);
+            return acc;
+        }
+        return Array.isArray(obj) ?  [...acc, ...obj] : ({...acc, [key]: obj[key]});
+    }, {});
+
+export async function loader(uri) {
+    const response = await cache.request(uri, '/');
+    return response && (typeof response.data === 'object'
+        ? response.data
+        : JSON.parse(response.data));
+}
+
+function matchRegex(string, filters){
+
+    const len = filters.length;
+
+    for (let i = 0; i < len; i++) {
+        if (string.match(filters[i])) {
+            return true;
+        }
+    }
+    return false;
+};
+
+function matchExclude(string, exclude) {
+    const len = exclude.length;
+
+    for (let i = 0; i < len; i++) {
+        if (string === exclude[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 
 
