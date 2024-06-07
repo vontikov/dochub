@@ -1,90 +1,33 @@
 <template>
-  <box>
-    <v-card flat class="container" style="padding: 0; margin-top: 12px">
-      <v-system-bar
-        v-if="!isPrintVersion"
-        class="toolbar"
-        floating
-        flat
-        color="#fff"
-        dense>
-        <v-btn icon title="Экспорт в Excalidraw" v-on:click="exportToExcalidraw">
-          <v-icon>mdi-download</v-icon>
-        </v-btn>
-        <v-btn v-if="selectedNodes" icon title="Кадрировать" v-on:click="doFocus">
-          <v-icon>mdi-crop-free</v-icon>
-        </v-btn>
-        <v-btn v-if="focusNodes" icon title="Полная диаграмма" v-on:click="clearFocus">
-          <v-icon>mdi-view-comfy</v-icon>
-        </v-btn>
-        <v-btn v-if="isUnwisp" icon title="Показать все связи" v-on:click="setUnwisp(false)">
-          <v-icon>mdi-arrow-decision-outline</v-icon>
-        </v-btn>
-        <v-btn v-if="!isUnwisp" icon title="Свернуть связи в жгуты" v-on:click="setUnwisp(true)">
-          <v-icon>mdi-arrow-decision-auto</v-icon>
-        </v-btn>
-        <v-btn v-if="isShowLinks" icon title="Показать только структуру" v-on:click="setShowLinks(false)">
-          <v-icon>mdi-monitor-dashboard</v-icon>
-        </v-btn>
-        <v-btn v-if="!isShowLinks" icon title="Показать связи" v-on:click="setShowLinks(true)">
-          <v-icon>mdi-sitemap</v-icon>
-        </v-btn>
-        <v-btn v-if="warnings?.length" icon title="Предупреждения" v-on:click="sheet = !sheet">
-          <v-icon style="color: rgb(255, 0, 0);">warning</v-icon>
-        </v-btn>
-
-        <v-bottom-sheet v-model="sheet">
-          <v-card
-            class="text-center"
-            height="200"
-            v-bind:style="!isPlugin ? 'padding: 20px 0px 0px 300px' : ''">
-            <v-card-text>
-              <ul>
-                <li v-for="warn in warnings" v-bind:key="warn">
-                  {{ warn }}
-                </li>
-              </ul>
-            </v-card-text>
-          </v-card>
-        </v-bottom-sheet>
-
-        <template v-if="scenario">
-          <v-select
-            v-model="scenario"
-            dense
-            item-text="text"
-            item-value="id"
-            v-bind:items="scenarios" />
-          <v-btn
-            icon
-            title="Проиграть сценарий"
-            v-on:click="playScenario">
-            <v-icon>{{ isPaying ? 'mdi-stop' : 'mdi-play' }}</v-icon>
-          </v-btn>
-          <!--
-            Имеются проблемы с перемоткой назад.
-            Плохо отрабатывают шаги очистки, т.е. отмотать состояние не удается без артефактов
-          <v-btn
-            v-if="isPaying"
-            icon
-            title="Дальше"
-            v-on:click="playPrev">
-            <v-icon>mdi-skip-previous</v-icon>
-          </v-btn>
-          -->
-          <v-btn
-            v-if="isPaying"
-            icon
-            title="Дальше"
-            v-on:click="playNext">
-            <v-icon>mdi-skip-next</v-icon>
-          </v-btn>
-        </template>
-      </v-system-bar>
+  <box class="smart-ants" style="min-width: 100%;">
+    <v-card flat class="container" v-bind:style="{ padding: '0', 'margin-top': '0', 'min-width': isFullScreen ? '100%' : 'auto' }">
+      <div v-if="ifShowFullscreen" class="fullscreen-icon">
+        <v-icon v-on:click="toggleFullscreen">
+          {{ isFullScreen ? 'mdi-close-box-outline' : 'fullscreen' }}
+        </v-icon>
+      </div>
+      <smartants-bar
+        v-bind:warnings="warnings"
+        v-bind:focus-nodes="focusNodes"
+        v-bind:scenario="scenario"
+        v-bind:scenarios="scenarios"
+        v-bind:is-print-version="isPrintVersion"
+        v-bind:is-show-links="isShowLinks"
+        v-bind:is-unwisp="isUnwisp"
+        v-bind:is-paying="isPaying"
+        v-on:exportToExcalidraw="exportToExcalidraw"
+        v-on:doFocus="doFocus"
+        v-on:clearFocus="clearFocus"
+        v-on:playScenario="playScenario"
+        v-on:playNext="playNext"
+        v-on:setScenario="setScenario"
+        v-on:setUnwisp="setUnwisp"
+        v-on:setShowLinks="setShowLinks" />
       <schema
         ref="schema"
         v-model="status"
         class="schema"
+        v-bind:full-screen="isFullScreen"
         v-bind:warnings="warnings"
         v-bind:data="data"
         v-bind:show-links="isShowLinks"
@@ -123,8 +66,10 @@
 <script>
 
   import Schema from '@front/components/Schema/DHSchema/DHSchema.vue';
+  import SmartantsBar from './SmartAntsBar.vue';
   import href from '@front/helpers/href';
   import download from '@front/helpers/download';
+  import fullScreen from '@front/helpers/fullscreen';
 
   import DocMixin from './DocMixin';
   import env from '@front/helpers/env';
@@ -132,7 +77,8 @@
   export default {
     name: 'DocSmartAnts',
     components: {
-      Schema
+      Schema,
+      SmartantsBar
     },
     mixins: [DocMixin],
     props: {
@@ -141,6 +87,7 @@
     data() {
       return {
         isPlugin: env.isPlugin(),
+        isFullScreen: false,
         warnings: [],
         sheet: false,
         menu: { // Контекстное меню
@@ -161,7 +108,8 @@
         selectedNodes: null,    // Выбранные ноды
         focusNodes: null,       // Кадрированные ноды
         isUnwisp: false,        // Признак группировки связей
-        isShowLinks: true       // Нужно ли показывать связи?
+        isShowLinks: true,      // Нужно ли показывать связи?
+        ifShowFullscreen: fullScreen.isAvailable()  // Доступно ли полноэкранное представление
       };
     },
     computed: {
@@ -230,7 +178,20 @@
         return true;
       }
     },
+    watch: {
+      fullScreenDialog(value) {
+        this.$store.commit('setFullScreenMode', value);
+      }
+    },
     methods: {
+      toggleFullscreen() {
+        fullScreen.toggle(this.$el, (value) => {
+          this.isFullScreen = value;
+        });
+      },
+      setScenario(value) {
+        this.scenario = value;
+      },
       // Возвращает SVG код диаграммы
       getSvg() {
         const addStyle = function(children) {
@@ -248,26 +209,6 @@
             }
           }
         };
-
-
-        /*
-        const createStyleElementFromCSS = () => {
-          // assume index.html loads only one CSS file in <header></header>
-          const sheet = document.styleSheets[0];
-
-          const styleRules = [];
-          for (let i = 0; i < sheet.cssRules.length; i++)
-            styleRules.push(sheet.cssRules.item(i).cssText);
-
-          const style = document.createElement('style');
-          style.type = 'text/css';
-          style.appendChild(document.createTextNode(styleRules.join(' ')));
-
-          return style;
-        };
-        const style = createStyleElementFromCSS();
-        svgElement.insertBefore(style, svgElement.firstChild);
-        */
 
         const svgElement = this.$refs.schema.$el;
         addStyle(svgElement.childNodes);
@@ -410,13 +351,35 @@
 
 .container {
   position: relative;
-  text-align: center;
+  position: relative;
 }
 
-.toolbar {
-  position: absolute;
-  top: 0px;
-  left: 6px;
-  max-width: calc(100% - 32px);
+.container:hover > .fullscreen-icon,
+.dialog-card > .fullscreen-icon {
+  display:block;
 }
+.fullscreen-icon {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  display: none;
+}
+
+.dialog-card .toolbar {
+  top: 5px;
+  margin-left: 0;
+}
+
+.markdown-document .toolbar {
+  margin-left: 0;
+}
+
+.fullscreen-dialog {
+  z-index: 10000 !important;
+}
+
+.fullscreen-dialog div {
+  margin-top: 100px;
+}
+
 </style>

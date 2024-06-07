@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <div
     class="plantuml-place"
     v-on:contextmenu="showMenu">
     <error-boundary
@@ -13,15 +13,21 @@
         v-bind:value="60"
         color="primary"
         indeterminate />
-      <div
-        v-else-if="render"
-        class="plantuml-schema"
-        v-on:mousedown.prevent="zoomAndPanMouseDown"
-        v-on:mousemove.prevent="zoomAndPanMouseMove"
-        v-on:mouseup.prevent="zoomAndPanMouseUp"
-        v-on:mouseleave.prevent="zoomAndPanMouseUp"
-        v-on:wheel="zoomAndPanWheelHandler"
-        v-html="svg" />
+      <template v-else-if="render">
+        <div v-if="ifShowFullscreen" class="fullscreen-icon">
+          <v-icon v-on:click="toggleFullscreen">
+            {{ isFullScreen ? 'mdi-close-box-outline' : 'fullscreen' }}
+          </v-icon>
+        </div>
+        <div
+          class="plantuml-schema"
+          v-on:mousedown.prevent="zoomAndPanMouseDown"
+          v-on:mousemove.prevent="zoomAndPanMouseMove"
+          v-on:mouseup.prevent="zoomAndPanMouseUp"
+          v-on:mouseleave.prevent="zoomAndPanMouseUp"
+          v-on:wheel="zoomAndPanWheelHandler"
+          v-html="svg" />
+      </template>
     </error-boundary>
     <v-menu
       v-model="menu.show"
@@ -55,6 +61,7 @@
   import href from '@front/helpers/href';
   import copyToClipboard from '@front/helpers/clipboard';
   import download from '@front/helpers/download';
+  import fullScreen from '@front/helpers/fullscreen';
 
   import ZoomAndPan from './zoomAndPan';
 
@@ -78,6 +85,7 @@
     ],
     data() {
       return {
+        original: null,
         menu: { // Контекстное меню
           show: false,  // Признак отображения
           x : 0,  // Позиция x
@@ -95,7 +103,9 @@
         rerenderTimer: null,
         svg: '',
         isLoading: true,
-        svgEl: null
+        svgEl: null,
+        isFullScreen: false,
+        ifShowFullscreen: fullScreen.isAvailable()
       };
     },
     computed: {
@@ -136,14 +146,15 @@
       }
     },
     mounted() {
-
       window.addEventListener('resize', this.reRender);
       this.reloadSVG();
       let oldClientHeight = this.$el.clientHeight;
       new ResizeObserver(() => {
         if (oldClientHeight != this.$el.clientHeight) {
-          this.doResize();
-          oldClientHeight = this.$el.clientHeight;
+          setTimeout(() => {
+            this.doResize();
+            oldClientHeight = this.$el.clientHeight;
+          }, 10);
         }
       }).observe(this.$el);
 
@@ -152,6 +163,11 @@
       window.removeEventListener('resize', this.reRender);
     },
     methods: {
+      toggleFullscreen() {
+        fullScreen.toggle(this.$el, (value) => {
+          this.isFullScreen = value;
+        });
+      },
       reRender() {
         if (this.rerenderTimer) clearTimeout(this.rerenderTimer);
         this.rerenderTimer = setTimeout(() => {
@@ -160,20 +176,50 @@
             this.render = true;
             this.$nextTick(() => this.prepareSVG());
           });
-        }, 300);
+        }, 0);
       },
       doResize() {
         if (!this.svgEl || !this.svgEl.clientWidth || !this.svgEl.clientHeight) return;
-
         const originWidth = this.viewBox.width;
 
         if (this.$el.clientWidth > this.viewBox.width) {
           this.viewBox.width = this.$el.clientWidth;
         }
 
+        const originHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
+
+        this.svgEl.style.height = originHeight;
+
+        if (originHeight < this.$el.clientHeight) {
+          const k = this.viewBox.height / originHeight;
+          this.svgEl.style.height = this.$el.clientHeight;
+          this.viewBox.height = this.$el.clientHeight * k;
+        } 
+
+        const offsetX = (this.viewBox.width - originWidth) / 2;
+        const offsetY = (this.$el.clientHeight - originHeight) / 2;
+        this.viewBox.x -= offsetX;
+        this.viewBox.y -= offsetY > 0 ? offsetY : 0;
+        /*
+        if (!this.svgEl || !this.svgEl.clientWidth || !this.svgEl.clientHeight) return;
+
+        const originWidth = this.viewBox.width;
+
+        if (this.$el.clientWidth > this.viewBox.width && !this.isFullScreen) {
+          this.viewBox.width = this.$el.clientWidth;
+        }
+        if (this.svgEl.clientWidth > this.viewBox.width && this.isFullScreen) {
+          this.viewBox.width = this.svgEl.clientWidth;
+        }
+        if (this.svgEl.clientHeight > this.viewBox.height && this.isFullScreen) {
+          this.viewBox.height = this.svgEl.clientHeight;
+        }
+
         const originalHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
 
-        this.svgEl.style.height = originalHeight;
+        this.svgEl.style.height = this.isFullScreen
+          ? Math.max(originalHeight, window.innerHeight * 0.89)
+          : originalHeight;
 
         if (originalHeight < this.$el.clientHeight) {
           const k = this.viewBox.height / originalHeight;
@@ -181,8 +227,21 @@
           this.viewBox.height = this.$el.clientHeight * k;
         }
 
+
         const offset = (this.viewBox.width - originWidth) / 2;
         this.viewBox.x -= offset;
+        */
+      },
+      saveOriginal() {
+        const originalHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
+        this.original = {
+          height: originalHeight,
+          viewBoxHeight: this.$el.clientHeight * this.viewBox.height / originalHeight
+        };
+      },
+      resetToDefault() {
+        this.viewBox.height = this.original.viewBoxHeight;
+        this.svgEl.style.height = this.original.height;
       },
       prepareSVG() {
         this.svgEl = this.$el.querySelectorAll('svg')[0];
@@ -190,7 +249,14 @@
         if (this.svgEl) {
           this.svgEl.style = null;
           this.svgEl.setAttribute('encoding', 'UTF-8');
-          this.doResize();
+          if(this.original && !this.isFullScreen)
+            this.resetToDefault();
+          else {
+            if(!this.original)
+              this.saveOriginal();
+            this.doResize();
+          }
+
           href.elProcessing(this.svgEl);
           if (this.postrender) this.postrender(this.svgEl);
         }
@@ -251,5 +317,17 @@
   width: 100%;
   height: auto;
 }
-
+.plantuml-place {
+  position: relative;
+  background-color: #fff;
+}
+.plantuml-place:hover .fullscreen-icon {
+  display:block !important;
+}
+.fullscreen-icon {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  display: none;
+}
 </style>

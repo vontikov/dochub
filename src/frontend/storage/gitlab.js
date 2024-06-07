@@ -22,95 +22,95 @@ const NET_CODES_ENUM = {
 };
 
 export default {
-    modules: {
-        plugins
-    },
-    state: {
-        // Признак загрузки данных
-        isReloading: true,
-        // Признак рендеринга в версии для печати
-        isPrintVersion: false,
-        // Идет процесс авторизации в gitlab
-        isOAuthProcess: null,
-        // Токен досутпа в GitLab
-        access_token: null,
-        // Токен бновления access_token досутпа в GitLab
-        refresh_token: null,
-        // Время обновления данных
-        moment: null,
-        // Обобщенный манифест
-        manifest: {},
-        // Выявленные Проблемы
-        problems: [],
-        // Источники данных манифеста
-        sources: {},
-        // Доступные проекты GitLab
-        available_projects: {},
-        // Проекты
-        projects: {},
-        diff_format: 'line-by-line',
-        // Последние изменения
-        last_changes: {},
-        // Движок для рендеринга
-        renderCore: 'graphviz',
-        // Признак инциализации проекта в плагине
-        notInited: null,
-        // Признак критической проблемы
-        criticalError: null
-    },
+	modules: {
+		plugins
+	},
+	state: {
+		// Признак загрузки данных
+		isReloading: true,
+		// Признак рендеринга в версии для печати
+		isPrintVersion: false,
+		// Идет процесс авторизации в gitlab
+		isOAuthProcess: null,
+		// Токен досутпа в GitLab
+		access_token: null,
+		// Токен бновления access_token досутпа в GitLab
+		refresh_token: null,
+		// Время обновления данных
+		moment: null,
+		// Обобщенный манифест
+		manifest: {},
+		// Выявленные Проблемы
+		problems: [],
+		// Источники данных манифеста
+		sources: {},
+		// Доступные проекты GitLab
+		available_projects: {},
+		// Проекты
+		projects: {},
+		diff_format: 'line-by-line',
+		// Последние изменения
+		last_changes: {},
+		// Движок для рендеринга
+		renderCore: 'graphviz',
+		// Признак инциализации проекта в плагине
+		notInited: null,
+		// Признак критической проблемы
+		criticalError: null
+	},
 
-    mutations: {
-        clean(state) {
-            state.manifest = {};
-            state.problems = [];
-            state.sources = {};
-            state.available_projects = {};
-            state.projects = {};
-            state.last_changes = {};
-            state.criticalError = null;
-        },
-        setManifest(state, value) {
-            state.moment = Date.now();
-            state.manifest = value;
-        },
-        setSources(state, value) {
-            state.sources = value;
-        },
-        setIsOAuthProcess(state, value) {
-            state.isOAuthProcess = value;
-        },
-        setIsReloading(state, value) {
-            state.isReloading = value;
-        },
-        setAccessToken(state, value) {
-            state.access_token = value;
-        },
-        setRefreshToken(state, value) {
-            state.refresh_token = value;
-        },
-        setDiffFormat(state, value) {
-            state.diff_format = value;
-            cookie.set('diff_format', value, 1);
-        },
-        appendLastChanges(state, value) {
-            Vue.set(state.last_changes, value.id, value.payload);
-        },
-        appendProblems(state, value) {
-            state.problems = state.problems.concat([value]);
-        },
-        setRenderCore(state, value) {
-            state.renderCore = value;
-        },
-        setNoInited(state, value) {
-            state.notInited = value;
-        },
-        setCriticalError(state, value) {
-            state.criticalError = value;
-        },
-        setPrintVersion(state, value) {
-            state.isPrintVersion = value;
-        }
-    },
+	mutations: {
+		clean(state) {
+			state.manifest = {};
+			state.problems = [];
+			state.sources = {};
+			state.available_projects = {};
+			state.projects = {};
+			state.last_changes = {};
+			state.criticalError = null;
+		},
+		setManifest(state, value) {
+			state.moment = Date.now();
+			state.manifest = value;
+		},
+		setSources(state, value) {
+			state.sources = value;
+		},
+		setIsOAuthProcess(state, value) {
+			state.isOAuthProcess = value;
+		},
+		setIsReloading(state, value) {
+			state.isReloading = value;
+		},
+		setAccessToken(state, value) {
+			state.access_token = value;
+		},
+		setRefreshToken(state, value) {
+			state.refresh_token = value;
+		},
+		setDiffFormat(state, value) {
+			state.diff_format = value;
+			cookie.set('diff_format', value, 1);
+		},
+		appendLastChanges(state, value) {
+			Vue.set(state.last_changes, value.id, value.payload);
+		},
+		appendProblems(state, value) {
+			state.problems = state.problems.concat([value]);
+		},
+		setRenderCore(state, value) {
+			state.renderCore = value;
+		},
+		setNoInited(state, value) {
+			state.notInited = value;
+		},
+		setCriticalError(state, value) {
+			state.criticalError = value;
+		},
+		setPrintVersion(state, value) {
+			state.isPrintVersion = value;
+		}
+	},
 
     actions: {
         // Action for init store

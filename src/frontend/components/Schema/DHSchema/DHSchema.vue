@@ -218,6 +218,11 @@
     },
     mixins: [ DHSchemaAnimationMixin, DHSchemaExcalidrawMixin, ZoomAndPan],
     props: {
+      // Толщина линии дорожки
+      fullScreen: {
+        type: Boolean,
+        default: false
+      },
       // Варнинги генерации диаграммы
       warnings: {
         type: Array,
@@ -317,6 +322,12 @@
       isFirefox() {
         return navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
       },
+      limitHeight() {
+        return this.fullScreen ? screen.height : null;
+      },
+      limitWidth() {
+        return this.fullScreen ? screen.width : null;
+      },
       lineWidthLimit() {
         return +this.data.config?.lineWidthLimit || 20;
       },
@@ -380,7 +391,13 @@
       }
     },
     watch: {
+      fullScreen() {
+        this.$nextTick(() => this.rebuildViewBox());
+      },
       data() {
+        this.$nextTick(() => this.rebuildPresentation());
+      },
+      '$store.state.isFullScreenMode'() {
         this.$nextTick(() => this.rebuildPresentation());
       },
       'selected.nodes'(value) {
@@ -554,13 +571,13 @@
       // Перестроить viewbox
       rebuildViewBox() {
         const width = this.presentation.valueBox?.dx - this.presentation.valueBox.x;
-        let height = Math.max(this.presentation.valueBox.dy - this.presentation.valueBox.y, 100);
+        let height = Math.max(this.presentation.valueBox.dy - this.presentation.valueBox.y, this.limitHeight || 100);
         const clientWidth = this.$el?.clientWidth || 0;
         const titleWidth = this.$el?.querySelector('#title')?.clientWidth || 0;
 
         this.landscape.viewBox.titleX = this.presentation.valueBox.x + (this.presentation.valueBox?.dx - this.presentation.valueBox.x)/2 - titleWidth/2;
 
-        this.landscape.viewBox.top = this.presentation.valueBox.y - 48;
+        this.landscape.viewBox.top = this.presentation.valueBox.y - (height - this.presentation.valueBox.dy + this.presentation.valueBox.y)/2;
 
         if (this.animation.information) {
           this.landscape.viewBox.top -= 64;
@@ -597,6 +614,7 @@
           distance,
           this.landscape.symbols,
           availableWidth,
+          this.limitHeight,
           this.debug
         )
           .then((presentation) => {
