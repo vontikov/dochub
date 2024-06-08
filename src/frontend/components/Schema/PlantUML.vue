@@ -147,17 +147,8 @@
     },
     mounted() {
       window.addEventListener('resize', this.reRender);
+      new ResizeObserver(this.reRender).observe(this.$el);
       this.reloadSVG();
-      let oldClientHeight = this.$el.clientHeight;
-      new ResizeObserver(() => {
-        if (oldClientHeight != this.$el.clientHeight) {
-          setTimeout(() => {
-            this.doResize();
-            oldClientHeight = this.$el.clientHeight;
-          }, 10);
-        }
-      }).observe(this.$el);
-
     },
     beforeDestroy(){
       window.removeEventListener('resize', this.reRender);
@@ -174,9 +165,12 @@
           this.render = false;
           this.$nextTick(() => {
             this.render = true;
-            this.$nextTick(() => this.prepareSVG());
+            this.$nextTick(() => {
+              this.prepareSVG();
+              this.$nextTick(() => this.doResize());
+            });
           });
-        }, 0);
+        }, 10);
       },
       doResize() {
         if (!this.svgEl || !this.svgEl.clientWidth || !this.svgEl.clientHeight) return;
@@ -200,37 +194,6 @@
         const offsetY = (this.$el.clientHeight - originHeight) / 2;
         this.viewBox.x -= offsetX;
         this.viewBox.y -= offsetY > 0 ? offsetY : 0;
-        /*
-        if (!this.svgEl || !this.svgEl.clientWidth || !this.svgEl.clientHeight) return;
-
-        const originWidth = this.viewBox.width;
-
-        if (this.$el.clientWidth > this.viewBox.width && !this.isFullScreen) {
-          this.viewBox.width = this.$el.clientWidth;
-        }
-        if (this.svgEl.clientWidth > this.viewBox.width && this.isFullScreen) {
-          this.viewBox.width = this.svgEl.clientWidth;
-        }
-        if (this.svgEl.clientHeight > this.viewBox.height && this.isFullScreen) {
-          this.viewBox.height = this.svgEl.clientHeight;
-        }
-
-        const originalHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
-
-        this.svgEl.style.height = this.isFullScreen
-          ? Math.max(originalHeight, window.innerHeight * 0.89)
-          : originalHeight;
-
-        if (originalHeight < this.$el.clientHeight) {
-          const k = this.viewBox.height / originalHeight;
-          this.svgEl.style.height = this.$el.clientHeight;
-          this.viewBox.height = this.$el.clientHeight * k;
-        }
-
-
-        const offset = (this.viewBox.width - originWidth) / 2;
-        this.viewBox.x -= offset;
-        */
       },
       saveOriginal() {
         const originalHeight = this.viewBox.height * (this.svgEl.clientWidth / this.viewBox.width);
@@ -249,30 +212,18 @@
         if (this.svgEl) {
           this.svgEl.style = null;
           this.svgEl.setAttribute('encoding', 'UTF-8');
-          if(this.original && !this.isFullScreen)
-            this.resetToDefault();
-          else {
-            if(!this.original)
-              this.saveOriginal();
-            this.doResize();
-          }
-
+          this.doResize();
           href.elProcessing(this.svgEl);
           if (this.postrender) this.postrender(this.svgEl);
         }
       },
       reloadSVG() {
-        // Сбрасываем параметры зума
-
         if (!this.uml) {
           this.svg = '';
           return;
         }
 
-        if (this.error) {
-          this.error = null;
-        }
-
+        this.error = null;
         this.isLoading = true;
 
         this.$nextTick(() => {
@@ -281,12 +232,11 @@
           request.then((response) => {
             this.svg = response.data.toString();
             this.isLoading = false;
-            this.$nextTick(() => this.prepareSVG());
+            this.$nextTick(() => this.reRender());
           }).catch((error) => {
             if (error.response && error.response.status === 400) {
-              this.$nextTick(() => this.prepareSVG());
+              this.$nextTick(() => this.reRender());
             }
-
             this.error = error;
           }).finally(()=> {
             this.isLoading = false;

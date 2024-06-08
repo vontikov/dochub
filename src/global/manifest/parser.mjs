@@ -16,7 +16,7 @@ const sectionDeepLog = {
 	'namespaces': 0,
 	'imports': 0,
 	'aspects': 2,
-	'docs': 2,
+	'docs': 3,
 	'contexts': 2,
 	'components': 2,
 	'entities': 6,

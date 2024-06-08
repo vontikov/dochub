@@ -43,7 +43,6 @@ export default {
             this.request(element);
             this.watcher = setInterval(() => {
               if (!this.isFullScreen()) {
-                console.info('>>>>>>>>>>>>>!!!');
                 clearInterval(this.watcher);
                 this.watcher = null;
                 callback(false);

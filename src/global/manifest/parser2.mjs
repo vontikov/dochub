@@ -216,7 +216,7 @@ const createManifestObject = (destination, source, owner) => {
 
 
 // Объект файла манифеста
-function ManifestLayer() {
+function ManifestLayer(owner) {
     // Текущий идентификатор ресурса слоя
     this.uri = null;
     // Текущий статус слоя
@@ -241,6 +241,13 @@ function ManifestLayer() {
             return rootObject;
         }
     });
+    Object.defineProperty(this, 'owner', {
+        enumerable: false,
+        configurable: false,
+        get: () => {
+            return owner;
+        }
+    });
 
     // Подключаем импортируемые манифесты
     const imports = () => {
@@ -255,6 +262,7 @@ function ManifestLayer() {
             for (let i = 0; i < limit; i++) {
                 const import_ = imports[i];
                 let imported_ = this.imported[i];
+                // Формируем URI загружаемого манифеста
                 const uri = import_ ? cache.makeURIByBaseURI(import_, this.uri) : null;
                 if (!uri && imported_) { // Если ресурс вышел из игры очищаем его, но не перестраиваем стек слоев
                     imported_.free();
@@ -264,7 +272,7 @@ function ManifestLayer() {
                     console.warn(message);
                 } else if (uri !== imported_?.uri) { // Если слой занят другим манифестом перестраиваем его или создаем новый
                     ++counter;
-                    !imported_ && (this.imported[i] = imported_ = new ManifestLayer());
+                    !imported_ && (this.imported[i] = imported_ = new ManifestLayer(this));
                     imported_
                         .reload(uri)
                         .then(() => !--counter && success())
@@ -291,7 +299,7 @@ function ManifestLayer() {
             // Устанавливаем текущий идентификатор ресурса
             this.uri = uri;
             // Отправляем загрузку манифеста в очередь
-            parser.pushRequest(uri).then((manifest) => {
+            parser.pushRequest(uri, this).then((manifest) => {
                 // Сохраняем полученные данные манифеста
                 this.manifest = manifest;
                 // Проверяем пустой ли манифест
@@ -344,6 +352,7 @@ parser.registerError = function(e, uri) {
             case 'EntryIsADirectory (FileSystemError)':
                 return 'file-system';
             case 'Package':
+                uri = e.uri;
                 return 'package';
             default:
                 return 'net';
@@ -357,24 +366,73 @@ parser.registerError = function(e, uri) {
 },
 
 
-    // ************************************************************************
-    // 				Загрузка контента и разрешение зависимостей
-    // ************************************************************************
+// ************************************************************************
+// 				Загрузка контента и разрешение зависимостей
+// ************************************************************************
 
-    // Если обработчик определен, он вызывается при запросе ресурса
-    // По умолчанию используется request модуль
+// Если обработчик определен, он вызывается при запросе ресурса
+// По умолчанию используется request модуль
 
-    parser.onPullSource = null;
+parser.onPullSource = null;
 
-parser.pushRequest = function(uri) {
+// Информация о загружаемых ресурсах
+parser.sourceLoading = {};
+
+// Функция сканирования дерева слоев
+// callback - вызывается для каждого слоя. Если возвращает true, 
+//            сканирование останавливается и возвращается слой
+parser.findLayers = function(callback)  {
+    const expandItem = (item) => {
+        let result = null;
+        try {
+            for (const i in item.imported) {
+                const layer = item.imported[i];
+                result = expandItem(layer);
+                if (result) return result;
+            }
+            return callback(item) && item;
+        } catch (e) {
+            this.registerError(e, e?.uri || item.uri);
+        }
+    };
+
+    for (const i in this.rootLayers) {
+        const result = expandItem(this.rootLayers[i]);
+        if (result) return result;
+    }
+
+    return null;
+};
+
+parser.pushRequest = function(uri, owner) {
+    // Проверяем не загружен ли уже ресурс
+    /*
+    const loadedLayer = parser.sourceLoading[uri] || parser.layers.find((layer) => {
+        debugger;
+        return (layer.transaction === parser.transaction) && (layer.uri === uri);
+    });
+    */
+    const loadedLayer = this.findLayers((layer) => {
+        return (layer !== owner) && (layer.transaction === parser.transaction) && (layer.uri === uri);
+    });
+    // Если ресурс уже загружен или загружается формируем ошибку и игнорируем загрузку
+    if (loadedLayer) {
+        parser.registerError(new PackageError(uri, `Дублирование импорта манифеста [${uri}] в [${owner?.owner?.uri || ''}]!`));
+        return new Promise((success) => success(null));
+    }
+
+    // Выбираем ручку для загрузки
     let request;
     if (this.onPullSource)
         request = this.onPullSource(uri, '/', this);
     else
         request = this.cache.request(uri, '/');
 
+    // Создаем запрос
     return new Promise((success, reject) => {
         request.then((response) => {
+            // Удаляем из загрузок ресурс
+            delete parser.sourceLoading[uri];
             success(response && (typeof response.data === 'object'
                 ? response.data
                 : JSON.parse(response.data))
@@ -469,8 +527,7 @@ parser.rebuildLayers = function() {
     captives.map((layer) => {
         getUnresolvedDeps(layer).map((problem) => {
             this.registerError(new PackageError(layer.uri,
-                `Неразрешена зависимость для [${problem.depId}@${problem.version}]!`)
-                , layer.uri);
+                `Неразрешена зависимость для [${problem.depId}@${problem.version}]!`));
         });
     });
 

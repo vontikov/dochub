@@ -239,7 +239,7 @@ export default {
                     const item = {
                         uid,
                         title: url,
-                        correction: 'Проверь зависимости',
+                        correction: 'Проверьте зависимости и импорты',
                         description: '',
                         location: url
                     };
