@@ -170,7 +170,7 @@
               this.$nextTick(() => this.doResize());
             });
           });
-        }, 10);
+        }, 0);
       },
       doResize() {
         if (!this.svgEl || !this.svgEl.clientWidth || !this.svgEl.clientHeight) return;
