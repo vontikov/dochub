@@ -6,6 +6,8 @@
     <markdown
       v-if="(markdown !== null)"
       toc
+      v-bind:toc-first-level="0"
+      v-bind:toc-last-level="100"
       v-bind:breaks="false"
       v-bind:html="isHTMLSupport"
       v-bind:postrender="rendered"
@@ -34,6 +36,7 @@
   import DocMixin from './DocMixin';
   import ContextMenu from './DocContextMenu.vue';
   import Spinner from '@front/components/Controls/Spinner.vue';
+  import env from '@front/helpers/env';
 
   export default {
     name: 'DocMarkdown',
@@ -92,7 +95,7 @@
     computed: {
       // Определяет поддерживаются ли HTML тэги в markdown
       isHTMLSupport() {
-        return (process.env.VUE_APP_DOCHUB_MARKDOWN_HTML || 'off').toLocaleLowerCase() === 'on';
+        return (process.env.VUE_APP_DOCHUB_MARKDOWN_HTML || env.ideSettings?.env.DOCHUB_IDE_MARKDOWN_HTML || 'off').toLocaleLowerCase() === 'on';
       },
       // Возвращает URL документа с учетом истории переходов
       currentURL() {
@@ -187,6 +190,11 @@
 </script>
 
 <style>
+
+.table-of-contents {
+  list-style-type: none;
+  padding-left: 0;
+}
 
 .theme--light.v-application code {
   background: none !important;
