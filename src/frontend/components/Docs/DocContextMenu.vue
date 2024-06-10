@@ -23,6 +23,7 @@
 <script>
 
   export default {
+    name: 'DocContextMenu',
     props: {
       items: {
         type: Array,

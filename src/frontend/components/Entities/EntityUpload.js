@@ -33,8 +33,8 @@ export const uploadDocument = function(profile, path, params) {
   const provider = datasets();
   return new Promise((success, reject) => {
       if (profile.template) {
-        const baseURI = uriTool.getBaseURIOfPath(path);
-        requests.request(profile.template, baseURI).then(({ data }) => {
+        const baseURI = uriTool.getBaseURIOfPath(`${path}/template`);
+        requests.request(profile.template, baseURI, { raw: true }).then(({ data }) => {
           let content = data;
           provider.releaseData(path, params)
           .then((dataset) => {

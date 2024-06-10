@@ -8,7 +8,7 @@
   import DocMixin from './DocMixin';
 
   export default {
-    name: 'DocTable',
+    name: 'DocNetwork',
     mixins: [DocMixin],
     data() {
       return {

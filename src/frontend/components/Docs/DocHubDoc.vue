@@ -68,7 +68,7 @@
 
   
   export default {
-    name: 'Document',
+    name: 'DocHubDoc',
     components: {
       AsyncApiComponent,
       Plantuml,
@@ -213,7 +213,7 @@
         return new Promise((success, reject) => {
           const whiter = setInterval(() => {
             if (!this.isReloading) {
-              requests.request(url, this.baseURI)
+              requests.request(url, this.baseURI, { raw : true })
                 .then(success)
                 .catch(reject);
               clearInterval(whiter);

@@ -7,7 +7,7 @@ export default {
                 return 'jsonata-query';
             } else if (source.endsWith('.jsonata')) {
                 return 'jsonata-file';
-            } else if (source.endsWith('.yaml') || source.endsWith('.json')) {
+            } else if (source.endsWith('.yaml') || source.endsWith('.json') || source.endsWith('.xml')) {
                 return 'data-file';
             } else {
                 return 'id';
