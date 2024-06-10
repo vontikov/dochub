@@ -29,6 +29,8 @@ axios.interceptors.response.use(
                     response.data = JSON.parse(response.data);
                 else if ((url.indexOf('.yaml/raw') >= 0) || url.endsWith('.yaml'))
                     response.data = yaml.parse(response.data);
+                else if ((url.indexOf('.xml/raw') >= 0) || url.endsWith('.xml'))
+                    response.data = xml.parse(response.data);
             }
         }
         return response;
