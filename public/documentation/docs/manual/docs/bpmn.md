@@ -122,14 +122,3 @@ docs:
 Результат:
 
 ![BPMN](@document/dochub.example.bpmn.analyse)
-
-# BPMN2
-test
-
-## trst
-
-### test 
-
-#### test
-
-##### test

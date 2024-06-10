@@ -173,6 +173,7 @@ export default {
                 // eslint-disable-next-line no-console
                 console.info('MEMORY STATUS ', window?.performance?.memory);
             };
+
             storageManager.onStartReload = () => {
                 rulesContext && rulesContext.stop();
                 tickCounter = Date.now();
@@ -251,8 +252,8 @@ export default {
 
                     item.description = `${error.toString()}\n`;
                     errors.package.items.push(item);
-                } else if (!errors.count && (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system')) {
-                    context.commit('setNoInited', true);
+                } else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
+                    context.commit('setNoInited', errors.count === 1);
                 } else {
                     const item = {
                         uid,
@@ -317,9 +318,10 @@ export default {
                         tickCounter = Date.now();
                         // eslint-disable-next-line no-console
                         console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
-                        if (storageManager.onChange)
+                        if (storageManager.onChange) {
+                            storageManager.onStartReload();
                             storageManager.onChange(Object.keys(changes));
-                        else 
+                        } else 
                             context.dispatch('reloadAll');
 
                         for (const source in changes) {
