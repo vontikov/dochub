@@ -48,7 +48,7 @@ const reloadConfig = () => {
 	}
 };
 
-if (window.$PAPI.onReloadSetting) window.$PAPI.onReloadSetting = reloadConfig;
+if (window.$PAPI?.onReloadSetting) window.$PAPI.onReloadSetting = reloadConfig;
 
 reloadConfig();
 
