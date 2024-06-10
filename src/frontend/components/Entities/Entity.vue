@@ -51,8 +51,8 @@
         profileLoaded: false,
         menu: {
           show: false,
-          x : 0,
-          y : 0
+          x: 0,
+          y: 0
         },
         minHeight: null
       };
@@ -99,6 +99,9 @@
       },
       entityPath() {
         return `/entities/${this.entity}`;
+      },
+      manifest() {
+        return this.$store.state.manifest;
       }
     },
     watch: {
@@ -109,7 +112,7 @@
         this.reloadProfile();
       },
       manifest() {
-        this.reloadProfile();
+        !this.refresher && this.reloadProfile().then(() => this.$nextTick(this.refreshPres));
       },
       currentPresentation() {
         this.reloadProfile();
@@ -124,22 +127,26 @@
       },
       // Перезагружает профиль сущности
       reloadProfile() {
-        if (this.refresher) clearTimeout(this.refresher);
-        this.profileLoaded = false;
-        this.refresher = setTimeout(() =>{
-          this.switchedPresentation = null;
-          const dateLakeId = this.makeDataLakeID(this.entityPath);
-          query.expression(dateLakeId).evaluate()
-            .then((data) => {
-              // Проверяем, что результат запроса не устарел
-              if (dateLakeId === this.makeDataLakeID(this.entityPath)) {
-                this.profile = data;
-                this.profileLoaded = true;
-              }
-            })
-            .catch((e) => this.error = e)
-            .finally(() => this.refresher = null);
-        } ,100);
+        return new Promise((success, reject) => {
+          if (this.refresher) clearTimeout(this.refresher);
+          this.profileLoaded = false;
+          this.refresher = setTimeout(() => {
+            this.switchedPresentation = null;
+            const dateLakeId = this.makeDataLakeID(this.entityPath);
+            query.expression(dateLakeId).evaluate()
+              .then((data) => {
+                // Проверяем, что результат запроса не устарел
+                if (dateLakeId === this.makeDataLakeID(this.entityPath)) {
+                  this.profile = data;
+                  this.profileLoaded = true;
+                  success(data);
+                }
+              })
+              .catch((e) => { this.error = e; reject(e); })
+              .finally(() => this.refresher = null);
+          }, 100);
+
+        });
       },
       // Принудительное обновление представления
       refreshPres() {
@@ -177,11 +184,11 @@
         } else { // Иначе переключаем презентацию
           this.switchedPresentation = presentation;
           /*
-          this.$router.push({
-            path: `/entities/${this.entity}/${presentation}`,
-            query: this.$route.query
-          });
-          */
+        this.$router.push({
+          path: `/entities/${this.entity}/${presentation}`,
+          query: this.$route.query
+        });
+        */
           this.refreshPres();
         }
       }

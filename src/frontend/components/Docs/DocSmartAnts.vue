@@ -1,46 +1,11 @@
 <template>
-  <box>
-    <v-card flat class="container" style="padding: 0; margin-top: 12px">
-      <div class="fullscreen-icon">
-        <v-icon v-on:click="openDialog">
-          fullscreen
+  <box class="smart-ants" style="min-width: 100%;">
+    <v-card flat class="container" v-bind:style="{ padding: '0', 'margin-top': '0', 'min-width': isFullScreen ? '100%' : 'auto' }">
+      <div v-if="ifShowFullscreen" class="fullscreen-icon">
+        <v-icon v-on:click="toggleFullscreen">
+          {{ isFullScreen ? 'mdi-close-box-outline' : 'fullscreen' }}
         </v-icon>
       </div>
-      <v-dialog
-        v-model="dialog"
-        style="z-index: 9999">
-        <v-card class="dialog-card">
-          <smartants-bar
-            v-bind:warnings="warnings"
-            v-bind:focus-nodes="focusNodes"
-            v-bind:scenario="scenario"
-            v-bind:scenarios="scenarios"
-            v-bind:is-print-version="isPrintVersion"
-            v-bind:is-show-links="isShowLinks"
-            v-bind:is-unwisp="isUnwisp"
-            v-bind:is-paying="isPaying"
-            v-on:exportToExcalidraw="exportToExcalidraw"
-            v-on:doFocus="doFocus"
-            v-on:clearFocus="clearFocus"
-            v-on:playScenario="playScenario"
-            v-on:playNext="playNext"
-            v-on:setUnwisp="(v) => setUnwisp(v)"
-            v-on:setShowLinks="(v) => setShowLinks(v)" />
-          <schema
-            ref="schema"
-            v-model="status"
-            class="schema"
-            v-bind:warnings="warnings"
-            v-bind:data="data"
-            v-bind:show-links="isShowLinks"
-            v-on:update:warnings="v => warnings = v"
-            v-on:playstop="onPlayStop"
-            v-on:playstart="onPlayStart"
-            v-on:selected-nodes="onSelectedNodes"
-            v-on:on-click-link="onClickLink"
-            v-on:contextmenu="showMenu" />
-        </v-card>
-      </v-dialog>
       <smartants-bar
         v-bind:warnings="warnings"
         v-bind:focus-nodes="focusNodes"
@@ -55,12 +20,14 @@
         v-on:clearFocus="clearFocus"
         v-on:playScenario="playScenario"
         v-on:playNext="playNext"
-        v-on:setUnwisp="(v) => setUnwisp(v)"
-        v-on:setShowLinks="(v) => setShowLinks(v)" />
+        v-on:setScenario="setScenario"
+        v-on:setUnwisp="setUnwisp"
+        v-on:setShowLinks="setShowLinks" />
       <schema
         ref="schema"
         v-model="status"
         class="schema"
+        v-bind:full-screen="isFullScreen"
         v-bind:warnings="warnings"
         v-bind:data="data"
         v-bind:show-links="isShowLinks"
@@ -102,12 +69,13 @@
   import SmartantsBar from './SmartAntsBar.vue';
   import href from '@front/helpers/href';
   import download from '@front/helpers/download';
+  import fullScreen from '@front/helpers/fullscreen';
 
   import DocMixin from './DocMixin';
   import env from '@front/helpers/env';
 
   export default {
-    name: 'DocHubViewpoint',
+    name: 'DocSmartAnts',
     components: {
       Schema,
       SmartantsBar
@@ -119,7 +87,7 @@
     data() {
       return {
         isPlugin: env.isPlugin(),
-        dialog: false,
+        isFullScreen: false,
         warnings: [],
         sheet: false,
         menu: { // Контекстное меню
@@ -140,7 +108,8 @@
         selectedNodes: null,    // Выбранные ноды
         focusNodes: null,       // Кадрированные ноды
         isUnwisp: false,        // Признак группировки связей
-        isShowLinks: true       // Нужно ли показывать связи?
+        isShowLinks: true,      // Нужно ли показывать связи?
+        ifShowFullscreen: fullScreen.isAvailable()  // Доступно ли полноэкранное представление
       };
     },
     computed: {
@@ -210,13 +179,18 @@
       }
     },
     watch: {
-      dialog(value) {
+      fullScreenDialog(value) {
         this.$store.commit('setFullScreenMode', value);
       }
     },
     methods: {
-      openDialog() {
-        this.dialog = true;
+      toggleFullscreen() {
+        fullScreen.toggle(this.$el, (value) => {
+          this.isFullScreen = value;
+        });
+      },
+      setScenario(value) {
+        this.scenario = value;
       },
       // Возвращает SVG код диаграммы
       getSvg() {
@@ -235,26 +209,6 @@
             }
           }
         };
-
-
-        /*
-        const createStyleElementFromCSS = () => {
-          // assume index.html loads only one CSS file in <header></header>
-          const sheet = document.styleSheets[0];
-
-          const styleRules = [];
-          for (let i = 0; i < sheet.cssRules.length; i++)
-            styleRules.push(sheet.cssRules.item(i).cssText);
-
-          const style = document.createElement('style');
-          style.type = 'text/css';
-          style.appendChild(document.createTextNode(styleRules.join(' ')));
-
-          return style;
-        };
-        const style = createStyleElementFromCSS();
-        svgElement.insertBefore(style, svgElement.firstChild);
-        */
 
         const svgElement = this.$refs.schema.$el;
         addStyle(svgElement.childNodes);
@@ -400,24 +354,17 @@
   position: relative;
 }
 
-.container:hover > .fullscreen-icon {
+.container:hover > .fullscreen-icon,
+.dialog-card > .fullscreen-icon {
   display:block;
 }
 .fullscreen-icon {
   position: absolute;
   right: 20px;
+  top: 20px;
   display: none;
 }
 
-.toolbar {
-  position: absolute;
-  top: 0px;
-  left: 6px;
-  margin-left: 6px;
-  max-width: calc(100% - 32px);
-  display: inline-flex;
-  left: 10px;
-}
 .dialog-card .toolbar {
   top: 5px;
   margin-left: 0;
@@ -426,4 +373,13 @@
 .markdown-document .toolbar {
   margin-left: 0;
 }
+
+.fullscreen-dialog {
+  z-index: 10000 !important;
+}
+
+.fullscreen-dialog div {
+  margin-top: 100px;
+}
+
 </style>

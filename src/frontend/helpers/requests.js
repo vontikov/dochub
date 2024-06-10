@@ -4,17 +4,7 @@ import crc16 from '@global/helpers/crc16';
 import gitlab from '@front/helpers/gitlab';
 import uriTool from '@front/helpers/uri';
 import { Buffer } from 'buffer';
-
-const XML = {
-	parse(xml) {
-		let result = null;
-		require('xml2js').parseString(xml, (err, json) => {
-			if (err) throw err;
-			result = json;
-		});
-		return result;
-	}
-};
+import xml from '@global/helpers/xmlparser';
 
 import env, { Plugins } from './env';
 import { responseCacheInterceptor, requestCacheInterceptor } from './cache';
@@ -69,7 +59,7 @@ axios.interceptors.response.use(async(response) => {
 				(url.indexOf('.xml/raw') >= 0)
 				|| (url.endsWith('.xml'))
 				|| (response?.headers || {})['content-type'] === 'application/xml') 
-				response.data = XML.parse(response.data);
+				response.data = xml.parse(response.data);
 		}
 	}
 
@@ -93,7 +83,7 @@ function injectPAPIMiddleware() {
 			switch (type) {
 				case 'yaml': response.data = YAML.parse(response.data); break;
 				case 'json': response.data = JSON.parse(response.data); break;
-				case 'xml': !request.raw && (response.data = XML.parse(response.data)); break;
+				case 'xml': !request.raw && (response.data = xml.parse(response.data)); break;
 				case 'jpg':
 					type = 'jpeg';
 				// eslint-disable-next-line no-fallthrough

@@ -1,7 +1,7 @@
 {
   "name": "dochubcore",
   "version": "1.0.6",
-  "main": "/dist/dochub.js",
+  "main": "src/backend/main.mjs",
   "files": [
     "/dist"
   ],

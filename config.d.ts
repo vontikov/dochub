@@ -16,7 +16,12 @@ declare var DochubVsCodeExt: {
       mode: string,
       request_type: string,
       server: string
-    }
+    };
+    env: {                    // Переменные среды для IDE режима
+      DOCHUB_IDE_GITLAB_URL?: string,     // gitlab сервер для режима IDE
+      DOCHUB_IDE_BITBUCKET_URL?: string,  // bitbacket сервер для режима IDE
+      DOCHUB_IDE_PERSONAL_TOKEN?: string, // персональный токен для gitlab/bitbacket
+    };
   }
 };
 
@@ -24,6 +29,7 @@ declare var DochubVsCodeExt: {
 declare var DocHubIDEACodeExt: {
   rootManifest: string,       // Корневой манифест (с чего начинается загрузка)
   settings: {
+    [x: string]: {};
     isEnterprise: boolean,    // Признак использования фронта в плагине как Enterprise портала
     enterpriseServer?: string,
     render: {
@@ -31,7 +37,12 @@ declare var DocHubIDEACodeExt: {
       mode: string,           // Режим рендера ELK / Smetana / GraphVis
       request_type: string,   // Тип запросов к сервер рендеринга POST / GET
       server: string          // Сервер рендеринга
-    }
+    };
+    env: {                    // Переменные среды для IDE режима
+      DOCHUB_IDE_GITLAB_URL?: string,     // gitlab сервер для режима IDE
+      DOCHUB_IDE_BITBUCKET_URL?: string,  // bitbacket сервер для режима IDE
+      DOCHUB_IDE_PERSONAL_TOKEN?: string, // персональный токен для gitlab/bitbacket
+    };
   }
 };
 

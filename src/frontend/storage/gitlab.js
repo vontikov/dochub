@@ -3,7 +3,6 @@ import cookie from 'vue-cookie';
 // import GitHelper from '../helpers/gitlab';
 import storageManager from '@front/manifest/manager';
 import Vue from 'vue';
-import requests from '@front/helpers/requests';
 import gateway from '@idea/gateway';
 import consts from '@front/consts';
 import rules from '@front/helpers/rules';
@@ -19,7 +18,7 @@ import validatorErrors from '@front/constants/validators';
 const axios = require('axios');
 
 const NET_CODES_ENUM = {
-	NOT_FOUND: 404
+    NOT_FOUND: 404
 };
 
 export default {
@@ -31,8 +30,6 @@ export default {
 		isReloading: true,
 		// Признак рендеринга в версии для печати
 		isPrintVersion: false,
-		// Признак полноэкранности диаграмм
-		isFullScreenMode: false,
 		// Идет процесс авторизации в gitlab
 		isOAuthProcess: null,
 		// Токен досутпа в GitLab
@@ -112,303 +109,335 @@ export default {
 		},
 		setPrintVersion(state, value) {
 			state.isPrintVersion = value;
-		},
-		setFullScreenMode(state, value) {
-			state.isFullScreenMode= value;
 		}
 	},
 
-	actions: {
-		// Action for init store
-		init(context) {
-			context.dispatch('plugins/init');
+    actions: {
+        // Action for init store
+        init(context) {
+            context.dispatch('plugins/init');
 
-			const errors = {
-				syntax: null,
-				net: null,
-				package: null
-			};
+            const errors = {
+                count: 0,
+                core: null,
+                syntax: null,
+                net: null,
+                missing_files: null,
+                package: null
+            };
 
-			context.commit('setRenderCore',
-				env.isPlugin(Plugins.idea) ? 'smetana' : 'graphviz'
-			);
+            context.commit('setRenderCore',
+                env.isPlugin(Plugins.idea) ? 'smetana' : 'graphviz'
+            );
 
-			let diff_format = cookie.get('diff_format');
-			context.commit('setDiffFormat', diff_format ? diff_format : context.state.diff_format);
+            let diff_format = cookie.get('diff_format');
+            context.commit('setDiffFormat', diff_format ? diff_format : context.state.diff_format);
 
-			storageManager.onReloaded = (parser) => {
-				// Очищаем прошлую загрузку
-				context.commit('clean');
-				// Регистрируем обнаруженные ошибки
-				errors.syntax && context.commit('appendProblems', errors.syntax);
-				errors.net && context.commit('appendProblems', errors.net);
-				errors.missing_files && context.commit('appendProblems', errors.missing_files);
-				errors.package && context.commit('appendProblems', errors.package);
+            let tickCounter = 0;
+            let rulesContext = null;
 
-				const manifest = Object.freeze(parser.manifest);
-				// Обновляем манифест и фризим объекты
-				context.commit('setManifest', manifest);
-				context.commit('setSources', parser.mergeMap);
-				if (!Object.keys(context.state.manifest || {}).length) {
-					context.commit('setCriticalError', true);
-				}
+            storageManager.onReloaded = (parser) => {
+                // eslint-disable-next-line no-console
+                console.info('TIME OF RELOAD SOURCES = ', (Number.parseFloat((Date.now() - tickCounter) / 1000)).toFixed(4));
+                // Очищаем прошлую загрузку
+                context.commit('clean');
+                // Регистрируем обнаруженные ошибки
+                errors.core && context.commit('appendProblems', errors.core);
+                errors.syntax && context.commit('appendProblems', errors.syntax);
+                errors.net && context.commit('appendProblems', errors.net);
+                errors.missing_files && context.commit('appendProblems', errors.missing_files);
+                errors.package && context.commit('appendProblems', errors.package);
 
-				entities(manifest);
-				context.commit('setIsReloading', false);
-				rules(manifest,
-					(problems) => context.commit('appendProblems', problems),
-					(error) => {
-						// eslint-disable-next-line no-console
-						console.error(error);
-						context.commit('appendProblems', error);
-					});
-			};
-			storageManager.onStartReload = () => {
-				errors.syntax = null;
-				errors.net = null;
-				errors.missing_files = null;
-				errors.package = null;
+                const manifest = Object.freeze(parser.manifest);
+                // Обновляем манифест и фризим объекты
+                context.commit('setManifest', manifest);
+                context.commit('setSources', parser.mergeMap);
+                if (!Object.keys(context.state.manifest || {}).length) {
+                    context.commit('setCriticalError', true);
+                }
 
-				context.commit('setNoInited', null);
-				context.commit('setIsReloading', true);
-			};
-			storageManager.onError = (action, data) => {
-				const error = data.error || {};
-				const url = (data.error.config || { url: data.uri }).url;
-				const uid = '$' + crc16(url);
-				if (action === 'syntax') {
-					if (!errors.syntax) {
-						errors.syntax = {
-							id: '$error.syntax',
-							title: validatorErrors.title.syntax,
-							items: [],
-							critical: true
-						};
-					}
-					const source = error.source || {};
-					const range = source.range || {};
-					if (!errors.syntax.items.find((item) => item.uid === uid)) {
-						errors.syntax.items.push({
-							uid,
-							title: url,
-							correction: validatorErrors.correction.in_file,
-							description: `${validatorErrors.description.manifest_syntax}:\n\n`
-								+ `${error.toString()}\n`
-								+ `${validatorErrors.parts.code}: ${source.toString()}`
-								+ `${validatorErrors.parts.range}: ${range.start || '--'}..${range.end || '--'}`,
-							location: url
-						});
-					}
-				} else if (action === 'package') {
-					if (errors.package?.items.find(({ description }) => description === `${error.toString()}\n`)) return;
-					if (!errors.package) {
-						errors.package = {
-							id: '$error.package',
-							items: [],
-							critical: true
-						};
-					}
-					const item = {
-						uid,
-						title: url,
-						correction: 'Проверь зависимости',
-						description: '',
-						location: url
-					};
+                entities(manifest);
+                context.commit('setIsReloading', false);
+                const startRules = Date.now();
+                rulesContext = rules(manifest,
+                    (problems) => context.commit('appendProblems', problems),
+                    (error) => {
+                        // eslint-disable-next-line no-console
+                        console.error(error);
+                        context.commit('appendProblems', error);
+                    });
+                // eslint-disable-next-line no-console
+                console.info('TIME OF EXECUTE RULES = ', (Number.parseFloat((Date.now() - startRules) / 1000)).toFixed(4));
+                // eslint-disable-next-line no-console
+                console.info('TIME OF FULL RELOAD = ', (Number.parseFloat((Date.now() - tickCounter) / 1000)).toFixed(4));
+                // eslint-disable-next-line no-console
+                console.info('MEMORY STATUS ', window?.performance?.memory);
+            };
 
-					item.description = `${error.toString()}\n`;
-					errors.package.items.push(item);
-				} else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
-					context.commit('setNoInited', true);
-				} else {
-					const item = {
-						uid,
-						title: url,
-						correction: '',
-						description: '',
-						location: url
-					};
+            storageManager.onStartReload = () => {
+                rulesContext && rulesContext.stop();
+                tickCounter = Date.now();
+                errors.count = 0;
+                errors.syntax = null;
+                errors.net = null;
+                errors.missing_files = null;
+                errors.package = null;
+                errors.core = null;
 
-					if (error.response?.status === NET_CODES_ENUM.NOT_FOUND) {
-						if (!errors.missing_files) {
-							errors.missing_files = {
-								id: '$error.missing_files',
-								items: [],
-								critical: true
-							};
-						}
+                context.commit('setNoInited', null);
+                context.commit('setIsReloading', true);
+            };
+            storageManager.onError = (action, data) => {
+                errors.count++;
+                const error = data.error || {};
+                const url = (data.error.config || { url: data.uri }).url;
+                const uid = '$' + crc16(url);
+                if (action === 'core') {
+                    if (!errors.core) {
+                        errors.core = {
+                            id: '$error.core',
+                            title: validatorErrors.title.core,
+                            items: [],
+                            critical: true
+                        };
+                    }
 
-						item.correction = validatorErrors.correction.missing_files;
-						item.description = `${validatorErrors.description.missing_files}:\n\n`
-							+ `${url.split('/').splice(3).join(' -> ')}\n`;
-						errors.missing_files.items.push(item);
-					} else {
-						if (!errors.net) {
-							errors.net = {
-								id: '$error.net',
-								items: [],
-								critical: true
-							};
-						}
+                    errors.core.items.push({
+                        uid,
+                        title: validatorErrors.title.core,
+                        correction: validatorErrors.correction.core,
+                        description: `${validatorErrors.description.core}:\n\n${error.toString()}\n\nStackTace:\n\n${error?.stack}`,
+                        location: url
+                    });
 
-						item.correction = validatorErrors.correction.net;
-						item.description = `${validatorErrors.description.net}:\n\n`
-							+ `${error.toString()}\n`;
-						errors.net.items.push(item);
-					}
+                } else if (action === 'syntax') {
+                    if (!errors.syntax) {
+                        errors.syntax = {
+                            id: '$error.syntax',
+                            title: validatorErrors.title.syntax,
+                            items: [],
+                            critical: true
+                        };
+                    }
+                    const source = error.source || {};
+                    const range = source.range || {};
+                    if (!errors.syntax.items.find((item) => item.uid === uid)) {
+                        errors.syntax.items.push({
+                            uid,
+                            title: url,
+                            correction: validatorErrors.correction.in_file,
+                            description: `${validatorErrors.description.manifest_syntax}:\n\n`
+                                + `${error.toString()}\n`
+                                + `${validatorErrors.parts.code}: ${source.toString()}`
+                                + `${validatorErrors.parts.range}: ${range.start || '--'}..${range.end || '--'}`,
+                            location: url
+                        });
+                    }
+                } else if (action === 'package') {
+                    if (errors.package?.items.find(({ description }) => description === `${error.toString()}\n`)) return;
+                    if (!errors.package) {
+                        errors.package = {
+                            id: '$error.package',
+                            items: [],
+                            critical: true
+                        };
+                    }
+                    const item = {
+                        uid,
+                        title: url,
+                        correction: 'Проверьте зависимости и импорты',
+                        description: '',
+                        location: url
+                    };
 
-					// Может не надо? 
-					context.commit('setIsReloading', false);
-				}
-			};
+                    item.description = `${error.toString()}\n`;
+                    errors.package.items.push(item);
+                } else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
+                    context.commit('setNoInited', errors.count === 1);
+                } else {
+                    const item = {
+                        uid,
+                        title: url,
+                        correction: '',
+                        description: '',
+                        location: url
+                    };
 
-			if (env.isPlugin()) {
-				storageManager.onPullSource = (url, path, parser) => {
-					return parser.cache.request(url, path);
-				};
-			}
+                    if (error.response?.status === NET_CODES_ENUM.NOT_FOUND) {
+                        if (!errors.missing_files) {
+                            errors.missing_files = {
+                                id: '$error.missing_files',
+                                items: [],
+                                critical: true
+                            };
+                        }
 
-			context.dispatch('reloadAll');
+                        item.correction = validatorErrors.correction.missing_files;
+                        item.description = `${validatorErrors.description.missing_files}:\n\n`
+                            + `${url.split('/').splice(3).join(' -> ')}\n`;
+                        errors.missing_files.items.push(item);
+                    } else {
+                        if (!errors.net) {
+                            errors.net = {
+                                id: '$error.net',
+                                items: [],
+                                critical: true
+                            };
+                        }
 
-			let changes = {};
-			let refreshTimer = null;
+                        item.correction = validatorErrors.correction.net;
+                        item.description = `${validatorErrors.description.net}:\n\n`
+                            + `${error.toString()}\n`;
+                        errors.net.items.push(item);
+                    }
 
-			function reloadSourceAll(data) {
-				if (data) {
-					changes = Object.assign(changes, data);
-					if (refreshTimer) clearTimeout(refreshTimer);
-					refreshTimer = setTimeout(() => {
-						const sources = context.state.sources['/'] || [];
-						for (const source in changes) {
-							if (source === consts.plugin.ROOT_MANIFEST) {
-								// eslint-disable-next-line no-console
-								console.info('>>>>>> GO RELOAD BY ROOT MANIFEST <<<<<<<<<<');
-								context.dispatch('reloadAll');
-								return;
-							} else if (requests.isUsedURL(source)) {
-								if (sources.indexOf(requests.getIndexURL(source)) >= 0) {
-									// eslint-disable-next-line no-console
-									console.info('>>>>>> GO RELOAD BY SOURCE <<<<<<<<<<', source);
-									context.dispatch('reloadAll');
-									return;
-								} else {
-									// eslint-disable-next-line no-console
-									console.info('>>>>>> ON CHANGED SOURCE <<<<<<<<<<', source);
-									// Уведомляем об изменениях всех подписчиков
-									window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
-								}
-							}
-						}
-					}, 350);
-				}
-			}
+                    // Может не надо? 
+                    context.commit('setIsReloading', false);
+                }
+            };
 
-			gateway.appendListener('source/changed', reloadSourceAll);
-		},
+            /* Зачем это здесь? 
+            if (env.isPlugin()) {
+                storageManager.onPullSource = (url, path, parser) => {
+                    return parser.cache.request(url, path);
+                };
+            }
+            */
 
-		// Вызывается при необходимости получить access_token
-		refreshAccessToken(context, OAuthCode) {
-			const params = OAuthCode ? {
-				grant_type: 'authorization_code',
-				code: OAuthCode
-			} : {
-				grant_type: 'refresh_token',
-				refresh_token: context.state.refresh_token
-			};
+            context.dispatch('reloadAll');
 
-			if (OAuthCode) context.commit('setIsOAuthProcess', true);
+            let changes = {};
+            let refreshTimer = null;
 
-			const OAuthURL = (new URL('/oauth/token', config.gitlab_server)).toString();
+            const reloadSourceAll = (data) => {
+                if (data) {
+                    changes = Object.assign(changes, data);
+                    if (refreshTimer) clearTimeout(refreshTimer);
+                    refreshTimer = setTimeout(() => {
+                        rulesContext && rulesContext.stop();
+                        tickCounter = Date.now();
+                        // eslint-disable-next-line no-console
+                        console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
+                        if (storageManager.onChange) {
+                            storageManager.onStartReload();
+                            storageManager.onChange(Object.keys(changes));
+                        } else 
+                            context.dispatch('reloadAll');
 
-			axios({
-				method: 'post',
-				url: OAuthURL,
-				params: Object.assign({
-					client_id: config.oauth.APP_ID,
-					redirect_uri: (new URL(consts.pages.OAUTH_CALLBACK_PAGE, window.location)).toString()
-				}, params)
-			})
-				.then((response) => {
-					context.commit('setAccessToken', response.data.access_token);
-					context.commit('setRefreshToken', response.data.refresh_token);
-					// Если expires_in нет, считаем, что токен вечный
-					response.data.expires_in && setTimeout(() => context.dispatch('refreshAccessToken'), (response.data.expires_in - 10) * 1000);
-					if (OAuthCode) context.dispatch('reloadAll');
-				}).catch((e) => {
-					context.commit('appendProblems', [{
-						problem: validatorErrors.title.net,
-						route: OAuthURL,
-						target: '_blank',
-						title: `${validatorErrors.title.gitlab_auth} [${e.toString()}]`
-					}]);
-					// eslint-disable-next-line no-console
-					console.error(validatorErrors.title.gitlab_auth, e);
-				}).finally(() => context.commit('setIsOAuthProcess', false));
-		},
+                        for (const source in changes) {
+                            // Уведомляем об изменениях всех подписчиков
+                            window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
+                        }
+                    }, 350);
+                }
+            };
 
-		// Need to call when gitlab takes callback's rout with oauth code
-		onReceivedOAuthCode(context, OAuthCode) {
-			context.dispatch('refreshAccessToken', OAuthCode);
-		},
+            gateway.appendListener('source/changed', reloadSourceAll);
+        },
 
-		// Reload root manifest
-		async reloadRootManifest(_context, payload) {
-			// Если работаем в режиме backend, берем все оттуда
-			if (env.isBackendMode()) {
-				storageManager.onStartReload();
-				storageManager.onReloaded({
-					manifest: Object.freeze({}),
-					mergeMap: Object.freeze({})
-				});
-			} else {
-				await storageManager.reloadManifest(payload);
-			}
-		},
+        // Вызывается при необходимости получить access_token
+        refreshAccessToken(context, OAuthCode) {
+            const params = OAuthCode ? {
+                grant_type: 'authorization_code',
+                code: OAuthCode
+            } : {
+                grant_type: 'refresh_token',
+                refresh_token: context.state.refresh_token
+            };
 
-		// Reload root manifest
-		reloadAll(context, payload) {
+            if (OAuthCode) context.commit('setIsOAuthProcess', true);
 
-			context.dispatch('reloadRootManifest', payload);
-		},
+            const OAuthURL = (new URL('/oauth/token', config.gitlab_server)).toString();
 
-		// Reload root manifest
-		updateLastChanges(context) {
-			let request = new function() {
-				this.terminate = false;
-				this.projects_tasks = {};
+            axios({
+                method: 'post',
+                url: OAuthURL,
+                params: Object.assign({
+                    client_id: config.oauth.APP_ID,
+                    redirect_uri: (new URL(consts.pages.OAUTH_CALLBACK_PAGE, window.location)).toString()
+                }, params)
+            })
+                .then((response) => {
+                    context.commit('setAccessToken', response.data.access_token);
+                    context.commit('setRefreshToken', response.data.refresh_token);
+                    // Если expires_in нет, считаем, что токен вечный
+                    response.data.expires_in && setTimeout(() => context.dispatch('refreshAccessToken'), (response.data.expires_in - 10) * 1000);
+                    if (OAuthCode) context.dispatch('reloadAll');
+                }).catch((e) => {
+                    context.commit('appendProblems', [{
+                        problem: validatorErrors.title.net,
+                        route: OAuthURL,
+                        target: '_blank',
+                        title: `${validatorErrors.title.gitlab_auth} [${e.toString()}]`
+                    }]);
+                    // eslint-disable-next-line no-console
+                    console.error(validatorErrors.title.gitlab_auth, e);
+                }).finally(() => context.commit('setIsOAuthProcess', false));
+        },
 
-				this.loadLastChange = (doc) => {
-					axios({
-						method: 'get',
-						url: GitLab.commitsListURI(doc.project_id, doc.branch, 1, doc.source, 1),
-						headers: { 'Authorization': `Bearer ${context.state.access_token}` }
-					})
-						.then((response) => {
-							if (!this.terminate) {
-								context.commit('appendLastChanges', {
-									id: doc.id,
-									payload: response.data
-								});
-							}
-						});
-				};
+        // Need to call when gitlab takes callback's rout with oauth code
+        onReceivedOAuthCode(context, OAuthCode) {
+            context.dispatch('refreshAccessToken', OAuthCode);
+        },
 
-				this.stop = () => {
-					this.terminate = true;
-				};
-			};
+        // Reload root manifest
+        async reloadRootManifest(_context, payload) {
+            // Если работаем в режиме backend, берем все оттуда
+            if (env.isBackendMode()) {
+                storageManager.onStartReload();
+                storageManager.onReloaded({
+                    manifest: Object.freeze({}),
+                    mergeMap: Object.freeze({})
+                });
+            } else {
+                await storageManager.reloadManifest(payload);
+            }
+        },
 
-			for (let id in context.state.docs) {
-				let doc = context.state.docs[id];
-				if ((doc.transport || '').toLowerCase() === 'gitlab') {
-					request.loadLastChange(doc);
-				}
-			}
-		},
+        // Reload root manifest
+        reloadAll(context, payload) {
 
-		// Регистрация проблемы
-		registerProblem(context, problem) {
-			context.commit('appendProblem', problem);
-		}
-	}
+            context.dispatch('reloadRootManifest', payload);
+        },
+
+        // Reload root manifest
+        updateLastChanges(context) {
+            let request = new function() {
+                this.terminate = false;
+                this.projects_tasks = {};
+
+                this.loadLastChange = (doc) => {
+                    axios({
+                        method: 'get',
+                        url: GitLab.commitsListURI(doc.project_id, doc.branch, 1, doc.source, 1),
+                        headers: { 'Authorization': `Bearer ${context.state.access_token}` }
+                    })
+                        .then((response) => {
+                            if (!this.terminate) {
+                                context.commit('appendLastChanges', {
+                                    id: doc.id,
+                                    payload: response.data
+                                });
+                            }
+                        });
+                };
+
+                this.stop = () => {
+                    this.terminate = true;
+                };
+            };
+
+            for (let id in context.state.docs) {
+                let doc = context.state.docs[id];
+                if ((doc.transport || '').toLowerCase() === 'gitlab') {
+                    request.loadLastChange(doc);
+                }
+            }
+        },
+
+        // Регистрация проблемы
+        registerProblem(context, problem) {
+            context.commit('appendProblem', problem);
+        }
+    }
 };

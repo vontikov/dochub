@@ -1,5 +1,5 @@
 <template>
-  <v-toolbar v-if="!isPrintVersion" class="toolbar" rounded elevation="1" color="#fff">
+  <v-toolbar v-if="!isPrintVersion" class="toolbar" rounded elevation="0" color="#fff" density="compact">
     <v-btn icon title="Экспорт в Excalidraw" v-on:click="$emit('exportToExcalidraw')">
       <v-icon>mdi-download</v-icon>
     </v-btn>
@@ -38,7 +38,7 @@
     </v-bottom-sheet>
 
     <template v-if="scenario">
-      <v-select v-model="scenario" dense item-text="text" item-value="id" v-bind:items="scenarios" />
+      <v-select v-model="selScenario" dense item-text="text" item-value="id" v-bind:items="scenarios" />
       <v-btn icon title="Проиграть сценарий" v-on:click="$emit('playScenario')">
         <v-icon>{{ isPaying ? "mdi-stop" : "mdi-play" }}</v-icon>
       </v-btn>
@@ -75,6 +75,30 @@
     },
     data: () => ({
       sheet: false
-    })
+    }),
+    computed: {
+      selScenario: {
+        get() {
+          return this.scenario;
+        },
+        set(value) {
+          this.$emit('setScenario', value);
+        }
+      }
+    }
   };
 </script>
+
+<style scoped>
+.toolbar {
+  position: absolute;
+  top: 0px;
+  left: 6px;
+  margin-left: 6px;
+  max-width: calc(100% - 32px);
+  display: inline-flex;
+  left: 10px;
+}
+
+
+</style>
