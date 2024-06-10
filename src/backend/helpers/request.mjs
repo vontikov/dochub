@@ -6,6 +6,7 @@ import uriTool from './uri.mjs';
 import gitlab from './gitlab.mjs';
 import bitbucket from './bitbucket.mjs';
 import logger from '../utils/logger.mjs';
+import xml from '../../global/helpers/xmlparser.mjs';
 
 const REQUEST_TAG = 'request';
 
@@ -40,14 +41,20 @@ function isAvailablePath(path) {
     return path.startsWith(`${$paths.file_storage}/`);
 }
 
+const CONTENT_TYPE_YAML = 'application/x-yaml';
+const CONTENT_TYPE_JSON = 'application/json';
+const CONTENT_TYPE_XML = 'application/xhtml+xml';
+
 // Определяет тип контента
 function getContentType(url) {
     let contentType = null;
     const uri = url.split('?')[0];
     if (uri.endsWith('.yaml') || uri.endsWith('.yml') || (uri.indexOf('.yaml/raw') >= 0) || (uri.indexOf('.yml/raw') >= 0)) {
-        contentType = 'application/x-yaml';
+        contentType = CONTENT_TYPE_YAML;
     } else if (uri.endsWith('.json') || (uri.indexOf('.json/raw') >= 0)) {
-        contentType = 'application/json';
+        contentType = CONTENT_TYPE_JSON;
+    } else if (uri.endsWith('.xml') || (uri.indexOf('.xml/raw') >= 0)) {
+        contentType = CONTENT_TYPE_XML;
     }
     return contentType;
 }
@@ -79,11 +86,13 @@ async function request(url, baseURI, response) {
             const result = {
                 data: fs.readFileSync(fileName, { encoding: 'utf8', flag: 'r' })
             };
-            if (contentType === 'application/x-yaml') {
+            if (contentType === CONTENT_TYPE_YAML) {
                 result.data = yaml.parse(result.data);
-            } else if (contentType === 'application/json') {
+            } else if (contentType === CONTENT_TYPE_JSON) {
                 result.data = JSON.parse(result.data);
-            } 
+            } else if (contentType === CONTENT_TYPE_XML) {
+                result.data = xml.parse(result.data);
+            }
             return result;
         }
     } // Если запрос по http / https
