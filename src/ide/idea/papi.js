@@ -68,6 +68,12 @@ const PAPI = {
 	copyToClipboard(data) {
 		this.request({ url: 'plugin:/idea/clipboard/copy', data });
 	},
+	// Событие вызывается при необходимости актуализировать конфигурацию DoсHub.
+	// Функцию нужно переопределить слушателем.
+	onReloadSetting() {
+		// eslint-disable-next-line no-console
+		console.warn('PAPI event onReloadSetting is not released.');
+	},
 	getSettings() {
 		return this.request({ url: 'plugin:/idea/settings/get' });
 	},
@@ -140,8 +146,11 @@ if (cefQuery && window[cefQuery]) {
 		}
 		// Тут нужно определиться или признаком Enerprise является запуск под протоколом http/https или настройка в плагине
 		window.DocHubIDEACodeExt.settings = config;
-	// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console
+		console.info('IDE ENVIRONMENTS:', config);
+		PAPI.onReloadSetting();
 	}).catch((e) => {
+		// eslint-disable-next-line no-console
 		alert('Не могу получить конфигурацию плагина.');
 		// eslint-disable-next-line no-console
 		console.error(e);

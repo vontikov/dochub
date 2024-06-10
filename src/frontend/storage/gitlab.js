@@ -118,8 +118,11 @@ export default {
             context.dispatch('plugins/init');
 
             const errors = {
+                count: 0,
+                core: null,
                 syntax: null,
                 net: null,
+                missing_files: null,
                 package: null
             };
 
@@ -173,6 +176,7 @@ export default {
             storageManager.onStartReload = () => {
                 rulesContext && rulesContext.stop();
                 tickCounter = Date.now();
+                errors.count = 0;
                 errors.syntax = null;
                 errors.net = null;
                 errors.missing_files = null;
@@ -183,6 +187,7 @@ export default {
                 context.commit('setIsReloading', true);
             };
             storageManager.onError = (action, data) => {
+                errors.count++;
                 const error = data.error || {};
                 const url = (data.error.config || { url: data.uri }).url;
                 const uid = '$' + crc16(url);
@@ -246,7 +251,7 @@ export default {
 
                     item.description = `${error.toString()}\n`;
                     errors.package.items.push(item);
-                } else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
+                } else if (!errors.count && (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system')) {
                     context.commit('setNoInited', true);
                 } else {
                     const item = {

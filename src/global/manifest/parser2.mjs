@@ -341,7 +341,9 @@ parser.registerError = function(e, uri) {
     const errorPath = `$errors/requests/${new Date().getTime()}`;
     // eslint-disable-next-line no-console
     console.error(e, `Ошибка запроса [${errorPath}:${uri}]`, e);
-    if (typeof e === 'string') e = JSON.parse(e);
+    try {
+        if (typeof e === 'string') e = JSON.parse(e);
+    } catch (e) { true; }
     let errorType = (() => {
         switch (e.name) {
             case 'YAMLSyntaxError':
@@ -366,14 +368,14 @@ parser.registerError = function(e, uri) {
 },
 
 
-// ************************************************************************
-// 				Загрузка контента и разрешение зависимостей
-// ************************************************************************
+    // ************************************************************************
+    // 				Загрузка контента и разрешение зависимостей
+    // ************************************************************************
 
-// Если обработчик определен, он вызывается при запросе ресурса
-// По умолчанию используется request модуль
+    // Если обработчик определен, он вызывается при запросе ресурса
+    // По умолчанию используется request модуль
 
-parser.onPullSource = null;
+    parser.onPullSource = null;
 
 // Информация о загружаемых ресурсах
 parser.sourceLoading = {};
@@ -381,7 +383,7 @@ parser.sourceLoading = {};
 // Функция сканирования дерева слоев
 // callback - вызывается для каждого слоя. Если возвращает true, 
 //            сканирование останавливается и возвращается слой
-parser.findLayers = function(callback)  {
+parser.findLayers = function(callback) {
     const expandItem = (item) => {
         let result = null;
         try {
@@ -406,12 +408,6 @@ parser.findLayers = function(callback)  {
 
 parser.pushRequest = function(uri, owner) {
     // Проверяем не загружен ли уже ресурс
-    /*
-    const loadedLayer = parser.sourceLoading[uri] || parser.layers.find((layer) => {
-        debugger;
-        return (layer.transaction === parser.transaction) && (layer.uri === uri);
-    });
-    */
     const loadedLayer = this.findLayers((layer) => {
         return (layer !== owner) && (layer.transaction === parser.transaction) && (layer.uri === uri);
     });
@@ -534,7 +530,7 @@ parser.rebuildLayers = function() {
     // Обновляем ссылку на манифест
     //this.manifest = prototype.expandAll({__proto__: this.layers[level - 1]?.object});
     const topObject = this.layers[level - 1]?.object;
-    this.manifest = prototype.expandAll(Object.assign({__uriOf__: topObject.__uriOf__}, topObject));
+    this.manifest = prototype.expandAll(Object.assign({ __uriOf__: topObject.__uriOf__ }, topObject));
 };
 
 
@@ -555,7 +551,11 @@ parser.onChange = async function(sources) {
         if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
         if (sources.indexOf(layer.uri) >= 0) {
-            await layer.reload(layer.uri);
+            try {
+                await layer.reload(layer.uri);
+            } catch (e) {
+                this.registerError(e, e?.uri || layer.uri);
+            }
             isAffected = true;
         }
     }
