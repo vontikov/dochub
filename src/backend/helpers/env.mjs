@@ -22,6 +22,7 @@ global.$listeners = {
 };
 
 global.$roles = {
+    MODE: process.env.VUE_APP_DOCHUB_ROLES_MODEL,
     URI: process.env.VUE_APP_DOCHUB_ROLES
 }
 

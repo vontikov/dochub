@@ -1,5 +1,7 @@
 import cache from "../storage/cache.mjs";
 
+export const DEFAULT_ROLE = 'default';
+
 export async function getCurrentRuleId(rules) {
     if(rules.length === 0) return 'default';
 
@@ -62,6 +64,11 @@ export async function loader(uri) {
     return response && (typeof response.data === 'object'
         ? response.data
         : JSON.parse(response.data));
+}
+
+export function isRolesMode() {
+    const {MODE} =  global.$roles;
+    return (MODE || 'N').toUpperCase() === 'Y';
 }
 
 function matchRegex(string, filters){

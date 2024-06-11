@@ -10,7 +10,7 @@ import '../helpers/env.mjs';
 
 import jsonataDriver from '../../global/jsonata/driver.mjs';
 import jsonataFunctions from '../../global/jsonata/functions.mjs';
-import {newManifest, loader} from "../utils/rules.mjs";
+import {newManifest, loader, isRolesMode, DEFAULT_ROLE} from "../utils/rules.mjs";
 
 const LOG_TAG = 'storage-manager';
 
@@ -113,20 +113,26 @@ export default {
 		}
 
 		await createManifest();
-		storageManifest.manifests = {origin: manifestParser.manifest};
-		Object.freeze(storageManifest.manifests.origin);
-		await createRoleManifest();
 
-		entities(storageManifest.manifests['default']);
+		let baseManifest = manifestParser.manifest;
+
+		if(isRolesMode()) {
+			storageManifest.manifests = {origin: baseManifest};
+			Object.freeze(storageManifest.manifests.origin);
+			await createRoleManifest();
+			baseManifest = storageManifest.manifests[DEFAULT_ROLE];
+		}
+
+		entities(baseManifest);
 
 		logger.log('Full reload is done', LOG_TAG);
 		const result = {
-			manifest: storageManifest.manifests['default'],			// Сформированный манифест
-			hash: objectHash(storageManifest.manifests['default']),	// HASH состояния для контроля в кластере
+			manifest: baseManifest, // Сформированный манифест
+			hash: objectHash(baseManifest), // HASH состояния для контроля в кластере
 			mergeMap: {},								// Карта склейки объектов
 			md5Map: {}, 								// Карта путей к ресурсам по md5 пути
 			manifests: {...storageManifest.manifests},
-			roleId: 'default',
+			roleId: DEFAULT_ROLE,
 			// Ошибки, которые возникли при загрузке манифестов
 			// по умолчанию заполняем ошибками, которые возникли при загрузке
 			problems: Object.keys(cache.errors || {}).map((key) => cache.errors[key]) || []
