@@ -136,7 +136,11 @@ export default {
 	translateBackendURL(url) {
 		const finalURl = url && url.toString();
 		if (finalURl && finalURl.startsWith('backend://')) {
-			return (new URL(finalURl.slice(10), env.backendFileStorageURL()));
+			try {
+				return (new URL(finalURl.slice(10), env.backendFileStorageURL()));
+			} catch (e) {
+				throw new Error(e);
+			}
 		} else {
 			return url;
 		}
