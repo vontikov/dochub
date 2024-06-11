@@ -253,7 +253,7 @@ export default {
                     item.description = `${error.toString()}\n`;
                     errors.package.items.push(item);
                 } else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
-                    context.commit('setNoInited', errors.count === 1);
+                    context.commit('setNoInited', true);
                 } else {
                     const item = {
                         uid,
@@ -294,6 +294,8 @@ export default {
                     // Может не надо? 
                     context.commit('setIsReloading', false);
                 }
+
+                if (errors.count > 1) context.commit('setNoInited', false);
             };
 
             /* Зачем это здесь? 
