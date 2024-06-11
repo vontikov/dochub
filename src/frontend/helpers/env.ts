@@ -48,6 +48,9 @@ export default {
   isBackendMode() {
     return !this.isPlugin() && (process.env.VUE_APP_DOCHUB_BACKEND_URL || ((process.env.VUE_APP_DOCHUB_MODE || '').toLowerCase() === 'backend'));
   },
+  isRolesMode(): boolean {
+    return (process.env.VUE_APP_DOCHUB_ROLES_MODEL || 'N').toUpperCase() === 'Y';
+  },
   isProduction(): boolean {
     return this.dochub.NODE_ENV === 'production';
   },

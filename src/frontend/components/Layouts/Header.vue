@@ -23,7 +23,7 @@
       <v-icon>refresh</v-icon>
     </v-btn>
       </div>
-      <div class="main-layout__header__menu">
+      <div v-if="isRolesMode" class="main-layout__header__menu">
         <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{
             user || 'Login'
           }}
@@ -74,6 +74,9 @@
       };
     },
     computed: {
+      isRolesMode() {
+        return env.isRolesMode();
+      },
       gotoIconShow() {
         return env.isPlugin() && this.$route.name === 'entities';
       },
