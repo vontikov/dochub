@@ -542,6 +542,7 @@ parser.rebuildLayers = function() {
 // Функция вызывается извне при изменении в источника
 // sources - массив с URI изменившихся источников
 parser.onChange = async function(sources) {
+    console.debug('>>> ON CHANGE = ', sources.length);
     if (!sources && !sources.length) return;
     // Флаг изменений
     let isAffected = false;

@@ -321,9 +321,12 @@ export default {
                         // eslint-disable-next-line no-console
                         console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
                         if (storageManager.onChange) {
+                            console.info('>>>>>> 1 <<<<<<<<<<', changes);
                             storageManager.onStartReload();
+                            console.info('>>>>>> 2 <<<<<<<<<<', changes);
                             storageManager.onChange(Object.keys(changes));
                         } else 
+                            console.info('>>>>>> 3 <<<<<<<<<<', changes);
                             context.dispatch('reloadAll');
 
                         for (const source in changes) {
