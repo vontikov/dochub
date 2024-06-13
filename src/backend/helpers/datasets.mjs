@@ -11,7 +11,7 @@ export default function(app) {
 	let currentContext;
 
 	if(isRolesMode()) {
-		let currentContext = app.storage.roleId === DEFAULT_ROLE ? app.storage.manifests[DEFAULT_ROLE] : app.storage.manifests[app.storage.roleId];
+		currentContext = app.storage.roleId === DEFAULT_ROLE ? app.storage.manifests[DEFAULT_ROLE] : app.storage.manifests[app.storage.roleId];
 		entities(currentContext);
 	} else {
 		currentContext = app.storage.manifest;
