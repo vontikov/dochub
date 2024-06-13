@@ -143,10 +143,10 @@
       const queryID = message.data.queryID;
       listeners[queryID] && listeners[queryID](message.data);
     };
-    this.make = (grid, nodes, links, trackWidth, distance, direction, height, symbols, availableWidth, wrap, isDebug) => {
+    this.make = (grid, styles, nodes, links, trackWidth, distance, direction, height, symbols, availableWidth, wrap, isDebug) => {
       return new Promise((success, reject) => {
         const params = {
-          grid, nodes, links, trackWidth, distance, direction, height, symbols, wrap, isDebug
+          grid, styles, nodes, links, trackWidth, distance, direction, height, symbols, wrap, isDebug
         };
         const hash = window.localStorage ? md5(JSON.stringify(params)) : null;
         const cacheKey = `SmartAnts.cache.v${CACHE_VERSION}.${hash}`;
@@ -620,6 +620,7 @@
         this.isBuilding++;
         Graph.make(
           this.data.config?.grid || {},
+          this.data.config?.styles || {},
           nodes || this.data.nodes || {},
           links || this.data.links || [],
           trackWidth,
