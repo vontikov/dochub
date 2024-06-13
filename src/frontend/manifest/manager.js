@@ -1,7 +1,11 @@
-import manifestParser from '@global/manifest/parser.mjs';
 import cache from '@front/manifest/cache';
 import requests from '@front/helpers/requests';
 import env from '@front/helpers/env';
+
+import manifestParserV1 from '@global/manifest/parser.mjs';
+import manifestParserV2 from '@global/manifest/parser2.mjs';
+
+const manifestParser = env.isBackendMode() ? manifestParserV1 : manifestParserV2;
 
 manifestParser.cache = cache;
 
@@ -29,7 +33,7 @@ manifestParser.reloadManifest = async function(payload) {
 
       // Если необходимо, подключаем документацию DocHub
       env.isAppendDocHubDocs
-        && await manifestParser.import(manifestParser.cache.makeURIByBaseURI('/documentation/root.yaml', requests.getSourceRoot()));
+        && await manifestParser.import(manifestParser.cache.makeURIByBaseURI('/documentation/dochub.yaml', requests.getSourceRoot()));
 
       let rootManifest = env.rootManifest;
 

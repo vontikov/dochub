@@ -14,6 +14,7 @@
             <v-autocomplete
               v-if="isOriginAvailable"
               v-model="origin"
+              multiple
               hide-details
               clearable
               v-bind:items="origins"
@@ -28,19 +29,9 @@
                   close
                   v-bind="data.attrs"
                   v-bind:input-value="data.selected"
-                  v-on:click:close="clearOrigin()">
+                  v-on:click:close="() => deleteOrigin(data.item.id)">
                   {{ data.item.id }}
                 </v-chip>
-              </template>
-              <template #item="data">
-                <v-list-item-content>
-                  <v-list-item-title>
-                    {{ data.item.id }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle v-if="data.item.title">
-                    {{ data.item.title }}
-                  </v-list-item-subtitle>
-                </v-list-item-content>
               </template>
             </v-autocomplete>
             <v-menu offset-y>
@@ -190,6 +181,9 @@
       this.loadJsonataQuery();
     },
     methods: {
+      deleteOrigin(originId) {
+        this.origin = this.origin.filter(id => id !== originId);
+      },
       clearOrigin() {
         this.origin = null;
         this.doAutoExecute();
@@ -207,7 +201,7 @@
       loadJsonataQuery(param_id) {
         const src = param_id || this.jsonataSource;
         if (!src) return;
-        
+
         const srcSplitPos = src.search(':');
         const jType = src.substring(0, srcSplitPos);
         const jSource = src.substring(srcSplitPos + 1);
@@ -256,12 +250,18 @@
       onExecute(force) {
         this.observer && clearTimeout(this.observer);
         if (this.autoExec || force) {
-          this.observer = setTimeout(() => {
+          this.observer = setTimeout(async() => {
             this.observer = null;
             if (this.origin && this.isOriginAvailable) {
-              datasets().releaseData(`/datasets/${this.origin}`)
-                .then((data) => this.doExecute(data))
-                .catch((e) => this.error = e);
+              this.origin.length > 1 ?
+                this.doExecute(
+                  await Promise.all(this.origin.map(async(origin) => {
+                    return {[ origin ]: await datasets().releaseData(`/datasets/${origin}`) };
+                  })).catch((e) => this.error = e)
+                )
+                : this.doExecute(
+                  await datasets().releaseData(`/datasets/${this.origin[0]}`)
+                ).catch((e) => this.error = e);
             } else this.doExecute();
           }, force ? 10 : 500);
         }
@@ -386,6 +386,16 @@
 
 .selected-log {
   background-color: rgb(52, 149, 219) !important;
+}
+
+.console .v-select__selections {
+  flex-wrap: nowrap;
+  width: 270px;
+  overflow-y: scroll;
+}
+
+.console .v-select__selections .v-chip {
+  min-width: fit-content;
 }
 
 </style>

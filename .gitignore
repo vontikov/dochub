@@ -8,6 +8,7 @@ node_modules
 /plugins
 /src/hidden
 /cache
+/public/temp
 
 ./plugins.json
 

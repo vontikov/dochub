@@ -3,6 +3,9 @@
         "plugins/html",
         "plugins/markaper",
         "plugins/charts",
-        "plugins/devtool"
+        "plugins/devtool",
+        "plugins/svg",
+        "plugins/bpmnjs",
+        "plugins/drawio"
     ]
 }

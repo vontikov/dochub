@@ -14,7 +14,9 @@
         v-bind:profile="profile"
         v-bind:path="currentPath"
         v-bind:get-content="getContentForPlugin"
+        v-bind:put-content="putContentForPlugin"
         v-bind:to-print="isPrintVersion"
+        v-bind:event-bus="eventBus"
         v-bind:pull-data="pullData"
         v-bind:context-menu="contextMenu" />
       <template v-else>
@@ -41,6 +43,7 @@
   import datasets from '@front/helpers/datasets';
   import query from '@front/manifest/query';
   import uriTool from '@front/helpers/uri';
+  import env from '@front/helpers/env';
 
   import Swagger from './DocSwagger.vue';
   import Plantuml from './DocPlantUML.vue';
@@ -65,7 +68,7 @@
 
   
   export default {
-    name: 'Document',
+    name: 'DocHubDoc',
     components: {
       AsyncApiComponent,
       Plantuml,
@@ -109,6 +112,9 @@
       };
     },
     computed: {
+      eventBus() {
+        return window.EventBus;
+      },
       is() {
         return inbuiltTypes[this.docType] 
           || (this.$store.state.plugins.documents[this.docType] && `plugin-doc-${this.docType}`)
@@ -120,11 +126,22 @@
       baseURI() {
         return uriTool.getBaseURIOfPath(this.currentPath);
       },
-      isReloading() {
+      isReloadingManifest() {
         return this.$store.state.isReloading;
+      },
+      isReloading() {
+        return this.isReloadingManifest || !!this.refresher;
       },
       isPrintVersion() {
         return this.$store.state.isPrintVersion;
+      },
+      putContentForPlugin() {
+        return env.isPlugin() ? (url, content) => {return new Promise((success, reject) => {
+          const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
+          window.$PAPI.pushFile(fullPath, content)
+            .then(success)
+            .catch(reject);
+        });} : null;
       }
     },
     watch: {
@@ -134,7 +151,7 @@
       params() {
         this.refresh();
       },
-      isReloading() {
+      isReloadingManifest() {
         this.refresh();
       }
     },
@@ -149,6 +166,8 @@
             type: contentType,
             source: `source:${encodeURIComponent(JSON.stringify(response.data))}`
           };
+        }).finally(() => {
+          this.refresher = null;
         });
       },
       // Достаем данные профиля документа из DataLake
@@ -178,7 +197,6 @@
           } else {
             this.pullProfileFromDataLake(`"${path.join('"."')}"`);
           }
-
         }, 50);
       },
       resolveParams() {
@@ -193,9 +211,14 @@
       //  url - прямой или относительный URL к файлу
       getContentForPlugin(url) {
         return new Promise((success, reject) => {
-          requests.request(url, this.baseURI)
-            .then(success)
-            .catch(reject);
+          const whiter = setInterval(() => {
+            if (!this.isReloading) {
+              requests.request(url, this.baseURI, { raw : true })
+                .then(success)
+                .catch(reject);
+              clearInterval(whiter);
+            }
+          }, 50);
         });
       },
       // API к озеру данных архитектуры

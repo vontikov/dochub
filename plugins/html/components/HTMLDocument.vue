@@ -180,4 +180,6 @@ td {
   padding: 12px;
   margin: 12px;
   border: solid 1px #ccc;
-}</style>
+}
+
+</style>

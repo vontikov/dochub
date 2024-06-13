@@ -160,7 +160,7 @@ export default Object.assign(prototype, {
 
             // Подключаем документацию, если нужно
             if ((process.env.VUE_APP_DOCHUB_APPEND_DOCHUB_DOCS || 'y').toLowerCase() === 'y') {
-                content.imports.push('/documentation/root.yaml');
+                content.imports.push('/documentation/dochub.yaml');
             }
 
             // Подключаем корневой манифест, если есть

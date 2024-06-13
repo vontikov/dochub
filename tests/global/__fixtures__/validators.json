@@ -2,37 +2,37 @@
   {
     "id": "dochub",
     "title": "DocHub",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.metamodel",
     "title": "Контроль ядра метамодели",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.metamodel.contexts",
     "title": "Контроль целостности контекстов",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.metamodel.components",
     "title": "Контроль целостности компонентов",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.metamodel.components.links",
     "title": "Связь компонентов",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.metamodel.aspects",
     "title": "Контроль целостности аспектов",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.fields",
     "title": "Заполнение полей",
-    "items": null
+    "items": []
   },
   {
     "id": "dochub.metamodel.contexts.no_found_component",

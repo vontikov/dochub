@@ -84,6 +84,9 @@ export default {
 
     throw new Error(`Неправильно указан параметр "VUE_APP_DOCHUB_CACHE=${currentMethod}" в env!`);
   },
+  get ideSettings() {
+    return (window.DocHubIDEACodeExt || window.DochubVsCodeExt)?.settings;
+  },
   get rootDocument(): TEnvValue {
     return this.dochub.VUE_APP_DOCHUB_ROOT_DOCUMENT;
   },
@@ -95,14 +98,19 @@ export default {
     } else return this.dochub.VUE_APP_DOCHUB_ROOT_MANIFEST;
   },
   get renderCore(): TEnvValue {
-    return window.DocHubIDEACodeExt?.settings?.render?.mode || this.dochub.VUE_APP_DOCHUB_RENDER_CORE || 'graphviz';
+    return this.ideSettings?.render?.mode || this.dochub.VUE_APP_DOCHUB_RENDER_CORE || 'graphviz';
   },
+  // Переменные систем управления версиями
   get gitlabUrl(): TEnvValue {
-    return this.dochub.VUE_APP_DOCHUB_GITLAB_URL;
+    return this.ideSettings?.env?.DOCHUB_IDE_GITLAB_URL || this.dochub.VUE_APP_DOCHUB_GITLAB_URL;
   },
   get bitbucketUrl(): TEnvValue {
-    return this.dochub.VUE_APP_DOCHUB_BITBUCKET_URL;
+    return this.ideSettings?.env?.DOCHUB_IDE_BITBUCKET_URL || this.dochub.VUE_APP_DOCHUB_BITBUCKET_URL;
   },
+  get personalToken(): TEnvValue {
+    return this.ideSettings?.env?.DOCHUB_IDE_PERSONAL_TOKEN || this.dochub.VUE_APP_DOCHUB_PERSONAL_TOKEN;
+  },
+  // 
   get appendDocHubDocs(): TEnvValue {
     return this.dochub.VUE_APP_DOCHUB_APPEND_DOCHUB_DOCS;
   },
@@ -112,31 +120,24 @@ export default {
   get clientSecret(): TEnvValue {
     return this.dochub.VUE_APP_DOCHUB_CLIENT_SECRET;
   },
-  get personalToken(): TEnvValue {
-    return this.dochub.VUE_APP_DOCHUB_PERSONAL_TOKEN;
-  },
   // Определяет сервер рендеринга
   get plantUmlServer(): TEnvValue {
     const envValue = this.dochub.VUE_APP_PLANTUML_SERVER || consts.plantuml.DEFAULT_SERVER;
     if (this.isPlugin(Plugins.idea)) {
-      const settings = window.DocHubIDEACodeExt?.settings;
-      return settings?.isEnterprise ? envValue : (
-        settings?.render?.external ? settings?.render?.server : null
+      return this.ideSettings?.isEnterprise ? envValue : (
+        this.ideSettings?.render?.external ? this.ideSettings?.render?.server : null
       );
     } else if (this.isPlugin(Plugins.vscode)) {
-      const { render } = window.DochubVsCodeExt?.settings;
-      return render.server;
+      return this.ideSettings?.render.server;
     } else return envValue;
   },
   // Определяет тип запроса к серверу рендеринга
   get plantUmlRequestType(): TEnvValue {
-    const settings = (window.DocHubIDEACodeExt || window.DochubVsCodeExt)?.settings;
-
-    if (!settings?.isEnterprise) {
+    if (!this.ideSettings?.isEnterprise) {
       if (this.isPlugin(Plugins.idea)) {
-        return settings?.render?.external ? settings?.render?.request_type || 'get' : 'plugin';
+        return this.ideSettings?.render?.external ? this.ideSettings?.render?.request_type || 'get' : 'plugin';
       } else if (this.isPlugin(Plugins.vscode)) {
-        return settings?.render?.request_type || 'get';
+        return this.ideSettings?.render?.request_type || 'get';
       }
     }
 
@@ -151,18 +152,17 @@ export default {
     return (this.appendDocHubDocs || 'y').toLowerCase() === 'y';
   },
   get uriMetamodel(): string {
-    const settings = (window.DocHubIDEACodeExt || window.DochubVsCodeExt)?.settings;
     let result = this.dochub.VUE_APP_DOCHUB_METAMODEL || DEF_METAMODEL_URI_PORTAL;
     let host = window.location.toString();
     if (this.isPlugin(Plugins.idea)) {
-      result = settings?.isEnterprise ? result : DEF_METAMODEL_URI_IDEA;
+      result = this.ideSettings?.isEnterprise ? result : DEF_METAMODEL_URI_IDEA;
     } else if (this.isPlugin(Plugins.vscode)) {
-      if(!settings?.isEnterprise && window.DochubVsCodeExt?.metamodelUri) {
+      if (!this.ideSettings?.isEnterprise && window.DochubVsCodeExt?.metamodelUri) {
         const { scheme, path, authority } = window.DochubVsCodeExt?.metamodelUri;
 
         result = `${path}`;
         host = `${scheme}://${authority}`;
-      } else host = settings?.enterpriseServer;
+      } else host = this.ideSettings?.enterpriseServer;
     }
     result = (new URL(result, host)).toString();
     // eslint-disable-next-line no-console

@@ -15,7 +15,7 @@ const PAPI = {
 				try {
 					const parseData = result || 'null';
 					if (window.$PAPI?.middleware)
-						res(window.$PAPI.middleware(JSON.parse(parseData)));
+						res(window.$PAPI.middleware(JSON.parse(parseData), params));
 					else
 						res(JSON.parse(parseData));
 				} catch (e) {
@@ -68,8 +68,22 @@ const PAPI = {
 	copyToClipboard(data) {
 		this.request({ url: 'plugin:/idea/clipboard/copy', data });
 	},
+	// Событие вызывается при необходимости актуализировать конфигурацию DoсHub.
+	// Функцию нужно переопределить слушателем.
+	onReloadSetting() {
+		// eslint-disable-next-line no-console
+		console.warn('PAPI event onReloadSetting is not released.');
+	},
 	getSettings() {
 		return this.request({ url: 'plugin:/idea/settings/get' });
+	},
+	// Сохраняет файл в проекте
+	pushFile(source, content) {
+		return this.request({ url: 'plugin:/idea/code/push/file', source, content });
+	},
+	// TBD 
+	pushCode(code, metadata) {
+		return this.request({ url: 'plugin:/idea/code/push/code', code, metadata });
 	}
 };
 
@@ -87,18 +101,24 @@ const fwCefQuery = '%$dochub-api-interface-func%';
 let cefQuery = params.get('$dochub-api-interface-func');
 
 // Если в параметрах интерфейсная функция не передана...
-if (!cefQuery && window[fwCefQuery]) {
+if (cefQuery) {
+	// eslint-disable-next-line no-console
+	console.info('Нашел интерфейсную функцию в параметрах!');
+} else if (!cefQuery && window[fwCefQuery]) {
 	cefQuery = fwCefQuery;
+	// eslint-disable-next-line no-console
 	console.info('Нашел интерфейсную функцию в коде!');
-} else if (window.localStorage && cefQuery) {
+} else if (!cefQuery && window.localStorage && localStorage.getItem('cefQuery')) {
+	// eslint-disable-next-line no-console
 	console.info('Нашел интерфейсную функцию в localStorage!');
 	cefQuery = localStorage.getItem('cefQuery');
 } else {
-	console.info('Нашел интерфейсную функцию в параметрах!');
+	// eslint-disable-next-line no-console
+	console.info('Интерфейсную функцию не нашел.');
 }
 
 // eslint-disable-next-line no-console
-console.info('Plugin API function: ', cefQuery);
+cefQuery && console.info('Plugin API function: ', cefQuery);
 
 if (cefQuery && window[cefQuery]) {
 	PAPI.cefQuery = window[cefQuery];
@@ -126,8 +146,11 @@ if (cefQuery && window[cefQuery]) {
 		}
 		// Тут нужно определиться или признаком Enerprise является запуск под протоколом http/https или настройка в плагине
 		window.DocHubIDEACodeExt.settings = config;
-	// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console
+		console.info('IDE ENVIRONMENTS:', config);
+		PAPI.onReloadSetting();
 	}).catch((e) => {
+		// eslint-disable-next-line no-console
 		alert('Не могу получить конфигурацию плагина.');
 		// eslint-disable-next-line no-console
 		console.error(e);

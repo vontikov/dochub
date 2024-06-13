@@ -4,7 +4,7 @@ const listeners = {};
 if (env.isPlugin(Plugins.idea)) {
   setInterval(() => {
     window.$PAPI.messagePull().then((message) => {
-      if (message) {
+      if (message?.data) {
         for (const action in message.data) {
           (listeners[action] || []).forEach((listener) => {
             listener(message.data[action]);

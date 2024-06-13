@@ -1,7 +1,8 @@
 <template>
   <div 
-    style="width: 300px; height: 200px; left: 50%; top: 50%; position: absolute; margin-left: -150px; margin-top: -100px; text-align:center;">
-    Не найден корневой манифест архитектуры.
+    style="width: 400px; height: 300px; left: 50%; top: 50%; position: absolute; margin-left: -150px; margin-top: -150px; text-align:center;">
+    Корневой манифест архитектуры <strong>dochub.yaml</strong> не обнаружен или не может быть загружен.<br><br>
+    Если файл существует, пожалуйста, проверьте его содержимое на наличие ошибок. Если манифест отсутствует, воспользуйтесь помощником для его создания.
     <br><br>
     <v-btn depressed color="primary" v-on:click="initEmptyProject">Создать пустой файл</v-btn>
     <br><br>

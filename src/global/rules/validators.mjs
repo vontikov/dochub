@@ -1,13 +1,21 @@
+const THEAD_LIMIT = 3;
+
 // Выполняет валидаторы и накладывает исключения
 export default function(datasets, manifest, success, reject) {
-	const rules = (manifest['rules'] || {});
-	const validators = rules['validators'] || {};
-	const exceptions = rules['exceptions'] || {};
+	const rules = manifest?.rules || {};
+	const validators = rules?.validators || {};
+	const exceptions = rules?.exceptions || {};
 
-	for (const id in validators) {
-		datasets.getData(manifest, Object.assign({_id: id}, validators[id]))
+	let stop = false;
+	const context = {
+		stop: () => stop = true,
+		stack: Object.keys(validators)
+	};
+
+	const runValidator = (id) => {
+		datasets.getData(manifest, Object.assign({ _id: id }, validators[id]))
 			.then((items) => {
-				success({
+				!stop && success({
 					id,
 					title: validators[id].title || id,
 					items: (items || []).map((item) => {
@@ -17,7 +25,7 @@ export default function(datasets, manifest, success, reject) {
 					})
 				});
 			}).catch((error) => {
-				reject(
+				!stop && reject(
 					{
 						id,
 						title: validators[id].title || id,
@@ -32,6 +40,15 @@ export default function(datasets, manifest, success, reject) {
 						]
 					}
 				);
+			}).finally(() => {
+				const nextId = context.stack.pop();
+				if (nextId && !stop) setTimeout(() => runValidator(nextId), 50);
 			});
+	};
+
+	for (let id, i = 0; (i < THEAD_LIMIT) && (id = context.stack.pop()) && !stop; i++) {
+		runValidator(id);
 	}
+
+	return context;
 }
