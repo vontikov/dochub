@@ -320,10 +320,9 @@ export default {
                         tickCounter = Date.now();
                         // eslint-disable-next-line no-console
                         console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
-                        if (storageManager.onChange) {
-                            storageManager.onStartReload();
+                        if (storageManager.onChange) 
                             storageManager.onChange(Object.keys(changes));
-                        } else 
+                        else 
                             context.dispatch('reloadAll');
 
                         for (const source in changes) {

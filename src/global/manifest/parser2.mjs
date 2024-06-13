@@ -551,20 +551,26 @@ parser.onChange = async function(sources) {
         if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
         if (sources.indexOf(layer.uri) >= 0) {
+            // eslint-disable-next-line no-console
+            console.info('>>>>>> Found layer for ', layer.uri);
+            isAffected = true;
             try {
                 await layer.reload(layer.uri);
             } catch (e) {
                 this.registerError(e, e?.uri || layer.uri);
             }
-            isAffected = true;
         }
     }
     // Если в данных есть изменения - перестраиваем слои
     if (isAffected) {
+        // Вызываем слушателя начала обновления данных в манифесте
+        this.onStartReload && this.onStartReload();
         parser.rebuildLayers();
-        // Вызываем слушателя обновления данных в манифесте
+        // Вызываем слушателя окончания обновления данных в манифесте
         this.onReloaded && this.onReloaded(this);
-        console.info('===== MANIFEST REFRESHED =====');
+    } else {
+        // eslint-disable-next-line no-console
+        console.info('>>>>>> No found layer for ', sources);
     }
 };
 
@@ -573,7 +579,7 @@ parser.onChange = async function(sources) {
 //	uri - идентификатор ресурса
 parser.import = async function(uri) {
     try {
-        // Создаем руктовую страницу
+        // Создаем рутовую страницу
         const rooLayer = new ManifestLayer();
         // Кладем ее в каталог
         this.rootLayers.push(rooLayer);
@@ -583,7 +589,6 @@ parser.import = async function(uri) {
         this.registerError(e, e?.uri || uri);
     }
 };
-
 
 // Менеджер манифестов
 export default parser;
