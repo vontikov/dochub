@@ -590,7 +590,6 @@ parser.import = async function(uri) {
     }
 };
 
-
 // Менеджер манифестов
 export default parser;
 
