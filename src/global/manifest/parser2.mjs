@@ -547,6 +547,7 @@ parser.onChange = async function(sources) {
     let isAffected = false;
     // Увеличиваем индекс транзакции
     this.transaction++;
+    console.debug('>>> TRANSACTION = ', this.transaction);
     for (const i in this.layers) {
         const layer = this.layers[i];
         // Если слой уже был затронут текущей транзакцией не трогаем его
@@ -554,7 +555,9 @@ parser.onChange = async function(sources) {
         // Если слой входит в список изменений - перезагружаем его
         if (sources.indexOf(layer.uri) >= 0) {
             try {
+                console.debug('>>> FOUND LAYER!');
                 await layer.reload(layer.uri);
+                console.debug('>>> LAYER RELOADED!');
             } catch (e) {
                 this.registerError(e, e?.uri || layer.uri);
             }
