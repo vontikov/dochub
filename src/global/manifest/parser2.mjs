@@ -293,6 +293,7 @@ function ManifestLayer(owner) {
 
     // Загружает слой 
     this.reload = (uri) => {
+        console.debug('>>>>>> RELOAd TO URI = ', uri);
         return new Promise((success, reject) => {
             // Указываем в рамках какой транзакции преобразование
             this.transaction = parser.transaction;
@@ -300,6 +301,7 @@ function ManifestLayer(owner) {
             this.uri = uri;
             // Отправляем загрузку манифеста в очередь
             parser.pushRequest(uri, this).then((manifest) => {
+                console.debug('>>>>>> Reloaded URI = ', uri);
                 // Сохраняем полученные данные манифеста
                 this.manifest = manifest;
                 // Проверяем пустой ли манифест
@@ -559,8 +561,10 @@ parser.onChange = async function(sources) {
             isAffected = true;
         }
     }
+    console.debug('>>> IS AFFECTED = ', isAffected);
     // Если в данных есть изменения - перестраиваем слои
     if (isAffected) {
+        console.debug('>>> DETECTED AFFECT ON MANIFEST');
         parser.rebuildLayers();
         // Вызываем слушателя обновления данных в манифесте
         this.onReloaded && this.onReloaded(this);
