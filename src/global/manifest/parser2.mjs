@@ -293,7 +293,6 @@ function ManifestLayer(owner) {
 
     // Загружает слой 
     this.reload = (uri) => {
-        console.debug('>>>>>> RELOAd TO URI = ', uri);
         return new Promise((success, reject) => {
             // Указываем в рамках какой транзакции преобразование
             this.transaction = parser.transaction;
@@ -301,7 +300,6 @@ function ManifestLayer(owner) {
             this.uri = uri;
             // Отправляем загрузку манифеста в очередь
             parser.pushRequest(uri, this).then((manifest) => {
-                console.debug('>>>>>> Reloaded URI = ', uri);
                 // Сохраняем полученные данные манифеста
                 this.manifest = manifest;
                 // Проверяем пустой ли манифест
@@ -581,7 +579,7 @@ parser.onChange = async function(sources) {
 //	uri - идентификатор ресурса
 parser.import = async function(uri) {
     try {
-        // Создаем руктовую страницу
+        // Создаем рутовую страницу
         const rooLayer = new ManifestLayer();
         // Кладем ее в каталог
         this.rootLayers.push(rooLayer);
