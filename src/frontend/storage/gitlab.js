@@ -315,13 +315,13 @@ export default {
                 if (data) {
                     changes = Object.assign(changes, data);
                     if (refreshTimer) clearTimeout(refreshTimer);
-                    refreshTimer = setTimeout(() => {
+                    refreshTimer = setTimeout(async() => {
                         rulesContext && rulesContext.stop();
                         tickCounter = Date.now();
                         // eslint-disable-next-line no-console
                         console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
                         if (storageManager.onChange) 
-                            storageManager.onChange(Object.keys(changes));
+                            await storageManager.onChange(Object.keys(changes));
                         else 
                             context.dispatch('reloadAll');
 
@@ -329,6 +329,7 @@ export default {
                             // Уведомляем об изменениях всех подписчиков
                             window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
                         }
+                        refreshTimer = null;
                     }, 350);
                 }
             };
