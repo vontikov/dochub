@@ -550,6 +550,8 @@ parser.onChange = async function(sources) {
         // Если слой уже был затронут текущей транзакцией не трогаем его
         if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
+        // eslint-disable-next-line no-console
+        console.info('============= ', layer.uri);
         if (sources.indexOf(layer.uri) >= 0) {
             // eslint-disable-next-line no-console
             console.info('>>>>>> Found layer for ', layer.uri);
