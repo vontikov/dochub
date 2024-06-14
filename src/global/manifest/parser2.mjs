@@ -539,6 +539,7 @@ parser.rebuildLayers = function() {
 // ************************************************************************
 // Функция вызывается извне при изменении в источника
 // sources - массив с URI изменившихся источников
+parser.isChangeProcessing = false;
 parser.onChange = async function(sources) {
     if (!sources && !sources.length) return;
     // Флаг изменений
@@ -551,10 +552,8 @@ parser.onChange = async function(sources) {
         if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
         // eslint-disable-next-line no-console
-        console.info('============= ', layer.uri);
         if (sources.indexOf(layer.uri) >= 0) {
             // eslint-disable-next-line no-console
-            console.info('>>>>>> Found layer for ', layer.uri);
             isAffected = true;
             try {
                 await layer.reload(layer.uri);
