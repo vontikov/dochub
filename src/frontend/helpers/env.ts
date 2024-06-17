@@ -39,7 +39,7 @@ export default {
   },
   // Адрес backend сервере
   backendURL(): string {
-    return this.dochub.VUE_APP_DOCHUB_BACKEND_URL || window.origin;
+    return this.dochub?.VUE_APP_DOCHUB_BACKEND_URL || (window?.origin && (window?.origin !== 'null') ? window?.origin : 'http://localhost:3030/');
   },
   // Адрес API доступа к файлам backend сервера
   backendFileStorageURL(): string {

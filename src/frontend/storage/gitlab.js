@@ -255,7 +255,7 @@ export default {
                     item.description = `${error.toString()}\n`;
                     errors.package.items.push(item);
                 } else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
-                    context.commit('setNoInited', errors.count === 1);
+                    context.commit('setNoInited', true);
                 } else {
                     const item = {
                         uid,
@@ -296,6 +296,8 @@ export default {
                     // Может не надо?
                     context.commit('setIsReloading', false);
                 }
+
+                if (errors.count > 1) context.commit('setNoInited', false);
             };
 
             /* Зачем это здесь?
@@ -315,21 +317,21 @@ export default {
                 if (data) {
                     changes = Object.assign(changes, data);
                     if (refreshTimer) clearTimeout(refreshTimer);
-                    refreshTimer = setTimeout(() => {
+                    refreshTimer = setTimeout(async() => {
                         rulesContext && rulesContext.stop();
                         tickCounter = Date.now();
                         // eslint-disable-next-line no-console
                         console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
-                        if (storageManager.onChange) {
-                            storageManager.onStartReload();
-                            storageManager.onChange(Object.keys(changes));
-                        } else
+                        if (storageManager.onChange)
+                            await storageManager.onChange(Object.keys(changes));
+                        else
                             context.dispatch('reloadAll');
 
                         for (const source in changes) {
                             // Уведомляем об изменениях всех подписчиков
                             window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
                         }
+                        refreshTimer = null;
                     }, 350);
                 }
             };
