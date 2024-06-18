@@ -8,6 +8,7 @@
       </div>
       <smartants-bar
         v-bind:warnings="warnings"
+        v-bind:selected-nodes="selectedNodes"
         v-bind:focus-nodes="focusNodes"
         v-bind:scenario="scenario"
         v-bind:scenarios="scenarios"
