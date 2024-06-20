@@ -35,9 +35,19 @@ manifestParser.reloadManifest = async function(payload) {
       env.isAppendDocHubDocs
         && await manifestParser.import(manifestParser.cache.makeURIByBaseURI('/documentation/dochub.yaml', requests.getSourceRoot()));
 
+      let rootManifest = env.rootManifest;
+
+      const user = await window.OidcUserManager.getUser();
+      if (user && rootManifest?.endsWith('.yaml')) {
+        const role = user.profile?.roles?.filter(role => role.startsWith('dh-'))[0];
+        if (role) {
+          rootManifest = rootManifest.slice(0, -4) + role + '.yaml';
+        }
+      }
+
       // Если корневой манифест указан загружаем
-      env.rootManifest
-        && await manifestParser.import(manifestParser.cache.makeURIByBaseURI(env.rootManifest, requests.getSourceRoot()));
+      rootManifest
+        && await manifestParser.import(manifestParser.cache.makeURIByBaseURI(rootManifest, requests.getSourceRoot()));
     } else {
       /* Подключаем базовую метамодель */
       await manifestParser.import(manifestParser.cache.makeURIByBaseURI(env.uriMetamodel, requests.getSourceRoot()));

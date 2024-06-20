@@ -21,4 +21,9 @@ global.$listeners = {
     onFoundLoadingError: process.env.VUE_APP_DOCHUB_BACKEND_EVENT_LOADING_ERRORS_FOUND
 };
 
+global.$roles = {
+    MODE: process.env.VUE_APP_DOCHUB_ROLES_MODEL,
+    URI: process.env.VUE_APP_DOCHUB_ROLES
+}
+
 export default dotenv;

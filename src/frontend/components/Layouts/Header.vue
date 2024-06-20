@@ -6,6 +6,8 @@
     dark
     v-bind:class="isPrintVersion ? 'print-version' : ''"
     style="z-index: 99">
+    <div class="main-layout__header">
+      <div class="main-layout__header__menu">
     <i class="fa-solid fa-bug" />
     <v-app-bar-nav-icon v-on:click="() => handleDrawer()">
       <header-logo />
@@ -20,7 +22,13 @@
     <v-btn v-if="isBackShow" icon v-on:click="refresh">
       <v-icon>refresh</v-icon>
     </v-btn>
-    <v-spacer />
+      </div>
+      <div v-if="isRolesMode" class="main-layout__header__menu">
+        <v-toolbar-title right offset-y style="cursor: pointer" v-on:click="loginout()">{{
+            user || 'Login'
+          }}
+        </v-toolbar-title>
+        <v-spacer />
     <v-btn v-if="isCriticalError" icon title="Есть критические ошибки!" v-on:click="gotoProblems">
       <v-icon class="material-icons blink" style="display: inline">error</v-icon>
     </v-btn>
@@ -43,11 +51,14 @@
         </v-list-item>
       </v-list>
     </v-menu>
+      </div>
+    </div>
   </v-app-bar>
 </template>
 
 <script>
   import env, {Plugins} from '@front/helpers/env';
+  import oidcClient from '@front/auth/oidc-client';
 
   import HeaderLogo from './HeaderLogo';
 
@@ -58,10 +69,14 @@
     },
     data() {
       return {
-        isBackShow: env.isPlugin(Plugins.vscode)
+        isBackShow: env.isPlugin(Plugins.vscode),
+        user: null
       };
     },
     computed: {
+      isRolesMode() {
+        return env.isRolesMode();
+      },
       gotoIconShow() {
         return env.isPlugin() && this.$route.name === 'entities';
       },
@@ -85,6 +100,17 @@
           return this.$store.state.isFullScreenMode;
         }
       }
+    },
+    mounted() {
+      window.OidcUserManager.getUser().then(user => {
+        const userName = user?.profile?.name;
+        this.user = userName ? userName + ' (Logout)' : null;
+        if (this.user) {
+          window.Vuex.dispatch('reloadRootManifest');
+        } else {
+          window.Vuex.dispatch('clean');
+        }
+      });
     },
     methods: {
       doPrint() {
@@ -125,12 +151,32 @@
 
         // Запрос в ide на открытие entity c id
         window.$PAPI.goto(null, entity, id);
+      },
+      loginout() {
+        this.user ? oidcClient.logout() : oidcClient.login();
+        console.log("login/logout");
+        this.user ? oidcClient.logout() : oidcClient.login().then(() => {
+          window.Vuex.dispatch('setRolesFromToken');
+          console.log("call set roles from token");
+        });
       }
     }
   };
 </script>
 
 <style scoped>
+
+.main-layout__header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.main-layout__header__menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 header.print-version {
   position: absolute;
@@ -141,6 +187,7 @@ header.print-version {
     opacity: 0.0;
   }
 }
+
 .blink {
   color: #A00 !important;
   animation: blink 1s step-start 0s infinite;

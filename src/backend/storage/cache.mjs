@@ -124,6 +124,8 @@ export default Object.assign(prototype, {
             }
 
             if (res) {
+                console.log('__dirname', __dirname);
+                console.log('fileName', fileName);
                 if (fileName) {
                     res.setHeader('Content-Type', 'application/json').sendFile(fileName);
                 } else res.status(200).json(result);

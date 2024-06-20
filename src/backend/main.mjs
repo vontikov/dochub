@@ -25,31 +25,33 @@ middlewareAccess(app);
 // Основной цикл приложения
 const mainLoop = async function() {
     // Загружаем манифест
-    app.listen(serverPort, function(){
+    const server = app.listen(serverPort, function(){
         logger.log(`DocHub server running on ${serverPort}`, LOG_TAG);
     });
 
-    storeManager.reloadManifest()
-        .then(async(storage) => {
-            await storeManager.applyManifest(app, storage);
-            // Подключаем драйвер кластера
-            await middlewareCluster(app, storeManager);
+    server.setTimeout(500000);
 
-            // Подключаем сжатие контента
-            middlewareCompression(app);
+     storeManager.reloadManifest(app)
+         .then(async(storage) => {
+             await storeManager.applyManifest(app, storage);
+             // Подключаем драйвер кластера
+             await middlewareCluster(app, storeManager);
 
-            // API ядра
-            controllerCore(app);
+             // Подключаем сжатие контента
+             middlewareCompression(app);
 
-            // API сущностей 
-            controllerEntity(app);
+             // API ядра
+             controllerCore(app);
 
-            // Контроллер доступа к файлам в хранилище
-            controllerStorage(app);
+             // API сущностей
+             controllerEntity(app);
 
-            // Статические ресурсы
-            controllerStatic(app);
-        });
+             // Контроллер доступа к файлам в хранилище
+             controllerStorage(app);
+
+             // Статические ресурсы
+             controllerStatic(app);
+         });
 };
 
 mainLoop();
