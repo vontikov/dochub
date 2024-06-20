@@ -8,7 +8,7 @@
         v-on:dblclick.stop.prevent="onNodeDblClick(box, true)">
         <template v-if="isShowArea">
           <rect
-            v-if="isArea(box)"
+            v-if="isArea(box) && !box.node.hideBorder"
             class="box"
             v-bind:fill="`${box.node.background || '#fff'}`"
             v-bind:fill-opacity="`${ box.node.background ? (box.node.opacity || 1) : 0}`"
