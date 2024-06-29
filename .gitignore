@@ -6,6 +6,7 @@ node_modules
 /certs
 /gitlab
 /plugins
+public/plugins
 /src/hidden
 /cache
 /public/temp

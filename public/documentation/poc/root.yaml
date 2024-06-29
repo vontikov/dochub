@@ -1,0 +1,22 @@
+# Ранние PoC новых видов документов
+docs_tests:
+  dochub.vscode.excalidraw:
+    location: /VSCode/excalidraw
+    title: Моя стартовая страница
+    type: vscode
+    extension: excalidraw
+    source: test.excalidraw  
+
+  dochub.vscode.drawio:
+    location: /VSCode/drawio
+    title: Моя стартовая страница
+    type: vscode
+    extension: drawio
+    source: test.drawio
+
+  dochub.vscode.latex:
+    location: /VSCode/LaTex
+    title: Моя стартовая страница
+    type: vscode
+    extension: latex
+    source: test.tex
