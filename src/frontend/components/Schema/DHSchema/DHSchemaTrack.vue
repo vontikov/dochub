@@ -1,16 +1,16 @@
 <template>
   <g>
-    <path 
+    <path
       v-bind:class="classesArrow"
-      v-bind:d="arrows" 
+      v-bind:d="arrows"
       v-bind:style="{ opacity: track.opacity, stroke: trackColor }"
       v-on:mouseover="onTrackOver"
       v-on:mouseleave="onTrackLeave"
       v-on:mousedown.stop.prevent="onTrackClick" />
     <path
-      v-bind:id="id" 
+      v-bind:id="id"
       v-bind:class="classesLine"
-      v-bind:d="line" 
+      v-bind:d="line"
       v-bind:style="{ opacity: track.opacity, 'stroke-width':strokeWidth, stroke: trackColor }"
       v-bind:stroke-width="strokeWidth"
       v-on:mouseover="onTrackOver"
@@ -58,7 +58,7 @@
     data() {
       return {
       };
-    },  
+    },
     computed: {
       strokeWidth() {
         let width = ((this.isUnwisp || []).length || 1);
@@ -102,7 +102,7 @@
           rotate: 0
         };
 
-        if (maxSegment.from.x !== maxSegment.to.x) 
+        if (maxSegment.from.x !== maxSegment.to.x)
           result.point = {
             x: maxSegment.from.x - (maxSegment.from.x - maxSegment.to.x) * 0.5,
             y: maxSegment.from.y - 4
@@ -138,7 +138,7 @@
       classesArrow() {
         return this.makeClass(true);
       },
-      // Стиль линии 
+      // Стиль линии
       classesLine() {
         return this.makeClass();
       },
@@ -161,7 +161,7 @@
             arrow = this.makeArrow(pice.curr.x, pice.curr.y, pice.arrow, 'left');
           else if ((pice.prev.x > pice.curr.x) && (pice.prev.y === pice.curr.y))
             arrow = this.makeArrow(pice.curr.x, pice.curr.y, pice.arrow, 'right');
-          
+
           if (pice.after)
             result += ` ${arrow}`;
           else
@@ -176,7 +176,7 @@
         return this.track.path;
       },
 
-      // Путь 
+      // Путь
       line() {
         return rounding(
           this.simplePath
@@ -186,7 +186,7 @@
       }
     },
     methods: {
-      // 
+      //
       onTrackClick() {
         this.$emit('track-click', this.track);
       },
@@ -221,7 +221,14 @@
       },
       // Генерирует path стрелки
       makeArrow(x, y, style, direction) {
+        const shifts = {
+          left: -2,
+          right: 0,
+          up: -1,
+          down: -1
+        };
         switch(style) {
+          case '*': return `M ${x+shifts[direction]}, ${y} m 3, 0 a 2,2 0 1,0 -4,0 a 2,2 0 1,0  4,0`;
           case '>':
           case '<':
             switch (direction) {

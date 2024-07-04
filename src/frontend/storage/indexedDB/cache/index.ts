@@ -5,32 +5,50 @@ import { get, add, put } from '../core/data';
 import config from './config.json';
 import { TCacheData } from '../types/idb.types';
 
-const storeName = env.rootManifest || 'dochub';
+async function storeName() {
+  const user = await window['OidcUserManager'].getUser();
+  // eslint-disable-next-line no-console
+  console.log(user?.profile?.roles);
 
-const init = (): Promise<IDBObjectStore> => create({
-  ...config,
-  storeName,
-  version: config['version']
-});
+  return env.rootManifest || 'dochub';
+}
 
-const getData = (id: string): Promise<TCacheData> => get({
-  storeName,
-  dbName: config.dbName,
-  indexName: config.indexes[0].name,
-  value: id
-});
+const init = async function(): Promise<IDBObjectStore> {
+  const _storeName = await storeName();
+  return await create({
+    ...config,
+    storeName: _storeName,
+    version: config['version']
+  });
+};
 
-const setData = (data: TCacheData): Promise<string | number> => add(
-  config.dbName,
-  storeName,
-  data
-);
+const getData = async function(id: string): Promise<TCacheData> {
+  const _storeName = await storeName();
+  return await get({
+    storeName: _storeName,
+    dbName: config.dbName,
+    indexName: config.indexes[0].name,
+    value: id
+  });
+};
 
-const putData = (data: TCacheData): Promise<string | number> => put(
-  config.dbName,
-  storeName,
-  data
-);
+const setData = async function(data: TCacheData): Promise<string | number> {
+  const _storeName = await storeName();
+  return await add(
+    config.dbName,
+    _storeName,
+    data
+  );
+};
+
+const putData = async function(data: TCacheData): Promise<string | number> {
+  const _storeName = await storeName();
+  return await put(
+    config.dbName,
+    _storeName,
+    data
+  );
+};
 
 export {
   init,

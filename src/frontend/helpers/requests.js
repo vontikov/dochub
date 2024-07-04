@@ -8,6 +8,7 @@ import xml from '@global/helpers/xmlparser';
 
 import env, { Plugins } from './env';
 import { responseCacheInterceptor, requestCacheInterceptor } from './cache';
+import oidcClient from '@front/auth/oidc-client';
 // import uriTool from '@/helpers/uri';
 
 
@@ -34,6 +35,10 @@ axios.interceptors.request.use(async(params) => {
 	if (env.cache) {
 		await requestCacheInterceptor(params);
 	}
+  if (env.backendURL() && (new URL(params.url)).host === (new URL(env.backendURL())).host) {
+    const accessToken = await oidcClient.getAccessToken();
+    params.headers.common.Authorization = 'Bearer ' + accessToken;
+  }
 	return gitlab.axiosInterceptor(params);
 }, (error) => Promise.reject(error));
 
@@ -136,7 +141,11 @@ export default {
 	translateBackendURL(url) {
 		const finalURl = url && url.toString();
 		if (finalURl && finalURl.startsWith('backend://')) {
-			return (new URL(finalURl.slice(10), env.backendFileStorageURL()));
+			try {
+				return (new URL(finalURl.slice(10), env.backendFileStorageURL()));
+			} catch (e) {
+				throw new Error(e);
+			}
 		} else {
 			return url;
 		}

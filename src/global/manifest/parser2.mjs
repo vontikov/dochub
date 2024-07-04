@@ -539,6 +539,7 @@ parser.rebuildLayers = function() {
 // ************************************************************************
 // Функция вызывается извне при изменении в источника
 // sources - массив с URI изменившихся источников
+parser.isChangeProcessing = false;
 parser.onChange = async function(sources) {
     if (!sources && !sources.length) return;
     // Флаг изменений
@@ -550,21 +551,27 @@ parser.onChange = async function(sources) {
         // Если слой уже был затронут текущей транзакцией не трогаем его
         if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
+        // eslint-disable-next-line no-console
         if (sources.indexOf(layer.uri) >= 0) {
+            // eslint-disable-next-line no-console
+            isAffected = true;
             try {
                 await layer.reload(layer.uri);
             } catch (e) {
                 this.registerError(e, e?.uri || layer.uri);
             }
-            isAffected = true;
         }
     }
     // Если в данных есть изменения - перестраиваем слои
     if (isAffected) {
+        // Вызываем слушателя начала обновления данных в манифесте
+        this.onStartReload && this.onStartReload();
         parser.rebuildLayers();
-        // Вызываем слушателя обновления данных в манифесте
+        // Вызываем слушателя окончания обновления данных в манифесте
         this.onReloaded && this.onReloaded(this);
-        console.info('===== MANIFEST REFRESHED =====');
+    } else {
+        // eslint-disable-next-line no-console
+        console.info('>>>>>> No found layer for ', sources);
     }
 };
 
@@ -573,7 +580,7 @@ parser.onChange = async function(sources) {
 //	uri - идентификатор ресурса
 parser.import = async function(uri) {
     try {
-        // Создаем руктовую страницу
+        // Создаем рутовую страницу
         const rooLayer = new ManifestLayer();
         // Кладем ее в каталог
         this.rootLayers.push(rooLayer);
@@ -583,7 +590,6 @@ parser.import = async function(uri) {
         this.registerError(e, e?.uri || uri);
     }
 };
-
 
 // Менеджер манифестов
 export default parser;

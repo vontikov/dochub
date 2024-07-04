@@ -39,7 +39,7 @@ export default {
   },
   // Адрес backend сервере
   backendURL(): string {
-    return this.dochub.VUE_APP_DOCHUB_BACKEND_URL || window.origin;
+    return this.dochub?.VUE_APP_DOCHUB_BACKEND_URL || (window?.origin && (window?.origin !== 'null') ? window?.origin : 'http://localhost:3030/');
   },
   // Адрес API доступа к файлам backend сервера
   backendFileStorageURL(): string {
@@ -47,6 +47,9 @@ export default {
   },
   isBackendMode() {
     return !this.isPlugin() && (process.env.VUE_APP_DOCHUB_BACKEND_URL || ((process.env.VUE_APP_DOCHUB_MODE || '').toLowerCase() === 'backend'));
+  },
+  isRolesMode(): boolean {
+    return (process.env.VUE_APP_DOCHUB_ROLES_MODEL || 'N').toUpperCase() === 'Y';
   },
   isProduction(): boolean {
     return this.dochub.NODE_ENV === 'production';

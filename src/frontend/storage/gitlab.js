@@ -96,7 +96,9 @@ export default {
 			Vue.set(state.last_changes, value.id, value.payload);
 		},
 		appendProblems(state, value) {
-			state.problems = state.problems.concat([value]);
+      if(!state.problems?.find(({ id }) => id === value.id)) {
+        state.problems = state.problems.concat([value]);
+      }
 		},
 		setRenderCore(state, value) {
 			state.renderCore = value;
@@ -253,7 +255,7 @@ export default {
                     item.description = `${error.toString()}\n`;
                     errors.package.items.push(item);
                 } else if (data.uri === consts.plugin.ROOT_MANIFEST || action === 'file-system') {
-                    context.commit('setNoInited', errors.count === 1);
+                    context.commit('setNoInited', true);
                 } else {
                     const item = {
                         uid,
@@ -291,12 +293,14 @@ export default {
                         errors.net.items.push(item);
                     }
 
-                    // Может не надо? 
+                    // Может не надо?
                     context.commit('setIsReloading', false);
                 }
+
+                if (errors.count > 1) context.commit('setNoInited', false);
             };
 
-            /* Зачем это здесь? 
+            /* Зачем это здесь?
             if (env.isPlugin()) {
                 storageManager.onPullSource = (url, path, parser) => {
                     return parser.cache.request(url, path);
@@ -313,37 +317,42 @@ export default {
                 if (data) {
                     changes = Object.assign(changes, data);
                     if (refreshTimer) clearTimeout(refreshTimer);
-                    refreshTimer = setTimeout(() => {
+                    refreshTimer = setTimeout(async() => {
                         rulesContext && rulesContext.stop();
                         tickCounter = Date.now();
                         // eslint-disable-next-line no-console
                         console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
-                        if (storageManager.onChange) {
-                            storageManager.onStartReload();
-                            storageManager.onChange(Object.keys(changes));
-                        } else 
+                        if (storageManager.onChange)
+                            await storageManager.onChange(Object.keys(changes));
+                        else
                             context.dispatch('reloadAll');
 
                         for (const source in changes) {
                             // Уведомляем об изменениях всех подписчиков
                             window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
                         }
+                        refreshTimer = null;
                     }, 350);
                 }
             };
 
-            gateway.appendListener('source/changed', reloadSourceAll);
-        },
+			gateway.appendListener('source/changed', reloadSourceAll);
+		},
+    //парсим токен с ролями
+    setRolesFromToken(context){
+      console.log('ACTION.............');
+      context.commit('setAvailableRoles', {roles : {users: ['test']}});
 
-        // Вызывается при необходимости получить access_token
-        refreshAccessToken(context, OAuthCode) {
-            const params = OAuthCode ? {
-                grant_type: 'authorization_code',
-                code: OAuthCode
-            } : {
-                grant_type: 'refresh_token',
-                refresh_token: context.state.refresh_token
-            };
+    },
+		// Вызывается при необходимости получить access_token
+		refreshAccessToken(context, OAuthCode) {
+			const params = OAuthCode ? {
+				grant_type: 'authorization_code',
+				code: OAuthCode
+			} : {
+				grant_type: 'refresh_token',
+				refresh_token: context.state.refresh_token
+			};
 
             if (OAuthCode) context.commit('setIsOAuthProcess', true);
 
@@ -380,19 +389,20 @@ export default {
             context.dispatch('refreshAccessToken', OAuthCode);
         },
 
-        // Reload root manifest
-        async reloadRootManifest(_context, payload) {
-            // Если работаем в режиме backend, берем все оттуда
-            if (env.isBackendMode()) {
-                storageManager.onStartReload();
-                storageManager.onReloaded({
-                    manifest: Object.freeze({}),
-                    mergeMap: Object.freeze({})
-                });
-            } else {
-                await storageManager.reloadManifest(payload);
-            }
-        },
+		// Reload root manifest
+		async reloadRootManifest(_context, payload) {
+      console.log('reload root manifest');
+			// Если работаем в режиме backend, берем все оттуда
+			if (env.isBackendMode()) {
+				storageManager.onStartReload();
+				storageManager.onReloaded({
+					manifest: Object.freeze({}),
+					mergeMap: Object.freeze({})
+				});
+			} else {
+				await storageManager.reloadManifest(payload);
+			}
+		},
 
         // Reload root manifest
         reloadAll(context, payload) {

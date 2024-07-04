@@ -14,6 +14,7 @@ import Empty from '@front/components/Controls/Empty';
 import DevTool from '@front/components/JSONata/DevTool';
 import Entity from '@front/components/Entities/Entity';
 import SSOError from '@front/components/sso/SSOError';
+import oidcClient from '@front/auth/oidc-client';
 
 const middleware = (route) => {
 	if (config.oauth !== false && !window.Vuex.state.isOAuthProcess && !window.Vuex.state.access_token) {
@@ -31,10 +32,33 @@ const middleware = (route) => {
 		);
 	}
 
+    window.OidcUserManager.getUser().then(user => {
+      if (user) {
+        // eslint-disable-next-line no-console
+        console.log(user.profile.roles);
+      }
+    });
+
 	return route.params;
 };
 
+const login = async function() {
+  console.log('window.Vuex',window.Vuex);
+  await oidcClient.signinCallback();
+};
+
 const routes = [
+  {
+    name: 'login',
+    path: '/login',
+    component: Empty,
+    props: login
+  },
+  {
+    name: 'logout',
+    path: '/logout',
+    redirect: { name: 'main' }
+  },
   {
     name: 'main',
     path: '/main',

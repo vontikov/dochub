@@ -2,6 +2,7 @@ import * as semver from 'semver';
 import cache from './services/cache.mjs';
 import prototype from './prototype.mjs';
 
+
 class PackageError extends Error {
 	constructor(uri, message) {
 		super(message);
@@ -44,7 +45,7 @@ const parser = {
 		this.manifest = {};
 	},
 	startLoad() {
-		this.loaded = {};
+	    this.loaded = {};
 		this.onStartReload && this.onStartReload(this);
 	},
 	stopLoad() {
@@ -153,7 +154,7 @@ const parser = {
 					result[id] = source[id];
 					this.pushToMergeMap(keyPath, result[id], location);
 				}
-				pathStruct.length == 1 && this.propResolver[entity] && this.propResolver[entity](result[id], location);
+				pathStruct.length === 1 && this.propResolver[entity] && this.propResolver[entity](result[id], location);
 			}
 		} else {
 			result = source;
@@ -205,9 +206,9 @@ const parser = {
 	// Разбираем сущности
 	// path - путь к перечислению сущностей (ключ -> объект)
 	async parseEntity(context, path, baseURI) {
-		for (const key in context) {
-			await this.expandProperty(context[key], `${path}/${encodeURIComponent(key)}`, baseURI);
-		}
+			for (const key in context) {
+				await this.expandProperty(context[key], `${path}/${encodeURIComponent(key)}`, baseURI);
+			}
 	},
 
 	async parseImports(manifest, baseURI) {
@@ -341,8 +342,8 @@ const parser = {
 		}
 	},
 
-	// Подключение манифеста
 	async import(uri) {
+		console.log('import.uri',uri);
 		try {
 			const response = this.onPullSource 
 				? await this.onPullSource(uri, '/', this)

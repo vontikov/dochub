@@ -143,10 +143,10 @@
       const queryID = message.data.queryID;
       listeners[queryID] && listeners[queryID](message.data);
     };
-    this.make = (grid, nodes, links, trackWidth, distance, symbols, availableWidth, isDebug) => {
+    this.make = (grid, styles, nodes, links, trackWidth, distance, direction, height, symbols, availableWidth, wrap, isDebug) => {
       return new Promise((success, reject) => {
         const params = {
-          grid, nodes, links, trackWidth, distance, symbols, isDebug
+          grid, styles, nodes, links, trackWidth, distance, direction, height, symbols, wrap, isDebug
         };
         const hash = window.localStorage ? md5(JSON.stringify(params)) : null;
         const cacheKey = `SmartAnts.cache.v${CACHE_VERSION}.${hash}`;
@@ -222,6 +222,16 @@
       fullScreen: {
         type: Boolean,
         default: false
+      },
+      // Направление диаграммы
+      direction: {
+        type: String,
+        default: 'row'
+      },
+      // Высота для колоночной диаграммы
+      height: {
+        type: Number,
+        default: 700
       },
       // Варнинги генерации диаграммы
       warnings: {
@@ -603,18 +613,24 @@
         this.recalcSymbols();
         const trackWidth = this.data.config?.trackWidth || this.trackWidth;
         const distance = this.data.config?.distance || this.distance;
+        const direction = this.data.config?.direction || this.direction;
+        const height = this.data.config?.height || this.height;
         let availableWidth = this.$el?.clientWidth || 0;
         if (availableWidth < 600) availableWidth = 600;
         this.isBuilding++;
         Graph.make(
           this.data.config?.grid || {},
+          this.data.config?.styles || {},
           nodes || this.data.nodes || {},
           links || this.data.links || [],
           trackWidth,
           distance,
+          direction,
+          height,
           this.landscape.symbols,
           availableWidth,
           this.limitHeight,
+          this.data.config?.wrap,
           this.debug
         )
           .then((presentation) => {
