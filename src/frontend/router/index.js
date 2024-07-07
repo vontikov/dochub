@@ -1,6 +1,5 @@
 import Vue from 'vue';
 import Router from 'vue-router';
-import cookie from 'vue-cookie';
 
 import gateway from '@idea/gateway';
 import env from '@front/helpers/env';
@@ -27,31 +26,6 @@ if (!env.isPlugin()) {
 				window.location = new URL('/main', window.origin);
 			}
 		});
-	rConfig.routes.push(
-		{
-			path: '/sso/gitlab/authentication',
-			redirect(route) {
-				const OAuthCode = Object.keys(route.query).length
-					? route.query.code
-					: new URLSearchParams(route.hash.substr(1)).get('code');
-				if (OAuthCode) {
-					window.Vuex.dispatch('onReceivedOAuthCode', OAuthCode);
-					const rRoute = cookie.get('return-route');
-					return rRoute ? JSON.parse(rRoute) : {
-						path: '/main',
-						query: {},
-						hash: ''
-					};
-				} else {
-					return {
-						path: '/sso/error',
-						query: {},
-						hash: ''
-					};
-				}
-			}
-		}
-	);
 } else {
 	rConfig.routes.push(
 		{

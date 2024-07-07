@@ -9,7 +9,7 @@ import '@assets/libs/prism';
 import Axios from 'axios';
 import Vue from 'vue';
 import VueCookie from 'vue-cookie';
-import Vuetify from 'vuetify';
+import Vuetify from 'vuetify/dist/vuetify.min.js';
 import Vuex from 'vuex';
 import '@idea/papi';
 import AsyncComputed from 'vue-async-computed';
@@ -31,7 +31,7 @@ import Youtube from '@front/components/Tools/Youtube.vue';
 import Entity from '@front/components/Entities/Entity.vue';
 import DocHubObject from '@front/components/Docs/DocHubObject';
 import GlobalMixin from '@front/mixins/global';
-import gitlab from '@front/storage/gitlab';
+import mainStorage from '@front/storage/main';
 
 import '@assets/styles/main.css';
 import '@front/storage/indexedDB';
@@ -40,7 +40,6 @@ import 'vuetify/dist/vuetify.min.css';
 
 window.Vue = Vue;
 window.Router = router;
-window.EventBus = new Vue();
 
 Vue.use(Vuex);
 Vue.use(Vuetify);
@@ -55,15 +54,13 @@ if (window.DochubVsCodeExt) {
   VsCode.pipe();
 }
 
-let store = new Vuex.Store(gitlab);
+let store = new Vuex.Store(mainStorage);
 
 if (window.DochubVsCodeExt) {
   VsCode.listener(store);
 }
 
 window.Vuex = store;
-
-store.dispatch('init');
 
 Vue.component('DochubObject', DocHubObject);
 Vue.component('DochubDoc', DocHubDoc);

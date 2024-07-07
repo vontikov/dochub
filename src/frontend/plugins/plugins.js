@@ -2,23 +2,48 @@
 import Vue from 'vue';
 import requests from '@front/helpers/requests';
 import env from '@front/helpers/env';
+import events from './events';
 
 const plugins = {
-    documents: [],  
-    protocols: [],
-    contentProviders: [], 
+    documents: [],          // Типы документов
+    protocols: [],          // Протоколы
+    contentProviders: [],   // Драйверы данных
+    routes: [],             // Роуты UI
+    uiComponents: [],       // Встраиваемые UI компоненты
+    dataLake: {             // Функции озера данных
+        manifests: []       // Манифесты плагинов 
+    },
     // Все ранее зарегистрированные плагины переносим в основной менеджер
     pull() {
-        this.documents.forEach((el) => DocHub.registerDocuments(el.type, el.component));
+        this.documents.forEach((el) => DocHub.documents.register(el.type, el.component));
     }
+};
+
+const routerMiddlewareMethods = { 
+    beforeEach: true
 };
 
 // Регистрируем временный менеджер регистрации плагинов
 window.DocHub = {
+    events,
+    eventBus: new Vue(),
+    router: {
+        registerRoute(route) {
+            window.Router.addRoute(route);
+            plugins.routes.push(route);
+        },
+        registerMiddleware(middleware) {
+            for (const method in middleware) {
+                if (routerMiddlewareMethods[method]) {
+                    window.Router[method](middleware[method]);
+                } else throw new Error(`Unsupported middleware method [${method}] for plugins core!`);
+            }
+        }
+    },
     contentProviders: {
         get(contentType) {
             const driver = plugins.contentProviders.find(
-                (item) => item.contentType.toLowerCase() === contentType.toLowerCase()
+                (item) => (new RegExp(item.contentType)).test(contentType.toLowerCase())
             )?.driver;
             // Если драйвер не хочет обрабатывать запросы, прячем его
             return driver?.isActive() ? driver : undefined;
@@ -27,7 +52,7 @@ window.DocHub = {
             // Инициализируем драйвера протоколов
             try {
                 // eslint-disable-next-line no-console
-                console.info(`Initialization content driver [${contentType}]...`);
+                console.info(`Initialization content driver [${contentType}]...`, plugins.contentProviders);
                 driver.bootstrap && driver.bootstrap({
                     env: JSON.parse(JSON.stringify(process.env))
                 });
@@ -35,6 +60,7 @@ window.DocHub = {
                 // eslint-disable-next-line no-console
                 console.info(`Content driver for [${contentType}] is registered.`);
             } catch (error) {
+                // eslint-disable-next-line no-console
                 console.error(`Error of registration content driver for ${contentType}`, error);
             }
         },
@@ -62,6 +88,7 @@ window.DocHub = {
                 // eslint-disable-next-line no-console
                 console.info(`Protocol [${protocol}] is registered.`);
             } catch (error) {
+                // eslint-disable-next-line no-console
                 console.error(`Error of registration protocol ${protocol}`, error);
             }
         },
@@ -76,15 +103,54 @@ window.DocHub = {
         fetch() {
             return JSON.parse(JSON.stringify(plugins.documents));
         }
+    },
+    ui: {
+        // location
+        //      avatar - область справа сверху в главном меню
+        register(location, component) {
+            plugins.uiComponents.push({ location, component });
+        },
+        fetch() {
+            return JSON.parse(JSON.stringify(plugins.uiComponents));
+        }
+    },
+    // API озера данных
+    dataLake: {
+        // Монтирует источник к загружаемым манифестам озера
+        //  uri: string     - URI монтируемого ресурса
+        mountManifest(uri) {
+            plugins.dataLake.manifests[uri] = true;
+            DocHub.eventBus.$emit(events.dataLake.mountManifest, uri);
+        },
+        // Монтирует источник к загружаемым манифестам озера
+        //  uri: string     - URI отключаемого ресурса
+        unmountManifest(uri) {
+            delete plugins.dataLake.manifests[uri];
+            DocHub.eventBus.$emit(events.dataLake.unmountManifest, uri);
+        },
+        // Требует перезагрузки ресурсов задействованных в озере данных
+        //  uriPattern: array | RegEx | undefined  - Шаблон проверки соответствия URI ресурса
+        //                                   Если undefined - перезагружает все
+        reload(uriPattern) {
+            DocHub.eventBus.$emit(events.dataLake.reloadManifests, 
+                uriPattern && 
+                    ((Array.isArray(uriPattern) ? uriPattern : [uriPattern]).map((item) => 
+                            typeof item === 'string'
+                            ? new RegExp('^' + item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$')
+                            : item
+                        )
+                    )
+            );
+        }
     }
 };
 
 export default {
     namespaced: true,
     state: {
+        ...plugins,
         ready: false,   // Признак готовности плагинов к использованию
-        documents: {},  // Доступные типы документов
-        protocols: {}   // Доступные протоколы
+        documents: {}   // Доступные типы документов
     },
     mutations: {
         setReady(state, value) {
@@ -92,27 +158,32 @@ export default {
         },
         registerDocument(state, document) {
             state.documents[document.type] = document.component;
+        },
+        registerUIComponent(state, component) {
+            state.uiComponents.push(component);
         }
     },
     actions: {
         // Загружаем плагины
         init(context) {
             // Регистрируем менеджер документов для плагинов
-            window.DocHub.documents.register = function(type, component) {
+            window.DocHub.documents.register = (type, component) => {
                 component.mixins = component.mixins || [];
                 Vue.component(`plugin-doc-${type}`, component);
                 context.commit('registerDocument', { type, component });
             };
 
-            // Регистрируем функцию получения доступных протоколов
-            window.DocHub.protocols.fetch = () => {
-                return JSON.parse(JSON.stringify(Object.keys(context.state.protocols || {})));
+            
+
+            window.DocHub.ui.register = (location, component) => {
+                context.commit('registerUIComponent', { location, component });
             };
 
             // Регистрируем функцию получения доступных типов документов
             window.DocHub.documents.fetch = () => {
                 return JSON.parse(JSON.stringify(Object.keys(context.state.documents || {})));
             };
+
             plugins.pull();
 
             let counter = 0;

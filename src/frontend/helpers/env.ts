@@ -98,9 +98,6 @@ export default {
     return this.ideSettings?.render?.mode || this.dochub.VUE_APP_DOCHUB_RENDER_CORE || 'graphviz';
   },
   // Переменные систем управления версиями
-  get gitlabUrl(): TEnvValue {
-    return this.ideSettings?.env?.DOCHUB_IDE_GITLAB_URL || this.dochub.VUE_APP_DOCHUB_GITLAB_URL;
-  },
   get bitbucketUrl(): TEnvValue {
     return this.ideSettings?.env?.DOCHUB_IDE_BITBUCKET_URL || this.dochub.VUE_APP_DOCHUB_BITBUCKET_URL;
   },

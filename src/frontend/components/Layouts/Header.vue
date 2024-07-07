@@ -27,6 +27,11 @@
     <v-btn v-if="gotoIconShow" icon title="Найти в коде" v-on:click="gotoCode">
       <v-icon class="material-icons" style="display: inline">code</v-icon>
     </v-btn>
+    <!-- Выводим зарегистрированные компоненты аватаров -->
+    <template v-for="(item, index) in avatars">
+      <component v-bind:is="item.component" v-bind:key="index" />
+    </template>
+
     <v-menu offset-y>
       <template #activator="{ on, attrs }">
         <v-btn icon v-bind="attrs" v-on="on">
@@ -62,6 +67,9 @@
       };
     },
     computed: {
+      avatars() {
+        return this.$store.state.plugins?.uiComponents.filter((item) => item.location.toLowerCase() === 'avatar');
+      },
       gotoIconShow() {
         return env.isPlugin() && this.$route.name === 'entities';
       },

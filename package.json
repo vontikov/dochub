@@ -74,6 +74,7 @@
     "babel-loader": "8.3.0",
     "babel-plugin-transform-import-meta": "2.2.0",
     "compression": "1.7.4",
+    "compression-webpack-plugin": "^11.1.0",
     "cors": "2.8.5",
     "css-loader": "3.6.0",
     "dotenv": "16.0.3",
@@ -101,7 +102,7 @@
     "vue-style-loader": "3.1.2",
     "vue-svg-loader": "0.16.0",
     "vue-template-compiler": "2.7.14",
-    "webpack-bundle-analyzer": "4.8.0",
+    "webpack-bundle-analyzer": "^4.8.0",
     "webpack-pwa-manifest": "4.3.0",
     "yo": "4.3.0"
   },

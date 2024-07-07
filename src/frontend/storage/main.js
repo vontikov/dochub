@@ -1,6 +1,4 @@
-import config from '@front/config';
 import cookie from 'vue-cookie';
-// import GitHelper from '../helpers/gitlab';
 import storageManager from '@front/manifest/manager';
 import Vue from 'vue';
 import gateway from '@idea/gateway';
@@ -11,106 +9,85 @@ import entities from '@front/entities/entities';
 import env, { Plugins } from '@front/helpers/env';
 import plugins from '../plugins/plugins';
 
-import GitLab from '@front/helpers/gitlab';
-
 import validatorErrors from '@front/constants/validators';
-
-const axios = require('axios');
 
 const NET_CODES_ENUM = {
     NOT_FOUND: 404
 };
 
 export default {
-	modules: {
-		plugins
-	},
-	state: {
-		// Признак загрузки данных
-		isReloading: true,
-		// Признак рендеринга в версии для печати
-		isPrintVersion: false,
-		// Идет процесс авторизации в gitlab
-		isOAuthProcess: null,
-		// Токен досутпа в GitLab
-		access_token: null,
-		// Токен бновления access_token досутпа в GitLab
-		refresh_token: null,
-		// Время обновления данных
-		moment: null,
-		// Обобщенный манифест
-		manifest: {},
-		// Выявленные Проблемы
-		problems: [],
-		// Источники данных манифеста
-		sources: {},
-		// Доступные проекты GitLab
-		available_projects: {},
-		// Проекты
-		projects: {},
-		diff_format: 'line-by-line',
-		// Последние изменения
-		last_changes: {},
-		// Движок для рендеринга
-		renderCore: 'graphviz',
-		// Признак инциализации проекта в плагине
-		notInited: null,
-		// Признак критической проблемы
-		criticalError: null
-	},
+    modules: {
+        plugins
+    },
+    state: {
+        // Признак загрузки данных
+        isReloading: true,
+        // Признак рендеринга в версии для печати
+        isPrintVersion: false,
+        // Время обновления данных
+        moment: null,
+        // Обобщенный манифест
+        manifest: {},
+        // Выявленные Проблемы
+        problems: [],
+        // Источники данных манифеста
+        sources: {},
+        // Проекты
+        projects: {},
+        diff_format: 'line-by-line',
+        // Последние изменения
+        last_changes: {},
+        // Движок для рендеринга
+        renderCore: 'graphviz',
+        // Признак инциализации проекта в плагине
+        notInited: null,
+        // Признак критической проблемы
+        criticalError: null
+    },
 
-	mutations: {
-		clean(state) {
-			state.manifest = {};
-			state.problems = [];
-			state.sources = {};
-			state.available_projects = {};
-			state.projects = {};
-			state.last_changes = {};
-			state.criticalError = null;
-		},
-		setManifest(state, value) {
-			state.moment = Date.now();
-			state.manifest = value;
-		},
-		setSources(state, value) {
-			state.sources = value;
-		},
-		setIsOAuthProcess(state, value) {
-			state.isOAuthProcess = value;
-		},
-		setIsReloading(state, value) {
-			state.isReloading = value;
-		},
-		setAccessToken(state, value) {
-			state.access_token = value;
-		},
-		setRefreshToken(state, value) {
-			state.refresh_token = value;
-		},
-		setDiffFormat(state, value) {
-			state.diff_format = value;
-			cookie.set('diff_format', value, 1);
-		},
-		appendLastChanges(state, value) {
-			Vue.set(state.last_changes, value.id, value.payload);
-		},
-		appendProblems(state, value) {
-			state.problems = state.problems.concat([value]);
-		},
-		setRenderCore(state, value) {
-			state.renderCore = value;
-		},
-		setNoInited(state, value) {
-			state.notInited = value;
-		},
-		setCriticalError(state, value) {
-			state.criticalError = value;
-		},
-		setPrintVersion(state, value) {
-			state.isPrintVersion = value;
-		}
-	},
+    mutations: {
+        clean(state) {
+            state.manifest = {};
+            state.problems = [];
+            state.sources = {};
+            state.available_projects = {};
+            state.projects = {};
+            state.last_changes = {};
+            state.criticalError = null;
+        },
+        setManifest(state, value) {
+            state.moment = Date.now();
+            state.manifest = value;
+        },
+        setSources(state, value) {
+            state.sources = value;
+        },
+        setIsReloading(state, value) {
+            state.isReloading = value;
+        },
+        setDiffFormat(state, value) {
+            state.diff_format = value;
+            cookie.set('diff_format', value, 1);
+        },
+        appendLastChanges(state, value) {
+            Vue.set(state.last_changes, value.id, value.payload);
+        },
+        appendProblems(state, value) {
+            state.problems = state.problems.concat([value]);
+        },
+        setRenderCore(state, value) {
+            state.renderCore = value;
+        },
+        setNoInited(state, value) {
+            state.notInited = value;
+        },
+        setCriticalError(state, value) {
+            state.criticalError = value;
+        },
+        setPrintVersion(state, value) {
+            state.isPrintVersion = value;
+        }
+    },
 
     actions: {
         // Action for init store
@@ -298,88 +275,42 @@ export default {
                 if (errors.count > 1) context.commit('setNoInited', false);
             };
 
-            /* Зачем это здесь? 
-            if (env.isPlugin()) {
-                storageManager.onPullSource = (url, path, parser) => {
-                    return parser.cache.request(url, path);
-                };
-            }
-            */
-
             context.dispatch('reloadAll');
-
-            let changes = {};
+            
             let refreshTimer = null;
 
-            const reloadSourceAll = (data) => {
-                if (data) {
-                    changes = Object.assign(changes, data);
-                    if (refreshTimer) clearTimeout(refreshTimer);
-                    refreshTimer = setTimeout(async() => {
-                        rulesContext && rulesContext.stop();
-                        tickCounter = Date.now();
+            const reloadSource = (target) => {
+                if (refreshTimer) clearTimeout(refreshTimer);
+                refreshTimer = setTimeout(async() => {
+                    rulesContext && rulesContext.stop();
+                    tickCounter = Date.now();
+                    if (target === 'all') {
                         // eslint-disable-next-line no-console
-                        console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<<<', changes);
-                        if (storageManager.onChange) 
-                            await storageManager.onChange(Object.keys(changes));
-                        else 
-                            context.dispatch('reloadAll');
+                        console.info('>>>>>> FULL RELOAD <<<<<<<<');
+                        context.dispatch('reloadAll');
+                    } else {
+                        let changes = [];
+                        const makeRegExp = (str) => {
+                            return new RegExp('^' + str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'); 
+                        };
+                        if (typeof target === 'string') changes.push(makeRegExp(target));
+                        else if (Array.isArray(target)) changes = target;
+                        else if (typeof target === 'object') changes = Object.keys(target).map((source) => makeRegExp(source));
 
-                        for (const source in changes) {
-                            // Уведомляем об изменениях всех подписчиков
-                            window.EventBus.$emit(consts.events.CHANGED_SOURCE, source);
-                        }
-                        refreshTimer = null;
-                    }, 350);
-                }
+                        // eslint-disable-next-line no-console
+                        console.info('>>>>>> ON CHANGED SOURCES <<<<<<<<', changes);
+                        await storageManager.onChange(changes);
+                    }
+                    refreshTimer = null;
+                }, 350);
             };
 
-            gateway.appendListener('source/changed', reloadSourceAll);
-        },
-
-        // Вызывается при необходимости получить access_token
-        refreshAccessToken(context, OAuthCode) {
-            const params = OAuthCode ? {
-                grant_type: 'authorization_code',
-                code: OAuthCode
-            } : {
-                grant_type: 'refresh_token',
-                refresh_token: context.state.refresh_token
-            };
-
-            if (OAuthCode) context.commit('setIsOAuthProcess', true);
-
-            const OAuthURL = (new URL('/oauth/token', config.gitlab_server)).toString();
-
-            axios({
-                method: 'post',
-                url: OAuthURL,
-                params: Object.assign({
-                    client_id: config.oauth.APP_ID,
-                    redirect_uri: (new URL(consts.pages.OAUTH_CALLBACK_PAGE, window.location)).toString()
-                }, params)
-            })
-                .then((response) => {
-                    context.commit('setAccessToken', response.data.access_token);
-                    context.commit('setRefreshToken', response.data.refresh_token);
-                    // Если expires_in нет, считаем, что токен вечный
-                    response.data.expires_in && setTimeout(() => context.dispatch('refreshAccessToken'), (response.data.expires_in - 10) * 1000);
-                    if (OAuthCode) context.dispatch('reloadAll');
-                }).catch((e) => {
-                    context.commit('appendProblems', [{
-                        problem: validatorErrors.title.net,
-                        route: OAuthURL,
-                        target: '_blank',
-                        title: `${validatorErrors.title.gitlab_auth} [${e.toString()}]`
-                    }]);
-                    // eslint-disable-next-line no-console
-                    console.error(validatorErrors.title.gitlab_auth, e);
-                }).finally(() => context.commit('setIsOAuthProcess', false));
-        },
-
-        // Need to call when gitlab takes callback's rout with oauth code
-        onReceivedOAuthCode(context, OAuthCode) {
-            context.dispatch('refreshAccessToken', OAuthCode);
+            // Слушаем события от IDE
+            gateway.appendListener('source/changed', (changes) => changes && reloadSource());
+            // Слушаем события от плагинов
+            DocHub.eventBus.$on(DocHub.events.dataLake.reloadManifests, (changes) => {
+                reloadSource(changes || 'all');
+            });
         },
 
         // Reload root manifest
@@ -398,43 +329,7 @@ export default {
 
         // Reload root manifest
         reloadAll(context, payload) {
-
             context.dispatch('reloadRootManifest', payload);
-        },
-
-        // Reload root manifest
-        updateLastChanges(context) {
-            let request = new function() {
-                this.terminate = false;
-                this.projects_tasks = {};
-
-                this.loadLastChange = (doc) => {
-                    axios({
-                        method: 'get',
-                        url: GitLab.commitsListURI(doc.project_id, doc.branch, 1, doc.source, 1),
-                        headers: { 'Authorization': `Bearer ${context.state.access_token}` }
-                    })
-                        .then((response) => {
-                            if (!this.terminate) {
-                                context.commit('appendLastChanges', {
-                                    id: doc.id,
-                                    payload: response.data
-                                });
-                            }
-                        });
-                };
-
-                this.stop = () => {
-                    this.terminate = true;
-                };
-            };
-
-            for (let id in context.state.docs) {
-                let doc = context.state.docs[id];
-                if ((doc.transport || '').toLowerCase() === 'gitlab') {
-                    request.loadLastChange(doc);
-                }
-            }
         },
 
         // Регистрация проблемы

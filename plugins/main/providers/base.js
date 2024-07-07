@@ -1,3 +1,6 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 export default {
     active: false,           // Признак активности драйвера
     // Возвращает true если драйвер готов обрабатывать запросы

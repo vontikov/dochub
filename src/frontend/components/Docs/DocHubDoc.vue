@@ -6,7 +6,7 @@
       <div>{{ error }}</div>
     </v-alert>
     <template v-if="!isReloading && !error">
-      <component 
+      <component
         v-bind:is="is"
         v-if="is"
         v-bind:inline="inline"
@@ -53,7 +53,7 @@
   import DocNetwork from './DocNetwork.vue';
   import DocSmartants from './DocSmartAnts.vue';
   import Spinner from '@front/components/Controls/Spinner.vue';
-  
+
   // Встроенные типы документов
   const inbuiltTypes = {
     [DocTypes.ASYNCAPI]: 'async-api-component',
@@ -66,7 +66,7 @@
     [DocTypes.SMARTANTS]: 'doc-smartants'
   };
 
-  
+
   export default {
     name: 'DocHubDoc',
     components: {
@@ -89,7 +89,7 @@
       inline: { type: Boolean, default: false },
       // Параметры передающиеся в запросы документа
       // Если undefined - берутся из URL
-      params: { 
+      params: {
         type: Object,
         default: undefined
       },
@@ -106,17 +106,17 @@
         refresher: null,
         profile: null,
         error: null,
-        currentPath : this.resolvePath(),
+        currentPath: this.resolvePath(),
         currentParams: this.resolveParams(),
         dataProvider: datasets()
       };
     },
     computed: {
       eventBus() {
-        return window.EventBus;
+        return DocHub.eventBus;
       },
       is() {
-        return inbuiltTypes[this.docType] 
+        return inbuiltTypes[this.docType]
           || (this.$store.state.plugins.documents[this.docType] && `plugin-doc-${this.docType}`)
           || null;
       },
@@ -136,12 +136,26 @@
         return this.$store.state.isPrintVersion;
       },
       putContentForPlugin() {
-        return env.isPlugin() ? (url, content) => {return new Promise((success, reject) => {
-          const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
-          window.$PAPI.pushFile(fullPath, content)
-            .then(success)
-            .catch(reject);
-        });} : null;
+        if (env.isPlugin()) {
+          return (url, content) => {
+            return new Promise((success, reject) => {
+              const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
+              window.$PAPI.pushFile(fullPath, content)
+                .then(success)
+                .catch(reject);
+            });
+          };
+        } else {
+          return (url, data) => {
+            return requests.request(url, this.baseURI, {
+              method: 'put',
+              headers: {
+                'Content-type': 'text/plain; charset=UTF-8'
+              },
+              data
+            });
+          };
+        }
       }
     },
     watch: {
@@ -172,7 +186,7 @@
       },
       // Достаем данные профиля документа из DataLake
       pullProfileFromDataLake(dateLakeId) {
-        query.expression( query.getObject(dateLakeId), null, this.resolveParams())
+        query.expression(query.getObject(dateLakeId), null, this.resolveParams())
           .evaluate()
           .then((profile) => {
             this.profile = Object.assign({ $base: this.path }, profile);
@@ -200,8 +214,8 @@
         }, 50);
       },
       resolveParams() {
-        return this.params || this.$router.currentRoute.query || {};
-      },  
+        return Object.assign({}, this.params || {}, this.$router.currentRoute.query || {});
+      },
       // Определяем текущий путь к профилю документа
       resolvePath() {
         if (this.path === '$URL$') return this.$router.history.current.path;
@@ -213,7 +227,7 @@
         return new Promise((success, reject) => {
           const whiter = setInterval(() => {
             if (!this.isReloading) {
-              requests.request(url, this.baseURI, { raw : true })
+              requests.request(url, this.baseURI, { raw: true })
                 .then(success)
                 .catch(reject);
               clearInterval(whiter);

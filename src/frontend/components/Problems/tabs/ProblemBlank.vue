@@ -24,7 +24,7 @@
               <v-list-item-content>
                 <v-list-item-subtitle>Ссылка на объект</v-list-item-subtitle>
                 <v-list-item-title>
-                  <router-link v-bind:to="problem.content.location">{{ problem.content.location }}</router-link>
+                  <router-link v-bind:to="problem.content.location.toString()">{{ problem.content.location }}</router-link>
                 </v-list-item-title>
               </v-list-item-content>
             </v-list-item>

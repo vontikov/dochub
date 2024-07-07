@@ -1,9 +1,5 @@
-import cookie from 'vue-cookie';
-
 import Doc from '@front/components/Architecture/Document.vue';
 import Main from '@front/components/Main';
-import config from '@front/config';
-import consts from '@front/consts';
 import Component from '@front/components/Architecture/Component';
 import Aspect from '@front/components/Architecture/Aspect';
 import Context from '@front/components/Architecture/Context';
@@ -13,33 +9,15 @@ import Problems from '@front/components/Problems/Problems';
 import Empty from '@front/components/Controls/Empty';
 import DevTool from '@front/components/JSONata/DevTool';
 import Entity from '@front/components/Entities/Entity';
-import SSOError from '@front/components/sso/SSOError';
 
-const middleware = (route) => {
-	if (config.oauth !== false && !window.Vuex.state.isOAuthProcess && !window.Vuex.state.access_token) {
-      cookie.set('return-route', JSON.stringify({
-        path: route.path,
-        query: route.query,
-        hash: route.hash
-      }), 1);
-      window.location = new URL(
-			`/oauth/authorize?client_id=${config.oauth.APP_ID}`
-            + '&redirect_uri=' + new URL(consts.pages.OAUTH_CALLBACK_PAGE, window.location)
-            + `&response_type=code&state=none&scope=${config.oauth.REQUESTED_SCOPES}`
-            + '&' + Math.floor(Math.random() * 10000)
-			, config.gitlab_server
-		);
-	}
 
-	return route.params;
-};
+
 
 const routes = [
   {
     name: 'main',
     path: '/main',
-    component: Main,
-    props: middleware
+    component: Main
   },
   {
     name: 'home',
@@ -54,85 +32,73 @@ const routes = [
   {
     name: 'doc',
     path: '/docs/:document',
-    component: Doc,
-    props: middleware
+    component: Doc
   },
   {
     name: 'contexts',
     path: '/architect/contexts/:context',
-    component: Context,
-    props: middleware
+    component: Context
   },
   {
     name: 'component',
     path: '/architect/components/:component',
-    component: Component,
-    props: middleware
+    component: Component
   },
   {
     name: 'aspect',
     path: '/architect/aspects/:aspect',
-    component: Aspect,
-    props: middleware
+    component: Aspect
   },
   {
     name: 'radar',
     path: '/techradar',
-    component: Radar,
-    props: middleware
+    component: Radar
   },
   {
     name: 'radar-section',
     path: '/techradar/:section',
-    component: Radar,
-    props: middleware
+    component: Radar
   },
   {
     name: 'technology',
     path: '/technology/:technology',
-    component: Technology,
-    props: middleware
+    component: Technology
   },
   {
     name: 'problems-subj',
     path: '/problems/:subject',
-    component: Problems,
-    props: middleware
+    component: Problems
   },
   {
     name: 'problems',
     path: '/problems',
-    component: Problems,
-    props: middleware
+    component: Problems
   },
   {
     name: 'devtool_source',
     path: '/devtool/:jsonataSource(.*)',
-    component: DevTool,
-    props: middleware
+    component: DevTool
   },
   {
     name: 'devtool',
     path: '/devtool',
-    component: DevTool,
-    props: middleware
+    component: DevTool
   },
   {
     name: 'entities',
     path: '/entities/:entity/:presentation',
-    component: Entity,
-    props: middleware
-  },
-  {
-    name: 'ssoerror',
-    path: '/sso/error',
-    component: SSOError
+    component: Entity
   },
   {
     name: 'Empty',
     path: '*',
     component: Empty
   }
-];
+].map((route) => (
+  {
+    ...route,
+    props: (route) => route.params
+  }
+));
 
 export default routes;

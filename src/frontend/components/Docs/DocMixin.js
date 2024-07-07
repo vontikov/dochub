@@ -1,7 +1,5 @@
 import datasets from '@front/helpers/datasets';
-import gateway from '@idea/gateway';
 import uriTool from '@front/helpers/uri';
-import requests from '@front/helpers/requests';
 
 const SOURCE_PENDING = 'pending';
 const SOURCE_READY = 'ready';
@@ -102,13 +100,13 @@ export default {
                 }
             });
         },
-        onChangeSource(data) {
-            if (data) {
-                this.saveState();
-                for (const source in data) {
-                    if (source === requests.getIndexURL(this.url)) {
-                        this.doRefresh();
-                    }
+        onChangeSource(changes) {
+            if (!changes) return;
+            this.saveState();
+            for (const pattern of changes) {
+                if(this.url.match(pattern)) {
+                    this.doRefresh();
+                    return;
                 }
             }
         },
@@ -217,10 +215,10 @@ export default {
     },
     created() {
         // Следим за обновлением документа
-        gateway.appendListener('source/changed', this.onChangeSource);
+        DocHub.eventBus.$on(DocHub.events.dataLake.reloadManifests, this.onChangeSource);
     },
     destroyed() {
-        gateway.removeListener('source/changed', this.onChangeSource);
+        DocHub.eventBus.$off(DocHub.events.dataLake.reloadManifests, this.onChangeSource);
     },
     mounted() {
         this.$on('showContextMenu', this.showContextMenu);

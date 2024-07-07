@@ -1,21 +1,16 @@
 import axios from 'axios';
-import YAML from 'yaml';
 import crc16 from '@global/helpers/crc16';
-import gitlab from '@front/helpers/gitlab';
 import uriTool from '@front/helpers/uri';
 import { Buffer } from 'buffer';
-import xml from '@global/helpers/xmlparser';
 
 import env, { Plugins } from './env';
-import { responseCacheInterceptor, requestCacheInterceptor } from './cache';
-// import uriTool from '@/helpers/uri';
+import { responseCacheInterceptor } from './cache';
 
 
 // CRC16 URL задействованных файлов
 const tracers = {};
 
 // Add a request interceptor
-
 const responseErrorInterceptor = (error) => {
     if (error.response?.status === 304) {
         if (error.config.lastCachedResult) {
@@ -29,39 +24,11 @@ const responseErrorInterceptor = (error) => {
     return Promise.reject(error);
 };
 
-// Интерцептор для GitLab авторизации
-axios.interceptors.request.use(async(params) => {
-    if (env.cache) {
-        await requestCacheInterceptor(params);
-    }
-    return gitlab.axiosInterceptor(params);
-}, (error) => Promise.reject(error));
-
 // Здесь разбираемся, что к нам вернулось из запроса и преобразуем к формату внутренних данных
 axios.interceptors.response.use(async(response) => {
+    // Выполняем перехват, если он определен
     if (response.config.responseHook)
         response.config.responseHook(response);
-    if (typeof response.data === 'string') {
-        if (!response.config.raw) {
-            const url = (response.config.url || '').toString().split('?')[0].toLowerCase();
-            if (
-                (url.indexOf('.json/raw') >= 0)
-                || (url.endsWith('.json'))
-                || (response?.headers || {})['content-type'] === 'application/json'
-            )
-                response.data = JSON.parse(response.data);
-            else if (
-                (url.indexOf('.yaml/raw') >= 0)
-                || (url.endsWith('.yaml'))
-                || (response?.headers || {})['content-type'] === 'application/x-yaml')
-                response.data = YAML.parse(response.data);
-            else if (
-                (url.indexOf('.xml/raw') >= 0)
-                || (url.endsWith('.xml'))
-                || (response?.headers || {})['content-type'] === 'application/xml')
-                response.data = xml.parse(response.data);
-        }
-    }
 
     if (env.cache) {
         const reRequest = await responseCacheInterceptor(response);
@@ -77,23 +44,18 @@ axios.interceptors.response.use(async(response) => {
 
 function injectPAPIMiddleware() {
     if (window.$PAPI && !window.$PAPI.middleware) {
-        window.$PAPI.middleware = function(response, request) {
+        window.$PAPI.middleware = function(response) {
             if (!response) return response;
-            let type = response.contentType;
-            switch (type) {
-                case 'yaml': response.data = YAML.parse(response.data); break;
-                case 'json': response.data = JSON.parse(response.data); break;
-                case 'xml': !request.raw && (response.data = xml.parse(response.data)); break;
+            let contentType = response.contentType;
+            switch (contentType) {
                 case 'jpg':
-                    type = 'jpeg';
+                    contentType = 'jpeg';
                 // eslint-disable-next-line no-fallthrough
-                case 'jpeg':
-                case 'png':
-                case 'svg':
-                    if (type === 'svg') type = 'svg+xml';
+                case 'jpeg': case 'png': case 'svg':
+                    if (contentType === 'svg') contentType = 'svg+xml';
                     response.data = Buffer.from(response.data, 'base64');
                     response.headers = Object.assign(response.headers || {}, {
-                        'content-type': `image/${type}`
+                        'content-type': `image/${contentType}`
                     });
                     break;
             }
@@ -176,47 +138,61 @@ export default {
 
         // Проверяем должен ли запрос обрабатываться специальным драйвером
         const driver = window.DocHub.protocols.get(
-            baseURI && ((struct) => struct.length > 1 && struct[0])(strBaseURI.split(':'))
-            || strURI && ((struct) => struct.length > 1 && struct[0])(strURI.split(':'))
+            strURI && ((struct) => struct.length > 1 && struct[0])(strURI.split(':'))
+            || baseURI && ((struct) => struct.length > 1 && struct[0])(strBaseURI.split(':'))
             || null
         );
 
+        // Определяем как будем разрешать запрос
+        let resolver = null;
+        // Если есть драйвер, то он будет этим заниматься сам
         if (driver) {
-            debugger;
             params.url = driver.resolveURL(baseURI, uri);
-            return driver.request(params);
-        }
-
-        // Если драйвер не найден, разбираем запрос встроенными методами
-        if (strURI.startsWith('source:')) {
-            return new Promise((success) => {
-                success({
-                    data: JSON.parse(decodeURIComponent((new URL(uri)).pathname))
+            resolver = driver.request(params);
+        } else {
+            // Если драйвер не найден, разбираем запрос встроенными методами
+            if (strURI.startsWith('source:')) {
+                return new Promise((success) => {
+                    success({
+                        data: JSON.parse(decodeURIComponent((new URL(uri)).pathname))
+                    });
                 });
-            });
-        } else if (strURI.startsWith('backend://')) {
-            const structURI = strURI.split('/');
-            const origin = `${structURI[0]}//${structURI[2]}/`;
-            const path = this.encodeRelPath(strURI.slice(origin.length));
-            params.url = new URL(path, this.translateBackendURL(origin));
-        } else if (strBaseURI.startsWith('backend://')) {
-            params.url = new URL(this.encodeRelPath(uri.toString()), this.translateBackendURL(baseURI));
-        } else if (baseURI) {
-            params.url = uriTool.makeURL(uriTool.makeURIByBaseURI(strURI, baseURI)).url;
-        } else {
-            params.url = uriTool.makeURL(strURI).url;
+            } else if (strURI.startsWith('backend://')) {
+                const structURI = strURI.split('/');
+                const origin = `${structURI[0]}//${structURI[2]}/`;
+                const path = this.encodeRelPath(strURI.slice(origin.length));
+                params.url = new URL(path, this.translateBackendURL(origin));
+            } else if (strBaseURI.startsWith('backend://')) {
+                params.url = new URL(this.encodeRelPath(uri.toString()), this.translateBackendURL(baseURI));
+            } else if (baseURI) {
+                params.url = uriTool.makeURL(uriTool.makeURIByBaseURI(strURI, baseURI)).url;
+            } else {
+                params.url = uriTool.makeURL(strURI).url;
+            }
+
+            // Если работаем в режиме плагинов, реализуем специальное поведение
+            if (
+                env.isPlugin(Plugins.idea) && params.url.toString().startsWith('plugin:') ||
+                env.isPlugin(Plugins.vscode) && params.url.toString().startsWith('https://file+.vscode-resource.vscode-cdn.net') && !params.responseHook
+            ) {
+                injectPAPIMiddleware();
+                this.trace(params.url);
+                params.raw = !!axios_params?.raw;
+                resolver = window.$PAPI.request(params);
+            } else {
+                resolver = axios(params);
+            }
         }
 
-        if (
-            env.isPlugin(Plugins.idea) && params.url.toString().startsWith('plugin:') ||
-            env.isPlugin(Plugins.vscode) && params.url.toString().startsWith('https://file+.vscode-resource.vscode-cdn.net') && !params.responseHook
-        ) {
-            injectPAPIMiddleware();
-            this.trace(params.url);
-            params.raw = !!axios_params?.raw;
-            return window.$PAPI.request(params);
-        } else {
-            return axios(params);
-        }
+        return new Promise((success, reject) => {
+            // Если требуется вернуть результат запрос "как есть", не используем обработчики
+            resolver.then(axios_params?.raw ? success : (response) => {
+                // Обрабатываем полученные данный драйвером, если он определен
+                response.data =
+                    window.DocHub.contentProviders.get(response.headers?.['content-type'])?.toObject(response.data)
+                    || response.data;
+                success(response);
+            }).catch(reject);
+        });
     }
 };

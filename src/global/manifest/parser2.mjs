@@ -552,7 +552,7 @@ parser.onChange = async function(sources) {
         if (layer.transaction === this.transaction) continue;
         // Если слой входит в список изменений - перезагружаем его
         // eslint-disable-next-line no-console
-        if (sources.indexOf(layer.uri) >= 0) {
+        if (sources.find((pattern) => layer.uri.match(pattern))) { //(sources.indexOf(layer.uri)
             // eslint-disable-next-line no-console
             isAffected = true;
             try {

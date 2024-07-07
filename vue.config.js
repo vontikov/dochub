@@ -1,9 +1,10 @@
 const WebpackPwaManifest = require('webpack-pwa-manifest');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const HtmlWebpackInlineSourcePlugin = require('@effortlessmotion/html-webpack-inline-source-plugin');
-// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const pluginsConf = require('./plugins.json');
 const PluginMaker = require('./src/building/plugin-maker');
+// const CompressionPlugin = require("compression-webpack-plugin");
 const path = require('path');
 const package = require('./package.json');
 
@@ -24,12 +25,15 @@ const vscodeAPIAvailable = process.env.VUE_APP_DOCHUB_IDE_VSCODE_API || package.
 process.env.VUE_APP_DOCHUB_IDE_IDEA_API = Array.isArray(vscodeAPIAvailable) ? vscodeAPIAvailable : vscodeAPIAvailable.toString().split(',');
 
 // Собираем встраиваемые плагины
-//if (process.env.VUE_APP_DOCHUB_MODE === 'production') {
+const chunks = ['app'];
 (pluginsConf?.inbuilt || []).map((item) => {
 	const config = require(`./${item}/package.json`);
-	entries[`plugins/${item}`] = `./${item}/${config.main || 'index.js'}`;
+	const chunkId = config.name;
+	entries[chunkId] = `./${item}/${config.main || 'index.js'}`;
+	chunks.push(chunkId);
 });
-//}
+
+process.env.VUE_APP_DOCHUB_BUILTIN_PLUGINS = chunks.join(';');
 
 // Добавляем в манифест внешние плагины
 const manifest = {
@@ -52,8 +56,11 @@ if (process.env.VUE_APP_DOCHUB_MODE === 'plugin') {
 		filename: 'plugin.html',
 		template: 'src/ide/plugin.html',
 		inlineSource: '.(woff(2)?|ttf|eot|svg|js|css|map)$',
-		inject: true
-		/* ,
+		inject: true,
+		chunks,
+    	chunksSortMode: 'manual',
+
+		/*
 		minify: {
 			removeComments: true,
 			collapseWhitespace: true,
@@ -62,12 +69,15 @@ if (process.env.VUE_APP_DOCHUB_MODE === 'plugin') {
 			minifyJS: true
 			// more options:
 			// https://github.com/kangax/html-minifier#options-quick-reference
-		} */
+		}
+		*/
 	}));
 	plugins.push(new HtmlWebpackInlineSourcePlugin());
 } else {
-	// plugins.push(new BundleAnalyzerPlugin());
+	plugins.push(new BundleAnalyzerPlugin());
 }
+
+// plugins.push(new CompressionPlugin( { test: /\.js(\?.*)?$/i }));
 
 // Дефолтная конфигурация dev-сервера
 let config = {
@@ -91,6 +101,20 @@ let config = {
 		config.module.rules.delete("svg");
 	},
 	configureWebpack: {
+		externalsType: 'module',
+		experiments: {
+			outputModule: true
+		},
+		externals: [
+			function ({ context, request }, callback) {
+				if (/^vue$/.test(request)) {
+					if (context.startsWith(path.resolve('./', 'plugins/')))
+						return callback(null, 'Vue', 'global');
+				}
+		  
+				callback();
+			},
+		],
 		cache: (process.env.VUE_APP_DOCHUB_BUILDING_CACHE || 'memory').toLowerCase() === 'filesystem'
 			? {
 				type: 'filesystem',
@@ -105,7 +129,9 @@ let config = {
 		},
 		optimization: {
 			splitChunks: false,
-			runtimeChunk: 'single'
+			runtimeChunk: 'single',
+			//minimize: true,
+			removeAvailableModules: true
 		},
 		entry: { ...entries },
 		plugins,

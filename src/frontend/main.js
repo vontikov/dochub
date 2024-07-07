@@ -20,5 +20,7 @@ document.addEventListener('DOMContentLoaded', async() => {
     store
   }).$mount('#app');
 
+  store.dispatch('init');
+
   window.$PAPI?.loaded && window.$PAPI.loaded();
 });

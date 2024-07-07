@@ -117,7 +117,7 @@
 </script>
 
 <style>
-@import '~vuetify/dist/vuetify.min.css';
+/* @import '~vuetify/dist/vuetify.min.css'; */
 @import '~swagger-ui/dist/swagger-ui.css';
 
 .swagger-ui {
