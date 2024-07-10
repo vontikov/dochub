@@ -1,7 +1,8 @@
 // Драйверы протокола
 import gitlab from './drivers/gitlab';
+import github from './drivers/github';
 import avatar from './components/OAuthAvatar.vue';
-import branchs from './components/BranchSelector.vue';
+import branchs from './components/gitlab/BranchSelector.vue';
 
 // Драйверы данных
 import json from './providers/json';
@@ -10,6 +11,7 @@ import xml from './providers/xml';
 
 
 DocHub.protocols.register('gitlab', gitlab);
+DocHub.protocols.register('github', github);
 
 DocHub.contentProviders.register('^(json|text/json|application/json|application/ld\\+json)', json);
 DocHub.contentProviders.register('^(yaml|text/yaml|application/yaml|application/x\\-yaml)', yaml);
