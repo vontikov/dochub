@@ -19,8 +19,6 @@ class PackageError extends Error {
 
 // Парсер манифестов
 const parser = {
-    checkLoaded() { return true; },
-    checkAwaitedPackages() { return true; },
     // Корневые страницы
     rootLayers: [],
     // Слои данных 
@@ -574,7 +572,6 @@ parser.onChange = async function(sources) {
         console.info('>>>>>> No found layer for ', sources);
     }
 };
-
 
 // Импорт манифеста по идентификатору ресурса
 //	uri - идентификатор ресурса

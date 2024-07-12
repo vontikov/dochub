@@ -65,21 +65,28 @@ const api = {
             diffs: result.files || []
         };
     },
+    // Возвращает список проектов
+    fetchRepos: async() => {
+        return ((await driver.fetch({
+            method: 'get',
+            url: new URL(`/user/repos`, API_SERVER)
+        })).data || []).map((item) => ({
+            ...item,
+            ref: item.name
+        }));
+    },
     // Возвращает список бранчей
-    fetchBranches: async() => {
+    fetchBranches: async(repo, owner) => {
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/repos/${driver.config.owner}/${driver.config.repo}/branches`, API_SERVER)
+            url: new URL(`/repos/${owner || driver.profile.login}/${repo || driver.config.repo}/branches`, API_SERVER)
         })).data;
     },
     fetchUser: async() => {
-        const result = (await driver.fetch({
+        return (await driver.fetch({
             method: 'get',
             url: new URL(`/user`, API_SERVER)
         })).data;
-        return {
-            avatar_url: result.avatar_url
-        };
     }
 };
 
@@ -121,14 +128,14 @@ const driver = {
             api,
             isActive: this.active,
             isLogined: !this.isOAuthProcessing && !!accessToken,
-            avatarURL: this.profile?.avatar_url
+            avatarURL: driver.profile?.avatar_url
         };
     },
     onChangeStatus() {
         const status = this.getStatus();
         if (status.isLogined) {
             api.fetchUser()
-                .then((profile) => this.profile = profile)
+                .then((profile) => driver.profile = profile)
                 .finally(() => DocHub.eventBus.$emit(this.eventsIDs.statusChange, this.getStatus()));
         } else {
             DocHub.eventBus.$emit(this.eventsIDs.statusChange, status);

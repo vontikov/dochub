@@ -48,11 +48,21 @@ const api = {
         };
     },
     // Возвращает список бранчей
-    fetchBranches: async() => {
+    fetchBranches: async(projectId) => {
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${driver.config.defProject}/repository/branches`, driver.config.server)
+            url: new URL(`/api/v4/projects/${projectId || driver.config.defProject}/repository/branches`, driver.config.server)
         })).data;
+    },
+    // Возвращает список проектов
+    fetchRepos: async(userId) => {
+        return ((await driver.fetch({
+            method: 'get',
+            url: new URL(`/api/v4/users/${userId || driver.profile?.id}/projects`, driver.config.server)
+        })).data || []).map((item) => ({
+            ...item,
+            ref: `${item.id}`
+        }));
     }
 };
 
@@ -110,7 +120,7 @@ const driver = {
             api,
             isActive: this.active,
             isLogined: !this.isOAuthProcessing && !!this.config.accessToken,
-            avatarURL: this.profile?.avatar_url
+            avatarURL: driver.profile?.avatar_url
         };
     },
     onChangeStatus() {
@@ -120,7 +130,7 @@ const driver = {
                 method: 'get',
                 url: new URL(`/api/v4/user`, this.config.server)
             }).then((response) => {
-                this.profile = response.data;
+                driver.profile = response.data;
                 DocHub.eventBus.$emit('gitlab-status-change', this.getStatus());
             });
         } else {
@@ -186,7 +196,7 @@ const driver = {
                     setTimeout(DocHub.dataLake.reload, 100);
                 }).catch((error) => {
                     console.error(error);
-                    if (error?.code !== 'ERR_CANCELED') {
+                    if (error.response?.status === 401) {
                         this.logout();
                         this.isOAuthProcessing = 'error';
                         reject();

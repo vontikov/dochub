@@ -3,6 +3,8 @@ import Vue from 'vue';
 import requests from '@front/helpers/requests';
 import env from '@front/helpers/env';
 import events from './events';
+import storageManager from '@front/manifest/manager';
+import protoProtocolDriver from './protoProtocolDriver';
 
 const plugins = {
     documents: [],          // Типы документов
@@ -10,12 +12,14 @@ const plugins = {
     contentProviders: [],   // Драйверы данных
     routes: [],             // Роуты UI
     uiComponents: [],       // Встраиваемые UI компоненты
-    dataLake: {             // Функции озера данных
-        manifests: []       // Манифесты плагинов 
-    },
+    mounted: {},            // Примонтированные манифесты
     // Все ранее зарегистрированные плагины переносим в основной менеджер
     pull() {
+        for(const uri in this.mounted) {
+            storageManager.mountManifest(uri);
+        }
         this.documents.forEach((el) => DocHub.documents.register(el.type, el.component));
+
     }
 };
 
@@ -81,6 +85,7 @@ window.DocHub = {
             try {
                 // eslint-disable-next-line no-console
                 console.info(`Initialization protocol [${protocol}]...`);
+                driver = Object.assign({}, protoProtocolDriver, driver);
                 driver.bootstrap && driver.bootstrap({
                     env: JSON.parse(JSON.stringify(process.env))
                 });
@@ -119,13 +124,13 @@ window.DocHub = {
         // Монтирует источник к загружаемым манифестам озера
         //  uri: string     - URI монтируемого ресурса
         mountManifest(uri) {
-            plugins.dataLake.manifests[uri] = true;
+            plugins.mounted[uri] = true;
             DocHub.eventBus.$emit(events.dataLake.mountManifest, uri);
         },
         // Монтирует источник к загружаемым манифестам озера
         //  uri: string     - URI отключаемого ресурса
         unmountManifest(uri) {
-            delete plugins.dataLake.manifests[uri];
+            delete plugins.mounted[uri];
             DocHub.eventBus.$emit(events.dataLake.unmountManifest, uri);
         },
         // Требует перезагрузки ресурсов задействованных в озере данных
@@ -161,27 +166,43 @@ export default {
         },
         registerUIComponent(state, component) {
             state.uiComponents.push(component);
+        },
+        mountManifest(state, uri) {
+            state.mounted[uri] = true;
+            storageManager.mountManifest(uri);
+        },
+        unmountManifest(state, uri) {
+            delete state.mounted[uri];
+            storageManager.unmountManifest(uri);
         }
     },
     actions: {
         // Загружаем плагины
         init(context) {
             // Регистрируем менеджер документов для плагинов
-            window.DocHub.documents.register = (type, component) => {
+            DocHub.documents.register = (type, component) => {
                 component.mixins = component.mixins || [];
                 Vue.component(`plugin-doc-${type}`, component);
                 context.commit('registerDocument', { type, component });
             };
 
-            
-
-            window.DocHub.ui.register = (location, component) => {
+            DocHub.ui.register = (location, component) => {
                 context.commit('registerUIComponent', { location, component });
             };
 
             // Регистрируем функцию получения доступных типов документов
-            window.DocHub.documents.fetch = () => {
+            DocHub.documents.fetch = () => {
                 return JSON.parse(JSON.stringify(Object.keys(context.state.documents || {})));
+            };
+
+            DocHub.dataLake.mountManifest = (uri) => {
+                context.commit('mountManifest', uri);
+                DocHub.eventBus.$emit(events.dataLake.mountManifest, uri);
+            };
+
+            DocHub.dataLake.unmountManifest = (uri) => {
+                context.commit('unmountManifest', uri);
+                DocHub.eventBus.$emit(events.dataLake.unmountManifest, uri);
             };
 
             plugins.pull();

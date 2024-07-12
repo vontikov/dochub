@@ -37,22 +37,13 @@
 
 <script>
 
+  import statusMixin from './mixins/status';
+
   export default {
     name: 'OAuthAvatar',
-    mounted() {
-      // Слушаем статусы драйверов
-      DocHub.eventBus.$on('gitlab-status-change', (status) => (this.driverStatus.gitlab = status) && this.refresh());
-      DocHub.eventBus.$on('github-status-change', (status) => (this.driverStatus.github = status) && this.refresh());
-      // И просим сообщить текущий статус
-      DocHub.eventBus.$emit('gitlab-status-get');
-      DocHub.eventBus.$emit('github-status-get');
-    },
+    mixins: [statusMixin],
     data() {
       return {
-        driverStatus: {
-          gitlab: null,
-          github: null
-        },
         showMenu: false,
         x: 0,
         y: 0,
@@ -75,29 +66,29 @@
       },
       refresh() {
         this.actions = [];
-        this.driverStatus.gitlab?.isActive && this.actions.push({
-          status: this.driverStatus.gitlab,
-          title: this.driverStatus.gitlab.isLogined ? 'Выйти' : 'Войти',
+        this.status.gitlab?.isActive && this.actions.push({
+          status: this.status.gitlab,
+          title: this.status.gitlab.isLogined ? 'Выйти' : 'Войти',
           icon: this.makeURLDataCode(require('!!raw-loader!../assets/gitlab-logo.svg').default),
           style: 'width: 64px; height: 64px;',
           click: () => {
             this.isProcessing = true;
             DocHub.eventBus.$emit(
-              this.driverStatus.gitlab.isLogined
+              this.status.gitlab.isLogined
                 ? 'gitlab-logout'
                 : 'gitlab-login'
             );
           }
         });
-        this.driverStatus.github?.isActive && this.actions.push({
-          status: this.driverStatus.github,
-          title: this.driverStatus.github.isLogined ? 'Выйти' : 'Войти',
+        this.status.github?.isActive && this.actions.push({
+          status: this.status.github,
+          title: this.status.github.isLogined ? 'Выйти' : 'Войти',
           icon: this.makeURLDataCode(require('!!raw-loader!../assets/github-logo.svg').default),
           style: 'width: 32px; height: 32px;',
           click: () => {
             this.isProcessing = true;
             DocHub.eventBus.$emit(
-              this.driverStatus.github.isLogined
+              this.status.github.isLogined
                 ? 'github-logout'
                 : 'github-login'
             );

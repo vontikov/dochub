@@ -314,7 +314,7 @@ export default {
         },
 
         // Reload root manifest
-        async reloadRootManifest(_context, payload) {
+        async reloadRootManifest() {
             // Если работаем в режиме backend, берем все оттуда
             if (env.isBackendMode()) {
                 storageManager.onStartReload();
@@ -323,13 +323,13 @@ export default {
                     mergeMap: Object.freeze({})
                 });
             } else {
-                await storageManager.reloadManifest(payload);
+                await storageManager.reloadManifest();
             }
         },
 
         // Reload root manifest
-        reloadAll(context, payload) {
-            context.dispatch('reloadRootManifest', payload);
+        reloadAll(context) {
+            context.dispatch('reloadRootManifest');
         },
 
         // Регистрация проблемы
