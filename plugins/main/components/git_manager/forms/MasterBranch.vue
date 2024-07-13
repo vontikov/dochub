@@ -22,7 +22,7 @@
       item-value="ref"
       v-bind:rules="[v => !!v || 'Требуется обязательно']"
       required />
-      
+
     <v-autocomplete
       v-model="branch"
       v-bind:loading="protocol && !repos && !branches"
@@ -41,6 +41,10 @@
       v-model="uri"
       v-bind:rules="[v => !!v || 'Требуется обязательно']"
       label="Полный URI файла"
+      append-icon="mdi-content-copy"
+      prepend-icon="mdi-content-paste"
+      v-on:click:append="copyText(uri)"
+      v-on:click:prepend="focusToURIEditor(), pastText((text) => (uri = text) && parseURI(true))"
       required />
 
     <v-btn v-bind:disabled="!valid" color="success" class="mr-4" v-on:click="validate">
@@ -49,6 +53,11 @@
     <v-btn class="mr-4" v-on:click="reset">
       Восстановить
     </v-btn>
+
+    <div v-if="copied" class="copied">
+      <span>Скопировано!</span>
+    </div>
+    
   </v-form>
 </template>
 
@@ -106,7 +115,9 @@
 
         branch: null,
         branches: null,
-        branchSearch: null
+        branchSearch: null,
+
+        copied: null
       };
     },
     watch: {
@@ -131,25 +142,35 @@
       }
     },
     methods: {
+      pastText(callback) {
+        navigator?.clipboard?.readText().then(callback);
+      },
+      copyText(text) {
+        if (this.copied) clearTimeout(this.copied);
+        this.copied = setTimeout(() => this.copied = null, 300);
+        navigator?.clipboard?.writeText(text);
+      },
+      focusToURIEditor() {
+        document.getElementById('urieditor')?.focus();
+      },
       isFocusURIEditor() {
         return document.activeElement?.id === 'urieditor';
       },
-      parseURI() {
-        if (this.isFocusURIEditor()) {
+      parseURI(force) {
+        if (force || this.isFocusURIEditor()) {
           const location = (this.uri || '').split('@')[0];
           const params = location.split(':');
-          this.protocol = this.protocols.find((item) => item.protocol === params[0]);
-          
           this.repoSearch = params[1];
-          this.repo = this.repoSearch;
-
           this.branchSearch = params[2];
+
+          this.protocol = this.protocols.find((item) => item.protocol === params[0]);
+          this.repo = this.repoSearch;
           this.branch = this.branchSearch;
         }
       },
       makeURI() {
         !this.isFocusURIEditor()
-          && (this.uri = `${this.protocol?.protocol || '???'}:${this.repo || '???'}:${this.branch || '???'}@dochub.yaml`);
+          && (this.uri = `${this.protocol?.protocol || '?'}:${this.repo || '?'}:${this.branch || '?'}@dochub.yaml`);
       },
       reloadRepos() {
         this.branches = null;
@@ -185,4 +206,24 @@
 </script>
 
 <style scoped>
+
+.copied {
+  width: 200px;
+  height: 42px;
+  position: fixed;
+  bottom: 48px;
+  left: 50vw;
+  margin-left: -100px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  text-align: center;
+  color: #333;
+  font-size: 16px;
+  padding-top: 10px;
+  transition: all 0.2s ease-out;
+}
+
+
+
 </style>
