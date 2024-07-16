@@ -87,6 +87,12 @@ const api = {
             method: 'get',
             url: new URL(`/user`, API_SERVER)
         })).data;
+    },
+    fetchFiles: async(path, branch, repo, owner) => {
+        return (await driver.fetch({
+            method: 'get',
+            url: new URL(`/repos/${owner || driver.profile.login}/${repo || driver.config.repo}/contents/${encodeURIComponent(path || '')}?ref=${branch || 'master'}`, API_SERVER)
+        })).data;
     }
 };
 
@@ -171,7 +177,7 @@ const driver = {
                     this.isOAuthProcessing = false;
                     this.onChangeStatus();
                     success();
-                    setTimeout(DocHub.dataLake.reload, 100);
+                    // setTimeout(DocHub.dataLake.reload, 100);
                 }).catch((error) => {
                     console.error(error);
                     if (error?.code !== 'ERR_CANCELED') {
@@ -335,7 +341,6 @@ const driver = {
                             'Authorization': `Bearer ${accessToken}`,  // Токен авторизации
                             'Accept': 'application/vnd.github+json',
                             'X-GitHub-Api-Version': '2022-11-28'
-                            // 'Access-Control-Allow-Origin': '*'
                         }
                     );
 

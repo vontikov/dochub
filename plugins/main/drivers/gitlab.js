@@ -63,6 +63,18 @@ const api = {
             ...item,
             ref: `${item.id}`
         }));
+    },
+    fetchFiles: async(path, branch, repo) => {
+        return ((await driver.fetch({
+            method: 'get',
+            url: new URL(`/api/v4/projects/${repo || driver.config.defProject}/repository/tree?path=${encodeURIComponent(path || '')}&ref=${branch}`, driver.config.server)
+        })).data || []).map((item) => {
+            return {
+                ...item,
+                type: item.type === 'tree' ? 'dir' : 'file',
+                ref: `${item.id}`
+            };
+        });
     }
 };
 
@@ -188,12 +200,12 @@ const driver = {
                     this.config.refreshToken = response.data.refresh_token;
 
                     // Сохраняем полученные токены для использования после перезагрузки
-                    cookie.set('gitlab-token-access', this.config.accessToken, `${response.data.expires_in}s`);
-                    cookie.set('gitlab-token-refresh', this.config.refreshToken, '365d');
+                    cookie.set('gitlab-token-access', this.config.accessToken, 1 * response.data.expires_in);
+                    cookie.set('gitlab-token-refresh', this.config.refreshToken, 60*60*24*365);
                     this.isOAuthProcessing = false;
                     this.onChangeStatus();
                     success();
-                    setTimeout(DocHub.dataLake.reload, 100);
+                    // setTimeout(DocHub.dataLake.reload, 100);
                 }).catch((error) => {
                     console.error(error);
                     if (error.response?.status === 401) {

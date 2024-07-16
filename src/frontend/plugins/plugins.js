@@ -29,6 +29,7 @@ const routerMiddlewareMethods = {
 
 // Регистрируем временный менеджер регистрации плагинов
 window.DocHub = {
+    env: JSON.parse(JSON.stringify(process.env)),
     events,
     eventBus: new Vue(),
     router: {
@@ -58,7 +59,7 @@ window.DocHub = {
                 // eslint-disable-next-line no-console
                 console.info(`Initialization content driver [${contentType}]...`, plugins.contentProviders);
                 driver.bootstrap && driver.bootstrap({
-                    env: JSON.parse(JSON.stringify(process.env))
+                    env: window.DocHub.env
                 });
                 plugins.contentProviders.push({ contentType, driver });
                 // eslint-disable-next-line no-console

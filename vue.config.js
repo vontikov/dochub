@@ -1,7 +1,7 @@
 const WebpackPwaManifest = require('webpack-pwa-manifest');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const HtmlWebpackInlineSourcePlugin = require('@effortlessmotion/html-webpack-inline-source-plugin');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+//const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const pluginsConf = require('./plugins.json');
 const PluginMaker = require('./src/building/plugin-maker');
 // const CompressionPlugin = require("compression-webpack-plugin");
@@ -74,7 +74,7 @@ if (process.env.VUE_APP_DOCHUB_MODE === 'plugin') {
 	}));
 	plugins.push(new HtmlWebpackInlineSourcePlugin());
 } else {
-	plugins.push(new BundleAnalyzerPlugin());
+	// plugins.push(new BundleAnalyzerPlugin());
 }
 
 // plugins.push(new CompressionPlugin( { test: /\.js(\?.*)?$/i }));
