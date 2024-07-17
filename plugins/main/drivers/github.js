@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from 'axios';
 import cookie from 'vue-cookie';
 import OAuthError from '../components/github/OAuthError.vue';
 
@@ -65,11 +65,13 @@ const api = {
             diffs: result.files || []
         };
     },
+    getContent: (uri) => driver.request({ url: uri }),
+    postContent: (uri, content) => driver.request({ url: uri,  method: 'post', data: content}),
     // Возвращает список проектов
     fetchRepos: async() => {
         return ((await driver.fetch({
             method: 'get',
-            url: new URL(`/user/repos`, API_SERVER)
+            url: new URL('/user/repos', API_SERVER)
         })).data || []).map((item) => ({
             ...item,
             ref: item.name
@@ -85,7 +87,7 @@ const api = {
     fetchUser: async() => {
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/user`, API_SERVER)
+            url: new URL('/user', API_SERVER)
         })).data;
     },
     fetchFiles: async(path, branch, repo, owner) => {
@@ -93,6 +95,25 @@ const api = {
             method: 'get',
             url: new URL(`/repos/${owner || driver.profile.login}/${repo || driver.config.repo}/contents/${encodeURIComponent(path || '')}?ref=${branch || 'master'}`, API_SERVER)
         })).data;
+    },
+    convertURL(url) {
+        const urlStr= url.toString();
+        if (urlStr.toLowerCase().startsWith('https://github.com/')) {
+            const struct = urlStr.split('/');
+            const base = `github:${struct[3]}/${(struct[4] || '').split('.')[0]}:`;
+            if (struct[5] === 'tree')
+                return `${base}${struct[6] || ''}@dochub.yaml`;
+            else if (struct[5] === 'blob') {
+                return `${base}${struct[6]}@${struct.slice(7).join('/')}`;
+            } else {
+                return `${base}master@dochub.yaml`;
+            }
+        } else if (urlStr.toLowerCase().startsWith('git@github.com:')) {
+            const segments = urlStr.split(':');
+            return `github:${segments[1].split('.')[0]}:master@dochub.yaml`;
+
+        }
+        return null;
     }
 };
 
@@ -234,7 +255,7 @@ const driver = {
         window.DocHub.eventBus.$on(this.eventsIDs.login, () => this.login());
         
         // Логируем информацию о режиме работы драйвера
-        console.info(`Драйвер GitHub активирован.`);
+        console.info('Драйвер GitHub активирован.');
     },
     // Возвращает список методов доступных над URI
     //  uri: string || URL          - Идентификатор ресурса
@@ -286,20 +307,22 @@ const driver = {
         return result;
     },
     parseURL(url) {
-        return ((struct) => ({
-            space: ((space) => ({
-                projectId: space[0] || this.config.defProject,
-                branch: currentBranch || space[1] || this.config.defBranch
-            }))(((struct.length > 1 && struct[0]) || '').split(':')),
-            location: struct.slice(struct.length > 1 ? 1 : 0).join('@')
-        }))(url.pathname.split('@'));
+        const struct = url.toString().split('@');
+        const location = struct[0].split(':');
+        const repo = location[1].split('/');
+        return {
+            owner: repo.length > 1 ? repo[0] : driver.config.owner || driver.profile.login,
+            repoId: repo[1] || repo[0] || this.config.defProject,
+            branch: location[2] || this.config.defBranch || 'master',
+            path: struct[1]
+        };
     },
     prepareGET(options) {
         // Декодируем URL
         const segments = this.parseURL(new URL(options.url));
         // Формирум URL запроса
         options.url = new URL(
-            `/repos/${driver.config.owner}/${segments.space.projectId}/contents/${encodeURIComponent(segments.location)}`
+            `/repos/${segments.owner}/${segments.repoId}/contents/${encodeURIComponent(segments.path || '')}?ref=${segments.branch}`
             , API_SERVER
         );
     },

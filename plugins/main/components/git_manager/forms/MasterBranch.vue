@@ -1,23 +1,23 @@
 <template>
   <v-form ref="form" v-model="valid" lazy-validation>
-    <h2>Расположение корневого манифеста dochub.yaml </h2>
+    <h2>Расположение корневого манифеста</h2>
 
     <v-expansion-panels flat class="expansion-panels">
       <v-expansion-panel>
         <v-expansion-panel-header>
           <v-row>
-            <v-icon v-on:click.stop="copyText(uri)" title="Копировать">mdi-content-copy</v-icon>
-            <v-icon v-on:click.stop="focusToURIEditor(), pastText((text) => (uri = text) && parseURI(true))" title="Вставить">mdi-content-paste</v-icon>
+            <v-icon title="Копировать" v-on:click.stop="copyText(uri)">mdi-content-copy</v-icon>
+            <v-icon title="Вставить" v-on:click.stop="focusToURIEditor(), pastText((text) => pasteURL(text) && parseURI(true))">mdi-content-paste</v-icon>
             <v-text-field
-              style="margin-left: 4px; margin-right: 16px;"
               id="urieditor"
               v-model="uri"
-              v-bind:rules="[v => !!v || 'Требуется обязательно']"
+              style="margin-left: 4px; margin-right: 16px;"
+              v-bind:rules="[v => checkURI(v) || 'Неверный формат URI']"
               label="Полный URI файла"
-              v-on:click.stop
               append-icon="mdi-close"
-              v-on:click:append="reset"
-              required />
+              required
+              v-on:click.stop
+              v-on:click:append="reset" />
           </v-row>
         </v-expansion-panel-header>
         <v-expansion-panel-content>
@@ -60,8 +60,8 @@
             required />        
 
           <v-autocomplete
-            v-model="file"
             ref="fileSelector"
+            v-model="file"
             v-bind:loading="filesLoading"
             v-bind:items="fileList"
             v-bind:search-input.sync="fileSearch"
@@ -71,12 +71,12 @@
             label="Корневой манифест"
             v-bind:rules="[v => !!v || 'Требуется обязательно']"
             item-value="name"
-            required >
-            <template v-slot:item="{ item }">
+            required>
+            <template #item="{ item }">
               <v-icon v-if="item.type === 'dir'">mdi-folder</v-icon>
               <v-icon v-else>mdi-file-code-outline</v-icon>
               <v-list-item-content style="margin-top: 4px; margin-left: 4px;">
-                <v-list-item-title v-text="item.name"></v-list-item-title>
+                <v-list-item-title v-bind:class="item.virtual ? 'item-virtual' : ''" v-text="item.name" />
               </v-list-item-content>
             </template>           
           </v-autocomplete>
@@ -84,17 +84,20 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <v-btn v-bind:disabled="!valid" color="success" class="mr-4" v-on:click="validate">
+    <v-btn v-if="!contentLoading" v-bind:disabled="!valid" color="success" class="mr-4" v-on:click="validate">
       Применить
     </v-btn>
-    <v-btn class="mr-4" v-on:click="createFile">
+    <v-btn 
+      v-if="!contentLoading && rootNotFound"
+      class="mr-4"
+      v-on:click="createFile">
       Создать файл
     </v-btn>
+    <v-progress-circular v-else-if="contentLoading" size="32" width="7" value="60" color="primary" indeterminate />
 
     <div v-if="copied" class="copied">
       <span>Скопировано!</span>
     </div>
-    
   </v-form>
 </template>
 
@@ -102,75 +105,9 @@
   export default {
     name: 'GitMasterBranch',
     props: {
-      status: Object
-    },
-    mounted() {
-      this.reset();
-    },
-    computed: {
-      protocols() {
-        const result = [];
-        this.status?.gitlab && result.push({ name: 'GitLab', protocol: 'gitlab', status: this.status.gitlab});
-        this.status?.github && result.push({ name: 'GitHub', protocol: 'github', status: this.status.github});
-        this.reset();
-        return result;
-      },
-      protocolList() {
-        const result = [].concat(this.protocols || []);
-        if (this.protocolSearch && !result.find((item) => item.protocol === this.protocolSearch?.toLowerCase())) {
-          result.unshift({
-            protocol: this.protocolSearch,
-            name: this.protocolSearch,
-            status: {
-              api: {
-                async fetchRepos() {return [];},
-                async fetchBranches() {return [];},
-                async fetchFiles() {return [];}
-              }
-            }
-          });
-        }
-        return result;
-      },
-
-      repoList() {
-        const result = (this.repos || []).map((item) => {
-          return {
-            ...item,
-            title: item.ref === item.name ? item.ref : `${item.ref} (${item.name})`
-          };
-        });
-        if (this.repoSearch && !result.find((item) => item.ref === this.repoSearch)) {
-          result.unshift({
-            title: this.repoSearch,
-            ref: this.repoSearch
-          });
-        }
-        return result;
-      },
-      branchList() {
-        const result = [].concat(this.branches || []);
-        if (this.branchSearch && !result.find((item) => item.name === this.branchSearch)) {
-          result.unshift({
-            name: this.branchSearch
-          });
-        }
-        return result;
-      },
-      fileList() {
-        const result = [].concat(this.files || []);
-        if (this.fileSearch && !result.find((item) => item.name === this.fileSearch)) {
-          result.unshift({
-            name: this.fileSearch
-          });
-        }
-        return result;
-      },
-      protocolAPI() {
-        return this.protocolList.find((item) => item.protocol === this.protocol)?.status?.api;
-      },
-      currentFile() {
-        return this.files?.find((item) => item.name === this.file);
+      status: {
+        type: Object,
+        required: true
       }
     },
     data() {
@@ -193,9 +130,83 @@
         files: null,
         fileSearch: null,
         filesLoading: false,
+        
+        contentLoading: null,
+        contentURI: null,
+        content: null,
+        rootNotFound: false,
 
         copied: null
       };
+    },
+    computed: {
+      protocols() {
+        const result = [];
+        this.status?.gitlab && result.push({ name: 'GitLab', protocol: 'gitlab', status: this.status.gitlab});
+        this.status?.github && result.push({ name: 'GitHub', protocol: 'github', status: this.status.github});
+        return result;
+      },
+      protocolList() {
+        const result = [].concat(this.protocols || []);
+        if (this.protocolSearch && !result.find((item) => item.protocol === this.protocolSearch?.toLowerCase())) {
+          result.unshift({
+            protocol: this.protocolSearch,
+            name: this.protocolSearch,
+            status: {
+              api: {
+                async fetchRepos() {return []; },
+                async fetchBranches() {return []; },
+                async fetchFiles() {return []; },
+                async getContent() { throw 'Is is fake method'; }
+              }
+            }
+          });
+        }
+        return result;
+      },
+
+      repoList() {
+        const result = (this.repos || []).map((item) => {
+          return {
+            ...item,
+            title: item.ref === item.name ? item.ref : `${item.ref} (${item.name})`
+          };
+        });
+        if (this.repoSearch && !result.find((item) => item.ref === this.repo)) {
+          result.unshift({
+            virtual: true,
+            title: this.repoSearch,
+            ref: this.repo
+          });
+        }
+        return result;
+      },
+      branchList() {
+        const result = [].concat(this.branches || []);
+        if (this.branchSearch && !result.find((item) => item.name === this.branchSearch)) {
+          result.unshift({
+            virtual: true,
+            name: this.branchSearch
+          });
+        }
+        return result;
+      },
+      fileList() {
+        const result = [].concat(this.files || []);
+        if (this.fileSearch && !result.find((item) => item.name === this.fileSearch)) {
+          result.unshift({
+            virtual: true,
+            name: this.fileSearch
+          });
+        }
+        return result;
+      },
+      protocolAPI() {
+        return this.protocolList.find((item) => item.protocol === this.protocol)?.status?.api;
+      },
+      currentFile() {
+        return this.files?.find((item) => item.name === this.file);
+      }
     },
     watch: {
       protocols() {
@@ -216,17 +227,49 @@
         this.makeURI();
       },
       uri() {
+        this.rootNotFound = false;
         this.parseURI();
+        this.reloadRootManifest();
       },
       protocolAPI() {
         this.reloadAll();
+        this.reloadRootManifest();
       },
       file() {
         this.currentFile?.type === 'dir' && (this.$refs.fileSelector.isMenuActive = true);
         this.reloadFiles();
       }
     },
+    mounted() {
+      this.reset();
+      window.addEventListener('paste', this.onPasteURL);
+    },
+    unmounted() {
+      window.removeEventListener('paste', this.onPasteURL);
+    },
     methods: {
+      pasteURL(url) {
+        let result = null;
+        for(const protocol of this.protocolList) {
+          result = protocol.status?.api?.convertURL && protocol.status.api.convertURL(url);
+          if (result) break;
+        }
+        if (result) {
+          this.uri = result;
+          return result;
+        }
+        return null;
+      },
+      onPasteURL(event) {
+        if (event.target.id === 'urieditor') {
+          if (this.pasteURL((event.clipboardData || window.clipboardData).getData('text/plain')))
+            event.preventDefault();
+        }
+      },
+      checkURI(uri) {
+        // eslint-disable-next-line no-useless-escape
+        return !!((uri || '').match(/^([a-zA-Z0-9-_]{1,}\:){1}([a-zA-Z0-9-_\/]{1,}\:){1}([a-zA-Z0-9-_]{1,}\@){1}.{1,}$/));
+      },
       pastText(callback) {
         navigator?.clipboard?.readText().then(callback);
       },
@@ -358,14 +401,34 @@
         };
         doit();
       },
+      reloadRootManifest() {
+        if(this.contentURI !== this.uri){
+          if (this.contentLoading) clearTimeout(this.contentLoading);
+          this.contentURI = this.uri;
+          this.contentLoading = setTimeout(() => {
+            this.protocolAPI?.getContent(this.uri)
+              .then(() => {
+                this.rootNotFound = false;
+              })
+              .catch((error) => {
+                this.rootNotFound = error.response?.status === 404;
+                console.error(error);
+              })
+              .finally(() => {
+                this.contentLoading = null;
+              });
+          }, 300);          
+        } 
+      },
       validate() {
         this.$refs.form.validate();
       },
       reset() {
         this.uri = DocHub.env.VUE_APP_DOCHUB_ROOT_MANIFEST;
+        this.reloadRootManifest();
       },
       createFile() {
-        
+
       }
     }
   };
@@ -392,6 +455,10 @@
 
 .expansion-panels div {
   background-color: rgba(0, 0, 0, 0.0) !important;
+}
+
+.item-virtual {
+  color: rgba(0, 0, 0, 0.2);
 }
 
 </style>

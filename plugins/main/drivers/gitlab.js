@@ -47,6 +47,8 @@ const api = {
             diffs: result.diffs || []
         };
     },
+    getContent: (uri) => driver.request({ url: uri }),
+    postContent: (uri, content) => driver.request({ url: uri,  method: 'post', data: content}),
     // Возвращает список бранчей
     fetchBranches: async(projectId) => {
         return (await driver.fetch({
@@ -111,9 +113,6 @@ const driver = {
             + '&' + Math.floor(Math.random() * 10000)
             , this.config.server
         );
-    },
-    cleanSession() {
-
     },
     logout() {
         const status = this.getStatus();
@@ -182,6 +181,7 @@ const driver = {
             if (!params) {
                 this.isOAuthProcessing = 'error';
                 reject(new Error('No gitlab auth parameters!'));
+                this.onChangeStatus();
                 return;
             }
 
@@ -203,7 +203,6 @@ const driver = {
                     cookie.set('gitlab-token-access', this.config.accessToken, 1 * response.data.expires_in);
                     cookie.set('gitlab-token-refresh', this.config.refreshToken, 60*60*24*365);
                     this.isOAuthProcessing = false;
-                    this.onChangeStatus();
                     success();
                     // setTimeout(DocHub.dataLake.reload, 100);
                 }).catch((error) => {
