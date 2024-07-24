@@ -88,11 +88,16 @@ export default {
     return this.dochub.VUE_APP_DOCHUB_ROOT_DOCUMENT;
   },
   get rootManifest(): TEnvValue {
-    if (this.isPlugin(Plugins.idea)) {
-      return consts.plugin.ROOT_MANIFEST;
-    } else if (this.isPlugin(Plugins.vscode)) {
-      return window.DochubVsCodeExt.rootManifest;
-    } else return this.dochub.VUE_APP_DOCHUB_ROOT_MANIFEST;
+    let rootManifest = null;
+    if (this.isPlugin(Plugins.idea))
+      rootManifest = consts.plugin.ROOT_MANIFEST;
+    else if (this.isPlugin(Plugins.vscode)) 
+      rootManifest = window.DochubVsCodeExt.rootManifest;
+    else 
+      rootManifest = DocHub?.settings.pull(['rootManifest']).rootManifest;
+    // eslint-disable-next-line no-console
+    console.info(`Root manifest is [${rootManifest}]`);
+    return rootManifest;
   },
   get renderCore(): TEnvValue {
     return this.ideSettings?.render?.mode || this.dochub.VUE_APP_DOCHUB_RENDER_CORE || 'graphviz';

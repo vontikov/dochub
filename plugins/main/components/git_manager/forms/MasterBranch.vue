@@ -44,7 +44,9 @@
             label="Репозиторий"
             item-value="ref"
             v-bind:rules="[v => !!v || 'Требуется обязательно']"
-            required />
+            append-icon="mdi-reload"
+            required 
+            v-on:click:append="reloadRepos" />
 
           <v-autocomplete
             v-model="branch"
@@ -57,7 +59,9 @@
             label="Бранч"
             v-bind:rules="[v => !!v || 'Требуется обязательно']"
             item-value="name"
-            required />        
+            append-icon="mdi-reload"
+            required 
+            v-on:click:append="reloadBranches" />        
 
           <v-autocomplete
             ref="fileSelector"
@@ -71,7 +75,9 @@
             label="Корневой манифест"
             v-bind:rules="[v => !!v || 'Требуется обязательно']"
             item-value="name"
-            required>
+            append-icon="mdi-reload"
+            required 
+            v-on:click:append="reloadFiles">
             <template #item="{ item }">
               <v-icon v-if="item.type === 'dir'">mdi-folder</v-icon>
               <v-icon v-else>mdi-file-code-outline</v-icon>
@@ -84,11 +90,17 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <v-btn v-if="!contentLoading" v-bind:disabled="!valid" color="success" class="mr-4" v-on:click="validate">
+    <v-btn
+      v-if="!contentLoading"
+      v-bind:disabled="!valid"
+      color="success"
+      class="mr-4"
+      v-on:click="apply">
       Применить
     </v-btn>
     <v-btn 
       v-if="!contentLoading && rootNotFound"
+      v-bind:disabled="!valid"
       class="mr-4"
       v-on:click="createFile">
       Создать файл
@@ -167,9 +179,10 @@
 
       repoList() {
         const result = (this.repos || []).map((item) => {
+          const title = item.full_name || item.name;
           return {
             ...item,
-            title: item.ref === item.name ? item.ref : `${item.ref} (${item.name})`
+            title: item.ref === title ? item.ref : `${item.ref} (${title})`
           };
         });
         if (this.repoSearch && !result.find((item) => item.ref === this.repo)) {
@@ -206,6 +219,9 @@
       },
       currentFile() {
         return this.files?.find((item) => item.name === this.file);
+      },
+      repoId() {
+        return (this.repo || '').split('/').pop();
       }
     },
     watch: {
@@ -345,7 +361,7 @@
             setTimeout(doit, 50);
             return;
           }
-          this.repo && this.protocolAPI?.fetchBranches(this.repo)
+          this.repo && this.protocolAPI?.fetchBranches(this.repoId)
             .then((branches) => {
               this.branches = branches;
             })
@@ -365,7 +381,7 @@
             return;
           }
           const path = (this.file || '').split('/').slice(0, -1).join('/');
-          this.branch && this.protocolAPI?.fetchFiles(path, this.branch, this.repo)
+          this.branch && this.protocolAPI?.fetchFiles(path, this.branch, this.repoId)
             .then((files) => {
               this.files = 
                 path.split('/').map((item, index, arr) => ({
@@ -420,11 +436,15 @@
           }, 300);          
         } 
       },
-      validate() {
-        this.$refs.form.validate();
+      apply() {
+        if(this.$refs.form.validate()) {
+          DocHub.settings.push({
+            rootManifest: this.uri
+          });
+        }
       },
       reset() {
-        this.uri = DocHub.env.VUE_APP_DOCHUB_ROOT_MANIFEST;
+        this.uri = DocHub.settings.pull(['rootManifest']).rootManifest;
         this.reloadRootManifest();
       },
       createFile() {

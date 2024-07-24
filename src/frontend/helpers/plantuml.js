@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 import uri from '@front/helpers/uri';
-import { plantUmlCache } from '@front/helpers/cache';
 import env from '@front/helpers/env';
 
 export default {
@@ -22,49 +21,12 @@ export default {
     }
 	},
   async get(umlUrl) {
-    try {
-      let data = await this.getCachedData(umlUrl);
-
-      if (!data) {
-        data = await axios.get(umlUrl);
-        this.setCachedData(umlUrl, data);
-      }
-
-      return data;
-    } catch (err) {
-      return Promise.reject(err);
-    }
+    return await axios.get(umlUrl);
   },
   async post(umlUrl, uml, config) {
-    try {
-      const cachedUrl = `${umlUrl}:${JSON.stringify(uml)}`;
-      let data = await this.getCachedData(cachedUrl);
-
-      if (!data) {
-        data = await axios.post(umlUrl, uml, config);
-        this.setCachedData(cachedUrl, data);
-      }
-
-      return data;
-    } catch (err) {
-      return Promise.reject(err);
-    }
+    return await axios.post(umlUrl, uml, config);
   },
-  async getCachedData(umlUrl) {
-    if (env.cache) {
-      const cachedData = await plantUmlCache.get(umlUrl);
-
-      if (cachedData) {
-        return cachedData;
-      }
-    }
-  },
-  setCachedData(umlUrl, data) {
-    if (env.cache) {
-      plantUmlCache.set(umlUrl, data);
-    }
-  },
-	svgURL(uml) {
+  svgURL(uml) {
 		return this.svgBaseURL() + this.compress(uml);
 	},
 	svgBaseURL() {

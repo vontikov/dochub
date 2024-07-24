@@ -17,7 +17,7 @@ const init = async(processEnv) => {
 
   const { default: app } = await import(/* webpackMode: "eager" */ './index');
 
-  await import(/* webpackMode: "eager" */ '@front/plugins/api');
+  await import(/* webpackMode: "eager" */ '@front/plugins/core');
 
   return app;
 };

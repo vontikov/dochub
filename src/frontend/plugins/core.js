@@ -5,6 +5,7 @@ import env from '@front/helpers/env';
 import events from './events';
 import storageManager from '@front/manifest/manager';
 import protoProtocolDriver from './protoProtocolDriver';
+import cookie from 'vue-cookie';
 
 const plugins = {
     documents: [],          // Типы документов
@@ -27,11 +28,33 @@ const routerMiddlewareMethods = {
     beforeEach: true
 };
 
+// Карта соответствия полей настроек и переменных среды
+const settingsMap = {
+    rootManifest: 'VUE_APP_DOCHUB_ROOT_MANIFEST'
+};
+
 // Регистрируем временный менеджер регистрации плагинов
 window.DocHub = {
     env: JSON.parse(JSON.stringify(process.env)),
     events,
     eventBus: new Vue(),
+    // Работа с настройками
+    settings: {
+        push(settings) {
+            DocHub.eventBus.$emit(events.settings.push, settings);
+            Object.keys(settings).map((key) => {
+                cookie.set(`$settings.${key}`, settings[key], 60*60*24*365);
+            });
+        },
+        pull(fields) {
+            const result = {};
+            (Array.isArray(fields) ? fields : Object.keys(fields)).map((key) => {
+                const def = (settingsMap[key] && process.env[settingsMap[key]]) || undefined;
+                result[key] = cookie.get(`$settings.${key}`) || fields[key] || def;
+            });
+            return result;
+        }
+    },
     router: {
         registerRoute(route) {
             window.Router.addRoute(route);

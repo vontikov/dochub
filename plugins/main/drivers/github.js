@@ -1,6 +1,7 @@
 import axios from 'axios';
 import cookie from 'vue-cookie';
 import OAuthError from '../components/github/OAuthError.vue';
+// import sha256 from 'js-sha256';
 
 const NULL_ORIGIN = 'null://null/';
 
@@ -74,7 +75,7 @@ const api = {
             url: new URL('/user/repos', API_SERVER)
         })).data || []).map((item) => ({
             ...item,
-            ref: item.name
+            ref: item.full_name
         }));
     },
     // Возвращает список бранчей
@@ -116,6 +117,7 @@ const api = {
         return null;
     }
 };
+
 
 const driver = {
     active: false,                      // Признак активности драйвера
@@ -314,10 +316,10 @@ const driver = {
             owner: repo.length > 1 ? repo[0] : driver.config.owner || driver.profile.login,
             repoId: repo[1] || repo[0] || this.config.defProject,
             branch: location[2] || this.config.defBranch || 'master',
-            path: struct[1]
+            path: struct[1].split('?')[0].split('#')[0]
         };
     },
-    prepareGET(options) {
+    async prepareGET(options) {
         // Декодируем URL
         const segments = this.parseURL(new URL(options.url));
         // Формирум URL запроса
@@ -327,18 +329,34 @@ const driver = {
         );
     },
 
-    preparePUT(options) {
+    async preparePUT(options) {
+        // commit https://gist.github.com/quilicicf/41e241768ab8eeec1529869777e996f0
         // Декодируем URL
-        debugger;
         const segments = this.parseURL(new URL(options.url));
+        const path = encodeURIComponent((segments.path || '').split('/').slice(0, -1).join('/'));
+
+        const meta = await this.fetch({
+            url: new URL(
+                `https://api.github.com/repos/${segments.owner}/${segments.repoId}/git/trees/${segments.branch}:${encodeURIComponent(path)}?${Date.now()}`
+                , API_SERVER
+            )
+        });
+
+        const metaFile = meta?.data?.tree.find((item) => segments.path.split('/').pop() === item.path);
+        const sha = metaFile.sha;
+
         options.url = new URL(
-            `/repos/${driver.config.owner}/${segments.space.projectId}/contents/${encodeURIComponent(segments.location)}`
+            `/repos/${segments.owner}/${segments.repoId}/contents/${encodeURIComponent(segments.path || '')}?ref=${segments.branch}`
             , API_SERVER
         );
         options.method = 'put';
+        const content = btoa(unescape(encodeURIComponent(
+            typeof options.data === 'string' ? options.data : JSON.stringify(options.data)
+        )));
         options.data = {
             message: 'DocHub automatic commit',
-            content: btoa(options.data)
+            sha,
+            content
         };
     },
     fetch(options) {
@@ -401,45 +419,47 @@ const driver = {
             // Клонируем объект параметров для работ ынад ним
             options = JSON.parse(JSON.stringify(options));
 
+            const resolver = () => {
+                // Выполняем запрос к серверу
+                this.fetch(options)
+                    .then((response) => {
+                        // Предобрабатывавем ответ идентифицируя тип контента по URL
+                        const pathname = response.data.path || '';
+                        let contentType = null;
+                        if (pathname.endsWith('.json'))
+                            contentType = 'application/json';
+                        else if (pathname.endsWith('.yaml'))
+                            contentType = 'application/x-yaml';
+                        else if (pathname.endsWith('.xml'))
+                            contentType = 'application/xml';
+                        else 
+                            contentType = 'text/plain; charset=UTF-8';
+
+                        // Актуализируем информацию о типе контента
+                        response.headers = Object.assign(response.headers || {}, {
+                            'content-type': contentType || response.headers?.['content-type']
+                        });
+
+                        if (response.data?.encoding === 'base64') {
+                            response.data = decodeURIComponent(atob(response.data.content).split('').map(function(c) {
+                                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                            }).join(''));
+                        } else 
+                            response.data = response.data.content;
+
+                        // Вызываем обработчик ответа
+                        success(response);
+                    })
+                    .catch(reject);
+            };
+
             switch (options.method || 'get') {
-                case 'get': this.prepareGET(options); break;
-                case 'put': this.preparePUT(options); break;
+                case 'get': this.prepareGET(options).then(resolver); break;
+                case 'put': this.preparePUT(options).then(resolver); break;
                 default:
                     throw new Error(`Unsuppor method [${options.method}] for GitHub driver!`);
             }
-
-            // Выполняем запрос к серверу
-            this.fetch(options)
-                .then((response) => {
-                    // Предобрабатывавем ответ идентифицируя тип контента по URL
-                    const pathname = (new URL(response.config.url)).pathname;
-                    debugger;
-                    let contentType = null;
-                    if (
-                        (pathname.indexOf('.json/raw') >= 0)
-                        || (pathname.endsWith('.json'))
-                    )
-                        contentType = 'application/json';
-                    else if (
-                        (pathname.indexOf('.yaml/raw') >= 0)
-                        || (pathname.endsWith('.yaml'))
-                    )
-                        contentType = 'application/x-yaml';
-                    else if (
-                        (pathname.indexOf('.xml/raw') >= 0)
-                        || (pathname.endsWith('.xml'))
-                    )
-                        contentType = 'application/xml';
-
-                    // Актуализируем информацию о типе контента
-                    response.headers = Object.assign(response.headers || {}, {
-                        'content-type': contentType || response.headers?.['content-type']
-                    });
-
-                    // Вызываем обработчик ответа
-                    success(response);
-                })
-                .catch(reject);
+           
         });
 
     }

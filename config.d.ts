@@ -1,4 +1,9 @@
 // eslint-disable-next-line no-var
+declare var DocHub: {
+  settings: any
+};
+
+// eslint-disable-next-line no-var
 declare var DochubVsCodeExt: {
   metamodelUri: {
     $mid: number;

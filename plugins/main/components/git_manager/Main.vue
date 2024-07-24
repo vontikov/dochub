@@ -2,7 +2,7 @@
   <v-container class="grey lighten-5">
     <v-row>
       <v-col md="6" sm="12">
-        <master-branch v-bind:status="status"/>
+        <master-branch v-bind:status="status" />
       </v-col>
       <v-col md="6" sm="12">
         {{ status }}
@@ -17,10 +17,10 @@
 
   export default {
     name: 'GitManager',
-    mixins: [statusMixin],
     components: {
       MasterBranch
     },
+    mixins: [statusMixin],
     data() {
       return {
       };

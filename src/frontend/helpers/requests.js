@@ -2,10 +2,7 @@ import axios from 'axios';
 import crc16 from '@global/helpers/crc16';
 import uriTool from '@front/helpers/uri';
 import { Buffer } from 'buffer';
-
 import env, { Plugins } from './env';
-import { responseCacheInterceptor } from './cache';
-
 
 // CRC16 URL задействованных файлов
 const tracers = {};
@@ -29,15 +26,6 @@ axios.interceptors.response.use(async(response) => {
     // Выполняем перехват, если он определен
     if (response.config.responseHook)
         response.config.responseHook(response);
-
-    if (env.cache) {
-        const reRequest = await responseCacheInterceptor(response);
-
-        if (reRequest) {
-            return axios(reRequest);
-        }
-    }
-
     return response;
 }, responseErrorInterceptor);
 

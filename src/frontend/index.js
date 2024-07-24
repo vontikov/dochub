@@ -34,7 +34,6 @@ import GlobalMixin from '@front/mixins/global';
 import mainStorage from '@front/storage/main';
 
 import '@assets/styles/main.css';
-import '@front/storage/indexedDB';
 import 'swagger-ui/dist/swagger-ui.css';
 import 'vuetify/dist/vuetify.min.css';
 

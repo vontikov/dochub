@@ -1,13 +1,11 @@
-import cookie from 'vue-cookie';
 import storageManager from '@front/manifest/manager';
-import Vue from 'vue';
 import gateway from '@idea/gateway';
 import consts from '@front/consts';
 import rules from '@front/helpers/rules';
 import crc16 from '@global/helpers/crc16';
 import entities from '@front/entities/entities';
 import env, { Plugins } from '@front/helpers/env';
-import plugins from '../plugins/plugins';
+import plugins from '../plugins/core';
 
 import validatorErrors from '@front/constants/validators';
 
@@ -24,19 +22,12 @@ export default {
         isReloading: true,
         // Признак рендеринга в версии для печати
         isPrintVersion: false,
-        // Время обновления данных
-        moment: null,
         // Обобщенный манифест
         manifest: {},
         // Выявленные Проблемы
         problems: [],
         // Источники данных манифеста
         sources: {},
-        // Проекты
-        projects: {},
-        diff_format: 'line-by-line',
-        // Последние изменения
-        last_changes: {},
         // Движок для рендеринга
         renderCore: 'graphviz',
         // Признак инциализации проекта в плагине
@@ -50,13 +41,10 @@ export default {
             state.manifest = {};
             state.problems = [];
             state.sources = {};
-            state.available_projects = {};
-            state.projects = {};
             state.last_changes = {};
             state.criticalError = null;
         },
         setManifest(state, value) {
-            state.moment = Date.now();
             state.manifest = value;
         },
         setSources(state, value) {
@@ -64,13 +52,6 @@ export default {
         },
         setIsReloading(state, value) {
             state.isReloading = value;
-        },
-        setDiffFormat(state, value) {
-            state.diff_format = value;
-            cookie.set('diff_format', value, 1);
-        },
-        appendLastChanges(state, value) {
-            Vue.set(state.last_changes, value.id, value.payload);
         },
         appendProblems(state, value) {
             state.problems = state.problems.concat([value]);
@@ -106,9 +87,6 @@ export default {
             context.commit('setRenderCore',
                 env.isPlugin(Plugins.idea) ? 'smetana' : 'graphviz'
             );
-
-            let diff_format = cookie.get('diff_format');
-            context.commit('setDiffFormat', diff_format ? diff_format : context.state.diff_format);
 
             let tickCounter = 0;
             let rulesContext = null;
@@ -308,9 +286,16 @@ export default {
             // Слушаем события от IDE
             gateway.appendListener('source/changed', (changes) => changes && reloadSource());
             // Слушаем события от плагинов
+
+            // Если какой-то манифест изменился, обновляем данные в DataLake
             DocHub.eventBus.$on(DocHub.events.dataLake.reloadManifests, (changes) => {
                 reloadSource(changes || 'all');
             });
+
+            // Если прилетело сообщение о необходимости изменения настроек - обновляем их
+            DocHub.eventBus.$on(DocHub.events.settings.push, 
+                (settings) => settings.rootManifest && reloadSource('all')
+            );
         },
 
         // Reload root manifest

@@ -1,4 +1,8 @@
 export default {
+	// Идентификаторы куки для хранения данных пользователя
+	cookie: {		
+		rootManifest: '$root_manifest'		
+	},
 	plugin: {
 		ROOT_MANIFEST: 'plugin:/idea/source/$root'
 	},
