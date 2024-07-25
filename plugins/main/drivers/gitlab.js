@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from 'axios';
 import cookie from 'vue-cookie';
 import OAuthError from '../components/gitlab/OAuthError.vue';
 
@@ -85,6 +85,7 @@ const driver = {
     profile: null,              // Профиль пользователя
     isOAuthProcessing: false,   // Признак взаимодействия с сервером авторизации 
     config: {
+        service: null,          // Сервис авторизации GitLab
         server: null,           // GitLab сервер
         accessToken: null,      // Токен доступа
         refreshToken: null,     // Токен обновления
@@ -98,7 +99,18 @@ const driver = {
     isActive() {
         return this.active;
     },
-    // Проверяет авторизацию, есил она не пройдена, отправляет в gitlab
+    // Возвращает режим авторизации 
+    //  service - интеграция через специальный сервис авторизации
+    //  custom  - интеграция с GitLab напрямую
+    authMode() {
+        if (this.config.service || !this.config.server) return 'service';
+        return 'custom';
+    },
+    // Возвращает актуальный адрес сервиса авторизации
+    getServiceAddress() {
+        return this.config.server ? null : this.config.service || 'https://registry.dochub.info/gitlab/oauth/proxy/login';
+    },
+    // Проверяет авторизацию, если она не пройдена, отправляет в gitlab
     checkAuth() {
         if (!this.active || this.isOAuthProcessing || !this.config.isOAuth) return;
         if (this.config.refreshToken && !this.config.accessToken) {
@@ -107,11 +119,13 @@ const driver = {
     },
     login() {
         window.location = new URL(
-            `/oauth/authorize?client_id=${this.config.appId}`
-            + '&redirect_uri=' + new URL(OAUTH_CALLBACK_PAGE, window.location)
-            + `&response_type=code&state=none&scope=${REQUESTED_SCOPES}`
-            + '&' + Math.floor(Math.random() * 10000)
-            , this.config.server
+            this.authMode() === 'service' 
+                ? this.getServiceAddress()
+                : `/oauth/authorize?client_id=${this.config.appId}`
+                + '&redirect_uri=' + new URL(OAUTH_CALLBACK_PAGE, window.location)
+                + `&response_type=code&state=none&scope=${REQUESTED_SCOPES}`
+                + '&' + Math.floor(Math.random() * 10000)
+                , this.config.server
         );
     },
     logout() {
@@ -139,7 +153,7 @@ const driver = {
         if (status.isLogined) {
             this.fetch({
                 method: 'get',
-                url: new URL(`/api/v4/user`, this.config.server)
+                url: new URL('/api/v4/user', this.config.server)
             }).then((response) => {
                 driver.profile = response.data;
                 DocHub.eventBus.$emit('gitlab-status-change', this.getStatus());
@@ -376,7 +390,7 @@ const driver = {
         options.url = new URL(`/api/v4/projects/${segments.space.projectId}/repository/commits`, this.config.server);
         options.method = 'post';
         options.headers = Object.assign(options.headers, {
-            "Content-type": "application/json; charset=UTF-8"
+            'Content-type': 'application/json; charset=UTF-8'
         });
         options.data = {
             branch: segments.space.branch,

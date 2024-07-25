@@ -1,7 +1,8 @@
 import axios from 'axios';
-import cookie from 'vue-cookie';
-import OAuthError from '../components/github/OAuthError.vue';
-// import sha256 from 'js-sha256';
+
+// Инициализируем сервис авторизации через dochub.info
+// для GitHub он является единственным средством получения токена доступа
+const authService = new require('./service')('github');
 
 const NULL_ORIGIN = 'null://null/';
 
@@ -9,31 +10,6 @@ let currentBranch = null;
 
 // Контроллеры отмены API запросов к GitlBab
 const actualRequest = {};
-
-// Cookies ключи
-const cookiesKeys = {
-    tokenAccess: 'github-token-access',
-    returnRoute: 'github-return-route'
-};
-
-const routes = {
-    error: {
-        name: 'github_error',
-        path: '/sso/github/error',
-        component: OAuthError
-    },
-    callback: {
-        name: 'github_callback',
-        path: '/sso/github/authentication'
-    },
-    service: {
-        name: 'github_auth_service',
-        path: null
-    }
-};
-
-let accessToken = null;    // Токен доступа
-
 
 const API_SERVER = 'https://api.github.com/';
 
@@ -122,41 +98,35 @@ const api = {
 const driver = {
     active: false,                      // Признак активности драйвера
     profile: null,                      // Профиль пользователя
-    isOAuthProcessing: false,           // Признак взаимодействия с сервером авторизации 
     config: {
-        isOAuth: true,                  // Признак использования OAuth авторизации
         owner: null,                    // Владелец репы GitHub
         repo: null,                     // Репозиторий 
         branch: null                    // Ветка по умолчанию
     },
     eventsIDs: {
-        statusChange: 'github-status-change',
-        loginRetry: 'github-login-retry',
-        statusGet: 'github-status-get',
-        logout: 'github-logout',
-        login: 'github-login'
+        statusChange: 'github-status-change',   // Изменился статус
+        loginRetry: 'github-login-retry',       // Пользователь хочет повторить попытку авторизации
+        statusGet: 'github-status-get',         // Кто-то запрашивает текущий статус
+        logout: 'github-logout',                // Нужно завершить сессию
+        login: 'github-login'                   // Нужно авторизоваться
     },
     // Возвращает true если драйвер готов обрабатывать запросы
     isActive() {
         return this.active;
     },
     login() {
-        window.location = routes.service.path;
+        authService.login();
     },
     logout() {
-        const status = this.getStatus();
-        accessToken = null;
-        cookie.delete(cookiesKeys.tokenAccess);
-        if (status.isLogined) {
-            this.onChangeStatus();
-            DocHub.dataLake.reload();
-        }
+        authService.logout();
+        this.onChangeStatus();
+        DocHub.dataLake.reload();
     },
     getStatus() {
         return {
             api,
             isActive: this.active,
-            isLogined: !this.isOAuthProcessing && !!accessToken,
+            isLogined: authService.isLogined(),
             avatarURL: driver.profile?.avatar_url
         };
     },
@@ -170,83 +140,14 @@ const driver = {
             DocHub.eventBus.$emit(this.eventsIDs.statusChange, status);
         }
     },
-
-    refreshAccessToken(weclomeToken) {
-        return new Promise((success, reject) => {
-            // Если процесс обновления токена уже запущен, ждем результат
-            if (this.isOAuthProcessing) {
-                const wait = () => {
-                    if (!this.isOAuthProcessing) success();
-                    else if (this.isOAuthProcessing === 'error') reject(new Error('GitHub authorized error!'));
-                    else setTimeout(wait, 100);
-                };
-                wait();
-                return;
-            } 
-            // Если нет, запускаем процесс обновления токена доступа
-            this.isOAuthProcessing = true;
-            // Иначе идем в GitLab за токеном доступа
-            axios({
-                method: 'get',
-                url: (new URL('/github/oauth/proxy/access_token', routes.service.path)).toString(),
-                params: {
-                    token: weclomeToken
-                }
-            })
-                .then((response) => {
-                    accessToken = response.data.access_token;
-                    // Сохраняем полученный токены для использования после перезагрузки
-                    cookie.set(cookiesKeys.tokenAccess, accessToken, 60*60*24*365);
-                    this.isOAuthProcessing = false;
-                    this.onChangeStatus();
-                    success();
-                    // setTimeout(DocHub.dataLake.reload, 100);
-                }).catch((error) => {
-                    console.error(error);
-                    if (error?.code !== 'ERR_CANCELED') {
-                        this.logout();
-                        this.isOAuthProcessing = 'error';
-                        reject();
-                    }
-                }).finally(() => this.onChangeStatus());
-        });
-    },
+    
     // Вызывается при инициализации транспортного сервиса
-    //  context: object     - контекст функционирования сервиса
-    //      {
-    //      }
-    bootstrap(context) {
-        // Получаем параметры интеграции
-        routes.service.path = context.env.VUE_APP_DOCHUB_GITHUB_AUTH_SERVICE;
-        accessToken = cookie.get(cookiesKeys.tokenAccess);
-
-        DocHub.router.registerMiddleware({
-            beforeEach: async(to, from, next) => {
-                switch (to.name) {
-                    case routes.error.name: next(); break;
-                    case routes.callback.name: {
-                        this.refreshAccessToken(new URL(location.href).searchParams.get('token'))
-                            .then(() => next(cookie.get(cookiesKeys.returnRoute) || '/'))
-                            .catch(() => next(routes.error.path));
-                        break;
-                    }
-                    default:
-                        cookie.set(cookiesKeys.returnRoute, to.fullPath, 1);
-                        next();
-                }
-            }
-        });
-
-        // Регистрируем роут для редиректа при авторизации
-        window.DocHub.router.registerRoute(routes.callback),
-        // Регистрируем роут для отражения ошибки авторизациии
-        window.DocHub.router.registerRoute(routes.error);
+    bootstrap() {
         // Отслеживаем события шины
         window.DocHub.eventBus.$on(this.eventsIDs.loginRetry, () => {
             this.logout();
             this.login();
         });
-
         // Устанавливаем флаг активности
         this.active = true;
         // Уведомляем всех слушателей шины, что у нас изменилось состояние
@@ -255,7 +156,6 @@ const driver = {
         window.DocHub.eventBus.$on(this.eventsIDs.statusGet, () => this.onChangeStatus());
         window.DocHub.eventBus.$on(this.eventsIDs.logout, () => this.logout());
         window.DocHub.eventBus.$on(this.eventsIDs.login, () => this.login());
-        
         // Логируем информацию о режиме работы драйвера
         console.info('Драйвер GitHub активирован.');
     },
@@ -363,35 +263,34 @@ const driver = {
         return new Promise((success, reject) => {
             const doIt = () => {
                 // Если идет процесс авторизации - ждем
-                if (this.isOAuthProcessing) {
-                    // Если случилась фатальная ошибка, останавливаем запрос
-                    if (this.isOAuthProcessing === 'error')
-                        reject(new Error('GitHub authorization error!'));
-                    else
-                        setTimeout(doIt, 100); // Попробуем позже
+                const authProcessingStatus = authService.getOAuthProcessing();
+                if (authProcessingStatus === 'error')
+                    reject(new Error('GitHub authorization error!'));
+                else if (authProcessingStatus) {
+                    setTimeout(doIt, 100); // Попробуем позже
                     return;
-                } else {
-                    const strURL = options.url.toString();
-                    // Если запрос уже выполняется - убиваем его и формирум новый
-                    actualRequest[strURL]?.abort();
-
-                    // Определяем необходимые заголовки для github
-                    options.headers = Object.assign(
-                        options.headers || {},
-                        {
-                            'Authorization': `Bearer ${accessToken}`,  // Токен авторизации
-                            'Accept': 'application/vnd.github+json',
-                            'X-GitHub-Api-Version': '2022-11-28'
-                        }
-                    );
-
-                    const abortControler = actualRequest[strURL] = new AbortController();
-                    axios(Object.assign({
-                        signal: abortControler.signal
-                    }, options)).then(success).catch((error) => {
-                        error?.code !== 'ERR_CANCELED' && reject(error);
-                    }).finally(() => delete actualRequest[strURL]);
                 }
+
+                const strURL = options.url.toString();
+                // Если запрос уже выполняется - убиваем его и формирум новый
+                actualRequest[strURL]?.abort();
+
+                // Определяем необходимые заголовки для github
+                options.headers = Object.assign(
+                    options.headers || {},
+                    {
+                        'Authorization': `Bearer ${authService.getAccessToken()}`,  // Токен авторизации
+                        'Accept': 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28'
+                    }
+                );
+
+                const abortControler = actualRequest[strURL] = new AbortController();
+                axios(Object.assign({
+                    signal: abortControler.signal
+                }, options)).then(success).catch((error) => {
+                    error?.code !== 'ERR_CANCELED' && reject(error);
+                }).finally(() => delete actualRequest[strURL]);
             };
             doIt();
         });
@@ -412,12 +311,13 @@ const driver = {
             // Если протокол не gitlab сообщаем об ошибке
             if (origin.protocol !== 'github:') {
                 const strError = `Invalid request by GitHub driver [${options.url}] `;
+                // eslint-disable-next-line no-console
                 console.error(strError, options);
                 throw new Error(strError);
             }
 
-            // Клонируем объект параметров для работ ынад ним
-            options = JSON.parse(JSON.stringify(options));
+            // Клонируем объект параметров для работ над ним
+            options = Object.assign({}, options);
 
             const resolver = () => {
                 // Выполняем запрос к серверу
