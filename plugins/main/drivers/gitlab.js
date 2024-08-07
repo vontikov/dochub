@@ -1,5 +1,8 @@
 import axios from 'axios';
 import cookie from 'vue-cookie';
+
+import serviceContructor from './service';
+
 import OAuthError from '../components/gitlab/OAuthError.vue';
 
 const NULL_ORIGIN = 'null://null/';
@@ -20,6 +23,10 @@ const cookiesKeys = {
 
 // API GitLab
 const api = {
+    // Возвращает URL API шлюза
+    getAPIServer: () => {
+        return driver.authService?.getAPIServer() || driver.config.server || 'https://gitlab.com/';
+    },
     // Возвращает текущий бранч
     currentBranch: () => {
         return currentBranch || driver.config.defBranch;        
@@ -40,7 +47,7 @@ const api = {
     compare: async(from, to) => {
         const result = (await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${driver.config.defProject}/repository/compare?from=${from}&to=${to}&straight=true`, driver.config.server)
+            url: new URL(`/api/v4/projects/${driver.config.defProject}/repository/compare?from=${from}&to=${to}&straight=true`, api.getAPIServer())
         })).data;
 
         return {
@@ -53,14 +60,14 @@ const api = {
     fetchBranches: async(projectId) => {
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${projectId || driver.config.defProject}/repository/branches`, driver.config.server)
+            url: new URL(`/api/v4/projects/${projectId || driver.config.defProject}/repository/branches`, api.getAPIServer())
         })).data;
     },
     // Возвращает список проектов
     fetchRepos: async(userId) => {
         return ((await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/users/${userId || driver.profile?.id}/projects`, driver.config.server)
+            url: new URL(`/api/v4/users/${userId || driver.profile?.id}/projects`, api.getAPIServer())
         })).data || []).map((item) => ({
             ...item,
             ref: `${item.id}`
@@ -69,7 +76,7 @@ const api = {
     fetchFiles: async(path, branch, repo) => {
         return ((await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${repo || driver.config.defProject}/repository/tree?path=${encodeURIComponent(path || '')}&ref=${branch}`, driver.config.server)
+            url: new URL(`/api/v4/projects/${repo || driver.config.defProject}/repository/tree?path=${encodeURIComponent(path || '')}&ref=${branch}`, api.getAPIServer())
         })).data || []).map((item) => {
             return {
                 ...item,
@@ -77,10 +84,17 @@ const api = {
                 ref: `${item.id}`
             };
         });
+    },
+    fetchUser: () => {
+        return driver.fetch({
+            method: 'get',
+            url: new URL('/api/v4/user', api.getAPIServer())
+        });        
     }
 };
 
 const driver = {
+    authService: null,          // Сервис авторизации
     active: false,              // Признак активности драйвера
     profile: null,              // Профиль пользователя
     isOAuthProcessing: false,   // Признак взаимодействия с сервером авторизации 
@@ -99,13 +113,6 @@ const driver = {
     isActive() {
         return this.active;
     },
-    // Возвращает режим авторизации 
-    //  service - интеграция через специальный сервис авторизации
-    //  custom  - интеграция с GitLab напрямую
-    authMode() {
-        if (this.config.service || !this.config.server) return 'service';
-        return 'custom';
-    },
     // Возвращает актуальный адрес сервиса авторизации
     getServiceAddress() {
         return this.config.server ? null : this.config.service || 'https://registry.dochub.info/gitlab/oauth/proxy/login';
@@ -118,43 +125,46 @@ const driver = {
         }
     },
     login() {
-        window.location = new URL(
-            this.authMode() === 'service' 
-                ? this.getServiceAddress()
-                : `/oauth/authorize?client_id=${this.config.appId}`
-                + '&redirect_uri=' + new URL(OAUTH_CALLBACK_PAGE, window.location)
-                + `&response_type=code&state=none&scope=${REQUESTED_SCOPES}`
-                + '&' + Math.floor(Math.random() * 10000)
-                , this.config.server
-        );
+        if(this.authService) this.authService.login();
+        else
+            window.location = new URL(
+                    `/oauth/authorize?client_id=${this.config.appId}`
+                    + '&redirect_uri=' + new URL(OAUTH_CALLBACK_PAGE, window.location)
+                    + `&response_type=code&state=none&scope=${REQUESTED_SCOPES}`
+                    + '&' + Math.floor(Math.random() * 10000)
+                    , this.config.server
+            );
     },
     logout() {
-        const status = this.getStatus();
-        this.config.accessToken = null;
-        this.config.refreshToken = null;
-        OAuthCode = null;
-        cookie.delete(cookiesKeys.tokenAccess);
-        cookie.delete(cookiesKeys.tokenRefresh);
-        if (status.isLogined) {
+        if (this.authService) {
+            this.authService.logout();
             this.onChangeStatus();
             DocHub.dataLake.reload();
+        } else {
+            const status = this.getStatus();
+            this.config.accessToken = null;
+            this.config.refreshToken = null;
+            OAuthCode = null;
+            cookie.delete(cookiesKeys.tokenAccess);
+            cookie.delete(cookiesKeys.tokenRefresh);
+            if (status.isLogined) {
+                this.onChangeStatus();
+                DocHub.dataLake.reload();
+            }
         }
     },
     getStatus() {
         return {
             api,
             isActive: this.active,
-            isLogined: !this.isOAuthProcessing && !!this.config.accessToken,
+            isLogined: this.authService ? this.authService.isLogined() : !this.isOAuthProcessing && !!this.config.accessToken,
             avatarURL: driver.profile?.avatar_url
         };
     },
     onChangeStatus() {
         const status = this.getStatus();
         if (status.isLogined) {
-            this.fetch({
-                method: 'get',
-                url: new URL('/api/v4/user', this.config.server)
-            }).then((response) => {
+            api.fetchUser().then((response) => {
                 driver.profile = response.data;
                 DocHub.eventBus.$emit('gitlab-status-change', this.getStatus());
             });
@@ -164,6 +174,12 @@ const driver = {
     },
     refreshAccessToken() {
         return new Promise((success, reject) => {
+            if (this.authService) {
+                this.authService.refreshAccessToken()
+                    .then(success)
+                    .catch(reject);
+                return;
+            }
             // Если процесс обновления токена уже запущен, ждем результат
             if (this.isOAuthProcessing) {
                 const wait = () => {
@@ -209,17 +225,17 @@ const driver = {
                 }, params)
             })
                 .then((response) => {
-                    // Если expires_in нет, считаем, что токен вечный
                     this.config.accessToken = response.data.access_token;
                     this.config.refreshToken = response.data.refresh_token;
 
                     // Сохраняем полученные токены для использования после перезагрузки
-                    cookie.set('gitlab-token-access', this.config.accessToken, 1 * response.data.expires_in);
+                    cookie.set('gitlab-token-access', this.config.accessToken, 1 * (response.data.expires_in || 1));
                     cookie.set('gitlab-token-refresh', this.config.refreshToken, 60*60*24*365);
                     this.isOAuthProcessing = false;
                     success();
                     // setTimeout(DocHub.dataLake.reload, 100);
                 }).catch((error) => {
+                    // eslint-disable-next-line no-console
                     console.error(error);
                     if (error.response?.status === 401) {
                         this.logout();
@@ -234,87 +250,102 @@ const driver = {
     //      {
     //      }
     bootstrap(context) {
-        // Получаем параметры интеграции
-        this.config.server = context.env.VUE_APP_DOCHUB_GITLAB_URL;
-        this.config.accessToken = context.env.VUE_APP_DOCHUB_PERSONAL_TOKEN;
-        this.config.appId = context.env.VUE_APP_DOCHUB_GITLAB_APP_ID 
-            || context.env.VUE_APP_DOCHUB_APP_ID; // Для совместимости со старыми конфигурациями
-        this.config.appSecret = context.env.VUE_APP_DOCHUB_GITLAB_CLIENT_SECRET
-            || context.env.VUE_APP_DOCHUB_CLIENT_SECRET; // Для совместимости со старыми конфигурациями
+        // Получаем ссылку на универсальный сервис авторизации для gitlab
+        const settings = DocHub.settings.pull(['gitlabAuthService']);
+        const serviceURL = settings.gitlabAuthService || context?.env?.VUE_APP_DOCHUB_GITLAB_AUTH_SERVICE;
 
-        if (!this.config.server) {
-            console.warn('Драйвер Gitlab не активирован т.к. сервер не определен.');
-            return;
-        }
+        if (serviceURL) {
+            this.authService = new serviceContructor('gitlab', serviceURL);
+            // Логируем информацию о режиме работы драйвера
+            // eslint-disable-next-line no-console
+            console.info(`Драйвер Gitlab активирован в режиме сервиса авторизации [${serviceURL}]`);
+        } else {
+            // Получаем параметры интеграции
+            this.config.server = context.env.VUE_APP_DOCHUB_GITLAB_URL;
+            this.config.accessToken = context.env.VUE_APP_DOCHUB_PERSONAL_TOKEN;
+            this.config.appId = context.env.VUE_APP_DOCHUB_GITLAB_APP_ID 
+                || context.env.VUE_APP_DOCHUB_APP_ID; // Для совместимости со старыми конфигурациями
+            this.config.appSecret = context.env.VUE_APP_DOCHUB_GITLAB_CLIENT_SECRET
+                || context.env.VUE_APP_DOCHUB_CLIENT_SECRET; // Для совместимости со старыми конфигурациями
 
-        // Проверяем на корректность параметров интеграции
-        if (!this.config.accessToken && (!this.config.appId || !this.config.appSecret)) {
-            context.emitError(new Error('Драйвер Gitlab не активирован т.к. в перематрах интеграции ошибка!'));
-            return;
-        }
+            if (!this.config.server) {
+                // eslint-disable-next-line no-console
+                console.warn('Драйвер Gitlab не активирован т.к. сервер не определен.');
+                return;
+            }
 
-        // Определяем режим функционирования драйвера
-        if ((this.config.isOAuth = !!this.config.appId)) {
+            // Проверяем на корректность параметров интеграции
+            if (!this.config.accessToken && (!this.config.appId || !this.config.appSecret)) {
+                context.emitError(new Error('Драйвер Gitlab не активирован т.к. в перематрах интеграции ошибка!'));
+                return;
+            }
 
-            this.config.accessToken = cookie.get('gitlab-token-access');
-            this.config.refreshToken = cookie.get('gitlab-token-refresh');
+            // Определяем режим функционирования драйвера
+            if ((this.config.isOAuth = !!this.config.appId)) {
 
-            DocHub.router.registerMiddleware({
-                beforeEach: async(to, from, next) => {
-                    switch (to.name) {
-                        case 'gitlab_error': next(); break;
-                        case 'gitlab_callback': {
-                            OAuthCode = Object.keys(to.query).length
-                                ? to.query.code
-                                : new URLSearchParams(to.hash.substr(1)).get('code');
+                this.config.accessToken = cookie.get('gitlab-token-access');
+                this.config.refreshToken = cookie.get('gitlab-token-refresh');
 
-                            this.refreshAccessToken()
-                                .then(() => next(cookie.get('gitlab-return-route') || '/'))
-                                .catch(() => next('/sso/gitlab/error'));
-                            break;
+                DocHub.router.registerMiddleware({
+                    beforeEach: async(to, from, next) => {
+                        switch (to.name) {
+                            case 'gitlab_error': next(); break;
+                            case 'gitlab_callback': {
+                                OAuthCode = Object.keys(to.query).length
+                                    ? to.query.code
+                                    : new URLSearchParams(to.hash.substr(1)).get('code');
+
+                                this.refreshAccessToken()
+                                    .then(() => next(cookie.get('gitlab-return-route') || '/'))
+                                    .catch(() => next('/sso/gitlab/error'));
+                                break;
+                            }
+                            default:
+                                cookie.set('gitlab-return-route', to.fullPath, 1);
+                                this.checkAuth();
+                                next();
                         }
-                        default:
-                            cookie.set('gitlab-return-route', to.fullPath, 1);
-                            this.checkAuth();
-                            next();
                     }
-                }
-            });
-            // Регистрируем роут для редиректа при авторизации
-            window.DocHub.router.registerRoute(
-                {
-                    path: OAUTH_CALLBACK_PAGE,
-                    name: 'gitlab_callback'
-                }
-            ),
-
-                // Регистрируем роут для отражения ошибки авторизациии
+                });
+                // Регистрируем роут для редиректа при авторизации
                 window.DocHub.router.registerRoute(
                     {
-                        name: 'gitlab_error',
-                        path: '/sso/gitlab/error',
-                        component: OAuthError
+                        path: OAUTH_CALLBACK_PAGE,
+                        name: 'gitlab_callback'
                     }
-                );
+                ),
+
+                    // Регистрируем роут для отражения ошибки авторизациии
+                    window.DocHub.router.registerRoute(
+                        {
+                            name: 'gitlab_error',
+                            path: '/sso/gitlab/error',
+                            component: OAuthError
+                        }
+                    );
+            }
+
+            // Отслеживаем события шины
+            window.DocHub.eventBus.$on('gitlab-login-retry', () => {
+                this.logout();
+                this.login();
+            });  
+            
+            // Логируем информацию о режиме работы драйвера
+            // eslint-disable-next-line no-console
+            console.info(`Драйвер Gitlab активирован в режиме ${this.config.isOAuth ? '"OAuth"' : '"Personal"'} авторизации.`);
         }
 
-        // Отслеживаем события шины
-        window.DocHub.eventBus.$on('gitlab-login-retry', () => {
-            this.logout();
-            this.login();
-        });
+        // Слушаем запросы о статусе
+        window.DocHub.eventBus.$on('gitlab-status-get', () => this.onChangeStatus());
+        window.DocHub.eventBus.$on('gitlab-logout', () => this.logout());
+        window.DocHub.eventBus.$on('gitlab-login', () => this.login());
 
         // Устанавливаем флаг активности
         this.active = true;
         // Уведомляем всех слушателей шины, что у нас изменилось состояние
         this.onChangeStatus();
-        // Слушаем запросы о статусе
-        window.DocHub.eventBus.$on('gitlab-status-get', () => this.onChangeStatus());
-        window.DocHub.eventBus.$on('gitlab-logout', () => this.logout());
-        window.DocHub.eventBus.$on('gitlab-login', () => this.login());
         
-        // Логируем информацию о режиме работы драйвера
-        console.info(`Драйвер Gitlab активирован в режиме ${this.config.isOAuth ? '"OAuth"' : '"Personal"'} авторизации.`);
     },
     // Возвращает список методов доступных над URI
     //  uri: string || URL          - Идентификатор ресурса
@@ -380,14 +411,14 @@ const driver = {
         // Формирум URL запроса
         options.url = new URL(
             `api/v4/projects/${segments.space.projectId}/repository/files/${encodeURIComponent(segments.location)}/raw?ref=${segments.space.branch}`
-            , this.config.server
+            , api.getAPIServer()
         );
     },
 
     preparePUT(options) {
         // Декодируем URL
         const segments = this.parseURL(new URL(options.url));
-        options.url = new URL(`/api/v4/projects/${segments.space.projectId}/repository/commits`, this.config.server);
+        options.url = new URL(`/api/v4/projects/${segments.space.projectId}/repository/commits`, api.getAPIServer());
         options.method = 'post';
         options.headers = Object.assign(options.headers, {
             'Content-type': 'application/json; charset=UTF-8'
@@ -406,23 +437,25 @@ const driver = {
     },
     fetch(options) {
         return new Promise((success, reject) => {
-            const doIt = () => {
+            const doIt = async() => {
                 // Если идет процесс авторизации - ждем
-                if (this.isOAuthProcessing) {
+                const oauthProcessing = this.authService?.getOAuthProcessing() || this.isOAuthProcessing;
+                if (oauthProcessing === 'error') {
                     // Если случилась фатальная ошибка, останавливаем запрос
-                    if (this.isOAuthProcessing === 'error')
-                        reject(new Error('GitLab authorization error!'));
-                    else
-                        setTimeout(doIt, 100); // Попробуем позже
-                    return;
+                    reject(new Error('GitLab authorization error!'));
+                } else if (oauthProcessing) {
+                    // Если идет процесс авторизации, попробуем позже
+                    setTimeout(doIt, 100); 
                 } else {
                     const strURL = options.url.toString();
                     // Если запрос уже выполняется - убиваем его и формирум новый
                     actualRequest[strURL]?.abort();
 
+                    const accessToken = this.config.accessToken || await this.authService?.getAccessToken();
+
                     // Определяем необходимые заголовки для gitlab
                     options.headers = Object.assign(options.headers || {}, {
-                        'Authorization': `Bearer ${this.config.accessToken}`  // Токен авторизации
+                        'Authorization': `Bearer ${accessToken}`  // Токен авторизации
                     });
 
                     const abortControler = actualRequest[strURL] = new AbortController();
@@ -459,6 +492,7 @@ const driver = {
             // Если протокол не gitlab сообщаем об ошибке
             if (origin.protocol !== 'gitlab:') {
                 const strError = `Invalid request by gitlab driver [${options.url}] `;
+                // eslint-disable-next-line no-console
                 console.error(strError, options);
                 throw new Error(strError);
             }

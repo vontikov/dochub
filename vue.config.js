@@ -58,7 +58,7 @@ if (process.env.VUE_APP_DOCHUB_MODE === 'plugin') {
 		inlineSource: '.(woff(2)?|ttf|eot|svg|js|css|map)$',
 		inject: true,
 		chunks,
-    	chunksSortMode: 'manual',
+    	chunksSortMode: 'manual'
 
 		/*
 		minify: {
@@ -88,6 +88,7 @@ let config = {
 			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
 			'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
 		},
+		allowedHosts: 'all',
 		/*
 		allowedHosts: [
 			'localhost'
@@ -98,7 +99,7 @@ let config = {
 	},
 	transpileDependencies: ['vueitfy'],
 	chainWebpack: (config) => {
-		config.module.rules.delete("svg");
+		config.module.rules.delete('svg');
 	},
 	configureWebpack: {
 		externalsType: 'module',
@@ -106,14 +107,14 @@ let config = {
 			outputModule: true
 		},
 		externals: [
-			function ({ context, request }, callback) {
+			function({ context, request }, callback) {
 				if (/^vue$/.test(request)) {
 					if (context.startsWith(path.resolve('./', 'plugins/')))
 						return callback(null, 'Vue', 'global');
 				}
 		  
 				callback();
-			},
+			}
 		],
 		cache: (process.env.VUE_APP_DOCHUB_BUILDING_CACHE || 'memory').toLowerCase() === 'filesystem'
 			? {

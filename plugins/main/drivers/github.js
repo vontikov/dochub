@@ -1,8 +1,8 @@
 import axios from 'axios';
+import serviceContructor from './service';
 
 // Инициализируем сервис авторизации через dochub.info
 // для GitHub он является единственным средством получения токена доступа
-const authService = new require('./service')('github');
 
 const NULL_ORIGIN = 'null://null/';
 
@@ -96,8 +96,10 @@ const api = {
 
 
 const driver = {
+    authService: null,                  // Сервис авторизации
     active: false,                      // Признак активности драйвера
     profile: null,                      // Профиль пользователя
+    settings: {},                       // Пользовательские настройки
     config: {
         owner: null,                    // Владелец репы GitHub
         repo: null,                     // Репозиторий 
@@ -115,10 +117,10 @@ const driver = {
         return this.active;
     },
     login() {
-        authService.login();
+        this.authService.login();
     },
     logout() {
-        authService.logout();
+        this.authService.logout();
         this.onChangeStatus();
         DocHub.dataLake.reload();
     },
@@ -126,7 +128,7 @@ const driver = {
         return {
             api,
             isActive: this.active,
-            isLogined: authService.isLogined(),
+            isLogined: this.authService.isLogined(),
             avatarURL: driver.profile?.avatar_url
         };
     },
@@ -142,21 +144,27 @@ const driver = {
     },
     
     // Вызывается при инициализации транспортного сервиса
-    bootstrap() {
+    bootstrap(context) {
+        // Получаем ссылку на универсальный сервис авторизации для github
+        const settings = DocHub.settings.pull(['githubAuthService']);
+        this.authService = new serviceContructor('github', 
+            settings.githubAuthService || context?.env?.VUE_APP_DOCHUB_GITHUB_AUTH_SERVICE
+        );
         // Отслеживаем события шины
-        window.DocHub.eventBus.$on(this.eventsIDs.loginRetry, () => {
+        DocHub.eventBus.$on(this.eventsIDs.loginRetry, () => {
             this.logout();
             this.login();
         });
+        // Слушаем запросы о статусе
+        DocHub.eventBus.$on(this.eventsIDs.statusGet, () => this.onChangeStatus());
+        DocHub.eventBus.$on(this.eventsIDs.logout, () => this.logout());
+        DocHub.eventBus.$on(this.eventsIDs.login, () => this.login());
         // Устанавливаем флаг активности
         this.active = true;
         // Уведомляем всех слушателей шины, что у нас изменилось состояние
         this.onChangeStatus();
-        // Слушаем запросы о статусе
-        window.DocHub.eventBus.$on(this.eventsIDs.statusGet, () => this.onChangeStatus());
-        window.DocHub.eventBus.$on(this.eventsIDs.logout, () => this.logout());
-        window.DocHub.eventBus.$on(this.eventsIDs.login, () => this.login());
         // Логируем информацию о режиме работы драйвера
+        // eslint-disable-next-line no-console
         console.info('Драйвер GitHub активирован.');
     },
     // Возвращает список методов доступных над URI
@@ -261,13 +269,13 @@ const driver = {
     },
     fetch(options) {
         return new Promise((success, reject) => {
-            const doIt = () => {
+            const doIt = async() => {
                 // Если идет процесс авторизации - ждем
-                const authProcessingStatus = authService.getOAuthProcessing();
+                const authProcessingStatus = this.authService?.getOAuthProcessing();
                 if (authProcessingStatus === 'error')
                     reject(new Error('GitHub authorization error!'));
-                else if (authProcessingStatus) {
-                    setTimeout(doIt, 100); // Попробуем позже
+                else if (authProcessingStatus || !this.authService) {
+                    setTimeout(() => doIt(), 100); // Попробуем позже
                     return;
                 }
 
@@ -279,7 +287,7 @@ const driver = {
                 options.headers = Object.assign(
                     options.headers || {},
                     {
-                        'Authorization': `Bearer ${authService.getAccessToken()}`,  // Токен авторизации
+                        'Authorization': `Bearer ${await this.authService.getAccessToken()}`,  // Токен авторизации
                         'Accept': 'application/vnd.github+json',
                         'X-GitHub-Api-Version': '2022-11-28'
                     }
@@ -364,6 +372,5 @@ const driver = {
 
     }
 };
-
 
 export default driver;

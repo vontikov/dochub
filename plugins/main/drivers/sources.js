@@ -27,7 +27,7 @@ const driver = {
                 data: JSON.stringify({
                   docs: {
                     'dochub.plugins.main.git.manager': {
-                        location: '/GitHub',
+                        location: '/Git',
                         type: 'main-gitmanager',
                         order: 100000
                     }

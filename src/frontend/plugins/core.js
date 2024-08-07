@@ -109,7 +109,8 @@ window.DocHub = {
             try {
                 // eslint-disable-next-line no-console
                 console.info(`Initialization protocol [${protocol}]...`);
-                driver = Object.assign({}, protoProtocolDriver, driver);
+                driver.__proto__ = protoProtocolDriver;
+                // driver = Object.assign({}, protoProtocolDriver, driver);
                 driver.bootstrap && driver.bootstrap({
                     env: JSON.parse(JSON.stringify(process.env))
                 });

@@ -2,6 +2,11 @@
   <v-container class="grey lighten-5">
     <v-row>
       <v-col md="6" sm="12">
+        <profiles v-bind:status="status" />
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col md="6" sm="12">
         <master-branch v-bind:status="status" />
       </v-col>
       <v-col md="6" sm="12">
@@ -13,12 +18,14 @@
 
 <script>
   import MasterBranch from './forms/MasterBranch.vue';
+  import Profiles from './forms/Profiles.vue';
   import statusMixin from '../mixins/status';
 
   export default {
     name: 'GitManager',
     components: {
-      MasterBranch
+      MasterBranch,
+      Profiles
     },
     mixins: [statusMixin],
     data() {
