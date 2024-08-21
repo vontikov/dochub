@@ -229,7 +229,7 @@ export default {
 
                         item.correction = validatorErrors.correction.missing_files;
                         item.description = `${validatorErrors.description.missing_files}:\n\n`
-                            + `${url.split('/').splice(3).join(' -> ')}\n`;
+                            + `${decodeURIComponent(url.toString()).split('/').splice(3).join(' -> ')}\n`;
                         errors.missing_files.items.push(item);
                     } else {
                         if (!errors.net) {

@@ -111,10 +111,6 @@ const driver = {
     isActive() {
         return this.active;
     },
-    // Возвращает актуальный адрес сервиса авторизации
-    getServiceAddress() {
-        return this.config.server ? null : this.config.service || 'https://registry.dochub.info/gitlab/oauth/proxy/login';
-    },
     // Проверяет авторизацию, если она не пройдена, отправляет в gitlab
     checkAuth() {
         if (!this.active || this.isOAuthProcessing || !this.config.isOAuth) return;

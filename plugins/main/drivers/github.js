@@ -56,9 +56,10 @@ const api = {
     },
     // Возвращает список бранчей
     fetchBranches: async(repo, owner) => {
+        const repoId = (repo || '').split('/').pop();
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/repos/${owner || driver.profile.login}/${repo || driver.config.repo}/branches`, API_SERVER)
+            url: new URL(`/repos/${owner || driver.profile.login}/${repoId || driver.config.repo}/branches`, API_SERVER)
         })).data;
     },
     fetchUser: async() => {

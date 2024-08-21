@@ -9,6 +9,7 @@ import branchs from './components/gitlab/BranchSelector.vue';
 import MasterBranch from './components/settings/MasterBranch.vue';
 import GitHubSettings from './components/github/Settings.vue';
 import GitLabSettings from './components/gitlab/Settings.vue';
+import bitbucketSettings from './components/bitbucket/Settings.vue';
 
 
 // Драйверы данных
@@ -33,6 +34,6 @@ DocHub.ui.register('avatar', avatar);
 // Регистрация UI интерфейсов настроек
 DocHub.settings.registerUI(GitLabSettings, 'Интеграции/GitLab', ['git', 'GitLab']);
 DocHub.settings.registerUI(GitHubSettings, 'Интеграции/GitHub', ['git', 'GitHub']);
-
+DocHub.settings.registerUI(bitbucketSettings, 'Интеграции/Bitbucket', ['git', 'Bitbucket']);
 
 DocHub.settings.registerUI(MasterBranch, 'Основное/Корневой манифест', ['root', 'корневой манифест', 'dochub.yaml']);
