@@ -69,9 +69,10 @@ const api = {
         })).data;
     },
     fetchFiles: async(path, branch, repo, owner) => {
+        const repoId = (repo || '').split('/').pop();
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/repos/${owner || driver.profile.login}/${repo || driver.config.repo}/contents/${encodeURIComponent(path || '')}?ref=${branch || 'master'}`, API_SERVER)
+            url: new URL(`/repos/${owner || driver.profile.login}/${repoId || driver.config.repo}/contents/${encodeURIComponent(path || '')}?ref=${branch || 'master'}`, API_SERVER)
         })).data;
     },
     convertURL(url) {
@@ -130,7 +131,8 @@ const driver = {
             api,
             isActive: this.active,
             isLogined: this.authService.isLogined(),
-            avatarURL: driver.profile?.avatar_url
+            avatarURL: driver.profile?.avatar_url,
+            userName: driver.profile?.name
         };
     },
     onChangeStatus() {

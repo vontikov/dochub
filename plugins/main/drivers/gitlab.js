@@ -152,7 +152,8 @@ const driver = {
             api,
             isActive: this.active,
             isLogined: this.authService ? this.authService.isLogined() : !this.isOAuthProcessing && !!this.config.accessToken,
-            avatarURL: driver.profile?.avatar_url
+            avatarURL: driver.profile?.avatar_url,
+            userName: driver.profile?.name
         };
     },
     onChangeStatus() {

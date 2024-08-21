@@ -34,9 +34,7 @@ export default {
             this.status = Object.assign(this.status || {}, { bitbucket: status }) ;
             this.refresh();
         },
-        refresh() {
-            console.warn('Status mixin: not released method refresh()!');
-        }
+        refresh() {}
     }
 
 };

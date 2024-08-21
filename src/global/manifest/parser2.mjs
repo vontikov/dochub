@@ -343,7 +343,7 @@ parser.registerError = function(e, uri) {
         if (typeof e === 'string') e = JSON.parse(e);
     } catch (e) { true; }
     let errorType = (() => {
-        switch (e.name) {
+        switch (e?.name) {
             case 'YAMLSyntaxError':
             case 'YAMLSemanticError':
                 return 'syntax';
@@ -361,7 +361,7 @@ parser.registerError = function(e, uri) {
 
     this.onError && this.onError(errorType, {
         uri,
-        error: e
+        error: e || new Error('Undefined error')
     });
 },
 
