@@ -8,7 +8,7 @@ const NULL_ORIGIN = 'null://null/';
 
 let currentBranch = null;
 
-// Контроллеры отмены API запросов к GitlBab
+// Контроллеры отмены API запросов к GitlHub
 const actualRequest = {};
 
 const API_SERVER = 'https://api.github.com/';

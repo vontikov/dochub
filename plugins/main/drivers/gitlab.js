@@ -3,8 +3,6 @@ import cookie from 'vue-cookie';
 
 import serviceContructor from './service';
 
-import OAuthError from '../components/gitlab/OAuthError.vue';
-
 const NULL_ORIGIN = 'null://null/';
 const OAUTH_CALLBACK_PAGE = '/sso/gitlab/authentication';
 let OAuthCode = null;
@@ -313,16 +311,7 @@ const driver = {
                         path: OAUTH_CALLBACK_PAGE,
                         name: 'gitlab_callback'
                     }
-                ),
-
-                    // Регистрируем роут для отражения ошибки авторизациии
-                    window.DocHub.router.registerRoute(
-                        {
-                            name: 'gitlab_error',
-                            path: '/sso/gitlab/error',
-                            component: OAuthError
-                        }
-                    );
+                );
             }
 
             // Отслеживаем события шины

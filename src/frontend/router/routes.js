@@ -9,9 +9,7 @@ import Problems from '@front/components/Problems/Problems';
 import Empty from '@front/components/Controls/Empty';
 import DevTool from '@front/components/JSONata/DevTool';
 import Entity from '@front/components/Entities/Entity';
-
-
-
+import Settings from '@front/components/settings/main.vue';
 
 const routes = [
   {
@@ -68,6 +66,11 @@ const routes = [
     name: 'problems-subj',
     path: '/problems/:subject',
     component: Problems
+  },
+  {
+    name: 'settings',
+    path: '/settings',
+    component: Settings
   },
   {
     name: 'problems',

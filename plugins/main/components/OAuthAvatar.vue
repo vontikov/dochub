@@ -36,7 +36,6 @@
 </template>
 
 <script>
-
   import statusMixin from './mixins/status';
 
   export default {
@@ -94,6 +93,20 @@
             );
           }
         });
+        this.status.bitbucket?.isActive && this.actions.push({
+          status: this.status.bitbucket,
+          title: this.status.bitbucket.isLogined ? 'Выйти' : 'Войти',
+          icon: this.makeURLDataCode(require('!!raw-loader!../assets/bitbucket-logo.svg').default),
+          style: 'width: 32px; height: 32px;',
+          click: () => {
+            this.isProcessing = true;
+            DocHub.eventBus.$emit(
+              this.status.bitbucket.isLogined
+                ? 'bitbucket-logout'
+                : 'bitbucket-login'
+            );
+          }
+        });
         this.isProcessing = false;
       },
       onMenu(e) {
@@ -106,11 +119,6 @@
         this.$nextTick(() => {
           this.showMenu = true;
         });
-      },
-      // Обновляем информацию о профайле пользователя
-      refreshProfile(status) {
-        // status = status || this.status;
-        console.info('Gitlab status: ', status);
       }
     }
   };
@@ -128,5 +136,6 @@
   background: #000;
   opacity: .3;
 }
+
 </style>
 

@@ -40,10 +40,21 @@
       </template>
       <v-list>
         <v-list-item>
-          <v-checkbox v-model="isPrintVersion" />
+          <v-list-item-icon>
+            <v-icon class="settings-menu-icon">settings</v-icon>
+          </v-list-item-icon>          
+          <v-list-item-title style="cursor: pointer;" v-on:click="doSettings">Настройки</v-list-item-title>
+        </v-list-item>
+        <v-list-item>
+          <v-list-item-action>
+            <v-checkbox v-model="isPrintVersion" />
+          </v-list-item-action>
           <v-list-item-title>Версия для печати</v-list-item-title>
         </v-list-item>
         <v-list-item>
+          <v-list-item-icon>
+            <v-icon class="settings-menu-icon">printer</v-icon>
+          </v-list-item-icon>          
           <v-list-item-title style="cursor: pointer;" v-on:click="doPrint">Печать</v-list-item-title>
         </v-list-item>
       </v-list>
@@ -95,6 +106,9 @@
       }
     },
     methods: {
+      doSettings() {
+        this.$router.push({ name: 'settings' });
+      },
       doPrint() {
         window.print();
       },
@@ -152,6 +166,11 @@ header.print-version {
 .blink {
   color: #A00 !important;
   animation: blink 1s step-start 0s infinite;
+}
+
+.settings-menu-icon {
+  width: 32px !important;
+  display: inline !important;
 }
 
 </style>

@@ -12,6 +12,7 @@ const plugins = {
     protocols: [],          // Протоколы
     contentProviders: [],   // Драйверы данных
     routes: [],             // Роуты UI
+    uiSettings: [],         // UI компоненты настроек плагинов
     uiComponents: [],       // Встраиваемые UI компоненты
     mounted: {},            // Примонтированные манифесты
     // Все ранее зарегистрированные плагины переносим в основной менеджер
@@ -19,8 +20,7 @@ const plugins = {
         for(const uri in this.mounted) {
             storageManager.mountManifest(uri);
         }
-        this.documents.forEach((el) => DocHub.documents.register(el.type, el.component));
-
+        this.documents.forEach((item) => DocHub.documents.register(item.type, item.component));
     }
 };
 
@@ -40,12 +40,27 @@ window.DocHub = {
     eventBus: new Vue(),
     // Работа с настройками
     settings: {
+        // Регистрирует UI компонент настроек
+        //  component - VUE компонент
+        //  location  - размещение UI компонента в дереве настроек
+        //  tags      - массив тегов для поиска компонента настроек
+        registerUI(component, location, tags) {
+            plugins.uiSettings.push({
+                component,
+                location,
+                tags
+            });
+        },
+        // Сохраняет структуру с настройками
+        //  settings    -   сохраняемая структура
         push(settings) {
             DocHub.eventBus.$emit(events.settings.push, settings);
             Object.keys(settings).map((key) => {
                 cookie.set(`$settings.${key}`, settings[key], 60*60*24*365);
             });
         },
+        // Получает настройки 
+        //  fields      - требуемый массив полей
         pull(fields) {
             const result = {};
             (Array.isArray(fields) ? fields : Object.keys(fields)).map((key) => {
@@ -192,6 +207,9 @@ export default {
         registerUIComponent(state, component) {
             state.uiComponents.push(component);
         },
+        registerUISettings(state, component) {
+            state.uiSettings.push(component);
+        },
         mountManifest(state, uri) {
             state.mounted[uri] = true;
             storageManager.mountManifest(uri);
@@ -210,6 +228,12 @@ export default {
                 Vue.component(`plugin-doc-${type}`, component);
                 context.commit('registerDocument', { type, component });
             };
+
+            // Регистрируем UI компонентов настроек
+            DocHub.settings.registerUI = (component, location, tags) => {
+                context.commit('registerUISettings', { component, location, tags });
+            };
+
 
             DocHub.ui.register = (location, component) => {
                 context.commit('registerUIComponent', { location, component });

@@ -1,25 +1,15 @@
 <template>
   <v-combobox 
-    class="selector"
     v-if="status?.isLogined"
     v-model="select"
-    v-bind:items="items">
-  </v-combobox>
+    class="selector"
+    v-bind:items="items" />
 </template>
 
 <script>
 
   export default {
     name: 'BranchSelector',
-    mounted() {
-      DocHub.eventBus.$on('gitlab-status-change', (status) => this.status = status);
-      DocHub.eventBus.$emit('gitlab-status-get');
-    },
-    watch: {
-      status() {
-        this.refreshSelector();
-      }
-    },
     data() {
       return {
         status: null,
@@ -35,6 +25,15 @@
           this.status?.api.checkout(to);
         }
       }
+    },
+    watch: {
+      status() {
+        this.refreshSelector();
+      }
+    },
+    mounted() {
+      DocHub.eventBus.$on('gitlab-status-change', (status) => this.status = status);
+      DocHub.eventBus.$emit('gitlab-status-get');
     },
     methods: {
       // Обновляем информацию о бранчах
