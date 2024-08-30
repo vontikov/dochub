@@ -1,14 +1,14 @@
 <template>
   <v-avatar v-if="isActive" color="indigo" style="cursor: pointer;">
-    <img v-if="avatarURL" v-bind:src="avatarURL" v-on:click="onMenu">
-    <v-icon v-else dark v-on:click="onMenu">
+    <img v-if="avatarURL" :src="avatarURL" @click="onMenu">
+    <v-icon v-else dark @click="onMenu">
       mdi-account-circle
     </v-icon>
-    <v-menu v-model="showMenu" bottom right v-bind:position-x="x" v-bind:position-y="y">
+    <v-menu v-model="showMenu" bottom right :position-x="x" :position-y="y">
       <v-list>
-        <v-list-item v-for="(action, index) in actions" v-bind:key="index" link v-on:click="action.click">
+        <v-list-item v-for="(action, index) in actions" :key="index" link @click="action.click">
           <v-list-item-avatar v-if="action.icon">
-            <img class="logo" v-bind:src="action.icon" v-bind:style="action.style">
+            <img class="logo" :src="action.icon" :style="action.style">
           </v-list-item-avatar>
           <v-list-item-title>{{ action.title }}</v-list-item-title>
         </v-list-item>

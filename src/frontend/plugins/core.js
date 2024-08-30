@@ -56,7 +56,7 @@ window.DocHub = {
         push(settings) {
             DocHub.eventBus.$emit(events.settings.push, settings);
             Object.keys(settings).map((key) => {
-                cookie.set(`$settings.${key}`, settings[key], 60*60*24*365);
+                cookie.set(`$settings.${key}`, JSON.stringify(settings[key]), 60*60*24*365);
             });
         },
         // Получает настройки 
@@ -65,7 +65,11 @@ window.DocHub = {
             const result = {};
             (Array.isArray(fields) ? fields : Object.keys(fields)).map((key) => {
                 const def = (settingsMap[key] && process.env[settingsMap[key]]) || undefined;
-                result[key] = cookie.get(`$settings.${key}`) || fields[key] || def;
+                try {
+                    result[key] = JSON.parse(cookie.get(`$settings.${key}`) || 'undefined');
+                // eslint-disable-next-line no-empty
+                } catch(error) {}
+                result[key] ||= fields[key] || def;
             });
             return result;
         }

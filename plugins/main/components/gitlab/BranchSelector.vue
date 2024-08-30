@@ -3,7 +3,7 @@
     v-if="status?.isLogined"
     v-model="select"
     class="selector"
-    v-bind:items="items" />
+    :items="items" />
 </template>
 
 <script>

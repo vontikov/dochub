@@ -224,114 +224,133 @@ const driver = {
                     this.config.refreshToken = response.data.refresh_token;
 
                     // Сохраняем полученные токены для использования после перезагрузки
-                    cookie.set('gitlab-token-access', this.config.accessToken, 1 * (response.data.expires_in || 1));
-                    cookie.set('gitlab-token-refresh', this.config.refreshToken, 60*60*24*365);
+                    const accessTokenExp = response.data?.expires_in && Math.max(1 * response.data?.expires_in - 300, 0);
+                    cookie.set('gitlab-token-access', this.config.accessToken, { expires: accessTokenExp ? `${accessTokenExp}s`: 0 });
+                    cookie.set('gitlab-token-refresh', this.config.refreshToken, { expires: `${60*60*24*365}s` });
                     this.isOAuthProcessing = false;
                     success();
                     // setTimeout(DocHub.dataLake.reload, 100);
                 }).catch((error) => {
                     // eslint-disable-next-line no-console
                     console.error(error);
-                    if (error.response?.status === 401) {
-                        this.logout();
-                        this.isOAuthProcessing = 'error';
-                        reject();
-                    }
+                    this.logout();
+                    this.isOAuthProcessing = 'error';
+                    reject(error);
                 }).finally(() => this.onChangeStatus());
         });
+    },
+    // Вызывается при изменении параметров интеграции
+    restart(context) {
+        // Для начала проверяем не настроена ли OAuth авторизация для GitLab
+        this.config.appId = context.env.VUE_APP_DOCHUB_GITLAB_APP_ID
+            || context.env.VUE_APP_DOCHUB_APP_ID; // Для совместимости со старыми конфигурациями
+        this.config.appSecret = context.env.VUE_APP_DOCHUB_GITLAB_CLIENT_SECRET
+            || context.env.VUE_APP_DOCHUB_CLIENT_SECRET; // Для совместимости со старыми конфигурациями
+
+        // Если идентификатор приложения указан, счтиаем, что нужно работать в режиме OAuth
+        this.config.isOAuth = !!this.config.appId;
+
+        // В режиме OAuth работаем по собственному flow
+        if (this.config.isOAuth) {
+            this.config.server = context.env.VUE_APP_DOCHUB_GITLAB_URL;
+            // Проверяем, что все параметры интеграции указаны
+            if (!this.config.appSecret || !this.config.server) {
+                context.emitError(new Error('Драйвер Gitlab не активирован в режиме "OAuth" т.к. в не задана переменная VUE_APP_DOCHUB_GITLAB_CLIENT_SECRET или VUE_APP_DOCHUB_GITLAB_URL!'));
+                return false;
+            }
+            // Получаем сохраненные ранее кредлы
+            this.config.accessToken = cookie.get('gitlab-token-access');
+            this.config.refreshToken = cookie.get('gitlab-token-refresh');
+            // eslint-disable-next-line no-console
+            console.info('Драйвер Gitlab активирован в режиме "OAuth".');
+        } else {
+            // Получаем сохраненные пользовательские настройки
+            const settings = DocHub.settings.pull(['gitlabAuthService', 'gitlabServer', 'gitlabPersonalToken']);
+            // Получаем ссылку на универсальный сервис авторизации для gitlab
+            const serviceURL = (new URL('/gitlab/oauth/proxy/login', settings.gitlabAuthService || context?.env?.VUE_APP_DOCHUB_GITLAB_AUTH_SERVICE)).toString();
+
+            // Если сервис авторизации указан, работаем по его flow
+            if (serviceURL) {
+                this.authService = new serviceContructor('gitlab', serviceURL);
+                // Логируем информацию о режиме работы драйвера
+                // eslint-disable-next-line no-console
+                console.info(`Драйвер Gitlab активирован в режиме сервиса авторизации [${serviceURL}]`);
+            } else {
+                // Иначе считаем, что работаем с персональным токеном
+                // Получаем параметры интеграции
+                this.config.server = settings.gitlabServer || context.env.VUE_APP_DOCHUB_GITLAB_URL;
+                this.config.accessToken = settings.gitlabPersonalToken || context.env.VUE_APP_DOCHUB_PERSONAL_TOKEN;
+
+                if (!this.config.server) {
+                    // eslint-disable-next-line no-console
+                    console.warn('Драйвер Gitlab не активирован в режиме "Personal" т.к. сервер не определен.');
+                    return false;
+                }
+               
+                // Логируем информацию о режиме работы драйвера
+                // eslint-disable-next-line no-console
+                console.info(`Драйвер Gitlab активирован в режиме ${this.config.isOAuth ? '"OAuth"' : '"Personal"'} авторизации.`);
+                
+            }
+        }
+        return true;
     },
     // Вызывается при инициализации транспортного сервиса
     //  context: object     - контекст функционирования сервиса
     //      {
     //      }
     bootstrap(context) {
-        // Получаем ссылку на универсальный сервис авторизации для gitlab
-        const settings = DocHub.settings.pull(['gitlabAuthService']);
-        const serviceURL = settings.gitlabAuthService || context?.env?.VUE_APP_DOCHUB_GITLAB_AUTH_SERVICE;
+        //Регистрируем перехватчики переходов для OAuth
+        DocHub.router.registerMiddleware({
+            beforeEach: async(to, from, next) => {
+                // Если мы не в режиме OAuth ничего не делаем
+                if (!this.config.isOAuth) {
+                    next();
+                    return;
+                }
+                // Иначе обрабатываем роуты
+                switch (to.name) {
+                    case 'gitlab_error': next(); break;
+                    case 'gitlab_callback': {
+                        OAuthCode = Object.keys(to.query).length
+                            ? to.query.code
+                            : new URLSearchParams(to.hash.substr(1)).get('code');
 
-        if (serviceURL) {
-            this.authService = new serviceContructor('gitlab', serviceURL);
-            // Логируем информацию о режиме работы драйвера
-            // eslint-disable-next-line no-console
-            console.info(`Драйвер Gitlab активирован в режиме сервиса авторизации [${serviceURL}]`);
-        } else {
-            // Получаем параметры интеграции
-            this.config.server = context.env.VUE_APP_DOCHUB_GITLAB_URL;
-            this.config.accessToken = context.env.VUE_APP_DOCHUB_PERSONAL_TOKEN;
-            this.config.appId = context.env.VUE_APP_DOCHUB_GITLAB_APP_ID 
-                || context.env.VUE_APP_DOCHUB_APP_ID; // Для совместимости со старыми конфигурациями
-            this.config.appSecret = context.env.VUE_APP_DOCHUB_GITLAB_CLIENT_SECRET
-                || context.env.VUE_APP_DOCHUB_CLIENT_SECRET; // Для совместимости со старыми конфигурациями
-
-            if (!this.config.server) {
-                // eslint-disable-next-line no-console
-                console.warn('Драйвер Gitlab не активирован т.к. сервер не определен.');
-                return;
-            }
-
-            // Проверяем на корректность параметров интеграции
-            if (!this.config.accessToken && (!this.config.appId || !this.config.appSecret)) {
-                context.emitError(new Error('Драйвер Gitlab не активирован т.к. в перематрах интеграции ошибка!'));
-                return;
-            }
-
-            // Определяем режим функционирования драйвера
-            if ((this.config.isOAuth = !!this.config.appId)) {
-
-                this.config.accessToken = cookie.get('gitlab-token-access');
-                this.config.refreshToken = cookie.get('gitlab-token-refresh');
-
-                DocHub.router.registerMiddleware({
-                    beforeEach: async(to, from, next) => {
-                        switch (to.name) {
-                            case 'gitlab_error': next(); break;
-                            case 'gitlab_callback': {
-                                OAuthCode = Object.keys(to.query).length
-                                    ? to.query.code
-                                    : new URLSearchParams(to.hash.substr(1)).get('code');
-
-                                this.refreshAccessToken()
-                                    .then(() => next(cookie.get('gitlab-return-route') || '/'))
-                                    .catch(() => next('/sso/gitlab/error'));
-                                break;
-                            }
-                            default:
-                                cookie.set('gitlab-return-route', to.fullPath, 1);
-                                this.checkAuth();
-                                next();
-                        }
+                        this.refreshAccessToken()
+                            .then(() => next(cookie.get('gitlab-return-route') || '/'))
+                            .catch(() => next('/sso/gitlab/error'));
+                        break;
                     }
-                });
-                // Регистрируем роут для редиректа при авторизации
-                window.DocHub.router.registerRoute(
-                    {
-                        path: OAUTH_CALLBACK_PAGE,
-                        name: 'gitlab_callback'
-                    }
-                );
+                    default:
+                        !to.fullPath.endsWith('/error') && cookie.set('gitlab-return-route', to.fullPath, { expires: '300s' });
+                        this.checkAuth();
+                        next();
+                }
             }
-
-            // Отслеживаем события шины
-            window.DocHub.eventBus.$on('gitlab-login-retry', () => {
-                this.logout();
-                this.login();
-            });  
-            
-            // Логируем информацию о режиме работы драйвера
-            // eslint-disable-next-line no-console
-            console.info(`Драйвер Gitlab активирован в режиме ${this.config.isOAuth ? '"OAuth"' : '"Personal"'} авторизации.`);
-        }
-
+        });
+        // Регистрируем роут для редиректа при авторизации
+        window.DocHub.router.registerRoute(
+            {
+                path: OAUTH_CALLBACK_PAGE,
+                name: 'gitlab_callback'
+            }
+        );
+        // Отслеживаем события шины
+        window.DocHub.eventBus.$on('gitlab-login-retry', () => {
+            this.logout();
+            this.login();
+        });  
         // Слушаем запросы о статусе
         window.DocHub.eventBus.$on('gitlab-status-get', () => this.onChangeStatus());
+        // Отслеживаем задания на сессию
         window.DocHub.eventBus.$on('gitlab-logout', () => this.logout());
         window.DocHub.eventBus.$on('gitlab-login', () => this.login());
-
-        // Устанавливаем флаг активности
-        this.active = true;
+        // Отслеживаем запросы на перезапуск драйвера
+        window.DocHub.eventBus.$on('gitlab-restart', () => this.active = this.restart(context));
+        // Рестартуем дравер 
+        this.active = this.restart(context);
         // Уведомляем всех слушателей шины, что у нас изменилось состояние
         this.onChangeStatus();
-        
     },
     // Возвращает список методов доступных над URI
     //  uri: string || URL          - Идентификатор ресурса
