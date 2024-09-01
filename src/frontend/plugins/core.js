@@ -15,6 +15,7 @@ const plugins = {
     uiSettings: [],         // UI компоненты настроек плагинов
     uiComponents: [],       // Встраиваемые UI компоненты
     mounted: {},            // Примонтированные манифесты
+    problems: [],           // Проблемы возникшие в плагине
     // Все ранее зарегистрированные плагины переносим в основной менеджер
     pull() {
         for(const uri in this.mounted) {
@@ -38,6 +39,16 @@ window.DocHub = {
     env: JSON.parse(JSON.stringify(process.env)),
     events,
     eventBus: new Vue(),
+    problems: {
+        emit(problem, title, uid) {
+            plugins.problems.push({
+                uid: uid || `${Date.now()}`,
+                title: title || problem?.toString(),
+                correction: '',
+                description: problem?.toString()
+            });
+        }
+    },
     // Работа с настройками
     settings: {
         // Регистрирует UI компонент настроек
@@ -101,6 +112,7 @@ window.DocHub = {
                 // eslint-disable-next-line no-console
                 console.info(`Initialization content driver [${contentType}]...`, plugins.contentProviders);
                 driver.bootstrap && driver.bootstrap({
+                    emitError: DocHub.problems.emit,
                     env: window.DocHub.env
                 });
                 plugins.contentProviders.push({ contentType, driver });
@@ -131,6 +143,7 @@ window.DocHub = {
                 driver.__proto__ = protoProtocolDriver;
                 // driver = Object.assign({}, protoProtocolDriver, driver);
                 driver.bootstrap && driver.bootstrap({
+                    emitError: DocHub.problems.emit,
                     env: JSON.parse(JSON.stringify(process.env))
                 });
                 plugins.protocols.push({ protocol, driver });

@@ -1,7 +1,12 @@
 <template>
   <settings driver="bitbucket" name="Bitbucket" :logo="logo">
     <template #config>
-      <config 
+      <template v-if="isFixedConfig">
+        У вас нет прав менять параметры интеграции
+      </template>
+
+      <config
+        v-else
         :mode="mode"
         :servers="servers"
         :get-fields="getFields"
@@ -47,6 +52,9 @@
       };
     },
     computed: {
+      isFixedConfig() {
+        return !!process?.env?.VUE_APP_DOCHUB_BITBUCKET_APP_ID;
+      },
       logo() {
         return this.makeURLDataCode(require('!!raw-loader!../../assets/bitbucket-logo.svg').default);
       },
@@ -56,7 +64,7 @@
         else return 'personal_token';
       },
       isLogInOut() {
-        return this.selMode === 'registry';
+        return this.selMode === 'registry' || !!process?.env?.VUE_APP_DOCHUB_BITBUCKET_APP_ID;
       }
     },
     mounted() {

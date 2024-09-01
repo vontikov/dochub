@@ -81,7 +81,14 @@ export default {
                 syntax: null,
                 net: null,
                 missing_files: null,
-                package: null
+                package: null,
+                plugins: context.state.plugins?.problems?.length ? {
+                    id: '$error.plugins',
+                    title: validatorErrors.title.plugins,
+                    items: context.state.plugins.problems,
+                    location: '',
+                    critical: true
+                } : undefined
             };
 
             context.commit('setRenderCore',
@@ -102,6 +109,7 @@ export default {
                 errors.net && context.commit('appendProblems', errors.net);
                 errors.missing_files && context.commit('appendProblems', errors.missing_files);
                 errors.package && context.commit('appendProblems', errors.package);
+                errors.plugins && context.commit('appendProblems', errors.plugins);
 
                 const manifest = Object.freeze(parser.manifest);
                 // Обновляем манифест и фризим объекты

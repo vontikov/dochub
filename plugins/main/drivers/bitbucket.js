@@ -6,17 +6,29 @@ import serviceContructor from './service';
 // Инициализируем сервис авторизации через dochub.info
 
 const NULL_ORIGIN = 'null://null/';
+const OAUTH_CALLBACK_PAGE = '/sso/bitbucket/authentication';
+let OAuthCode = null;   // Код выданный процессом OAuth авторизации
 
 let currentBranch = null;
 
 // Контроллеры отмены API запросов к Bitbucket
 const actualRequest = {};
 
+const COOKIE_ID_ACCESS_TOKEN = 'bitbucket-token-access';
+const COOKIE_ID_REFRESH_TOKEN = 'bitbucket-token-refresh';
+
+
 // API Bitbucket
 const api = {
     // Возвращает URL API шлюза
     getAPIServer: () => {
-        return driver.authService?.getAPIServer() || driver.config.server || 'https://api.bitbucket.org/2.0/';
+        return driver.authService?.getAPIServer()
+            || (() => {
+                if (!driver.config.server) return null;
+                const url = new URL(driver.config.server);
+                return `${url.protocol}//api.${url.host}/2.0/`;
+            })() 
+            || 'https://api.bitbucket.org/2.0/';
     },
     // Возвращает текущий бранч
     currentBranch: () => {
@@ -104,6 +116,7 @@ const api = {
 };
 
 const driver = {
+    isOAuthProcessing: false,           // Признак взаимодействия с сервером авторизации в собственной flow
     authService: null,                  // Сервис авторизации
     active: false,                      // Признак активности драйвера
     profile: null,                      // Профиль пользователя
@@ -138,10 +151,31 @@ const driver = {
         return this.active;
     },
     login() {
-        this.authService.login();
+        switch(this.config.mode) {
+            case 'registry':
+                this.authService.login();
+                break;
+            case 'oauth':            
+                window.location = new URL(
+                    '/site/oauth2/authorize'
+                    + `?client_id=${this.config.appId}`
+                    + '&response_type=code'
+                    + `&${Math.floor(Math.random() * 10000)}`
+                    , this.config.server
+                );
+                break;
+            case 'personal':
+                break;
+            default:
+                throw new Error(`Unknown login method for mode [${this.config.mode}]`);
+        }
     },
     logout() {
-        this.authService.logout();
+        this.authService?.logout();
+        cookie.delete(COOKIE_ID_ACCESS_TOKEN);
+        cookie.delete(COOKIE_ID_REFRESH_TOKEN);
+        this.config.accessToken = null;
+        this.config.refreshToken = null;
         this.onChangeStatus();
         DocHub.dataLake.reload();
     },
@@ -149,7 +183,7 @@ const driver = {
         return {
             api,
             isActive: this.active,
-            isLogined: this.config.mode === 'personal' || this.authService?.isLogined(), // Здесь еще oauth нужно реализовать!!!
+            isLogined: this.config.mode === 'personal' || this.config.accessToken || this.authService?.isLogined(),
             avatarURL: driver.profile?.links?.avatar?.href,
             userName: driver.profile?.display_name || driver.profile?.nickname || driver.profile?.username  
         };
@@ -182,21 +216,18 @@ const driver = {
         // Если идентификатор приложения указан, счтиаем, что нужно работать в режиме OAuth
         this.config.mode = this.config.appId ? 'oauth' : null;
         // В режиме OAuth работаем по собственному flow
-        if (this.config.mode) {
+        if (this.config.mode === 'oauth') {
             // Не будем использовать универсальный сервис авторизации DocHub
             this.authService = null;
             // Проверяем, что все параметры интеграции указаны
             if (!this.config.appSecret || !this.config.server) {
-                context.emitError(new Error('Драйвер Bitbucket не активирован в режиме "OAuth" т.к. в не задана переменная VUE_APP_DOCHUB_BITBUCKET_CLIENT_SECRET или VUE_APP_DOCHUB_BITBUCKET_URL!'));
+                context.emitError(new Error('Драйвер Bitbucket не активирован в режиме "OAuth" т.к. не задана переменная VUE_APP_DOCHUB_BITBUCKET_CLIENT_SECRET или VUE_APP_DOCHUB_BITBUCKET_URL!'));
                 this.config.mode = 'off';
                 return false;
             }
-            // Получаем сохраненные ранее кредлы
-            this.config.accessToken = cookie.get('bitbucket-token-access');
-            this.config.refreshToken = cookie.get('bitbucket-token-refresh');
-            // eslint-disable-next-line no-console
-            console.info('Драйвер Bitbucket активирован в режиме "OAuth".');
-            console.warn('!!НО ЕЩЕ НЕДОДЕЛАН!!!');
+            // Получаем сохраненные ранее кредлы, если они есть
+            this.config.accessToken = cookie.get(COOKIE_ID_ACCESS_TOKEN);
+            this.config.refreshToken = cookie.get(COOKIE_ID_REFRESH_TOKEN);
         } else {
             this.settings = DocHub.settings.pull({
                 bitbucketDisable: false,
@@ -216,9 +247,9 @@ const driver = {
 
             // Если указан универсальный сервис авторизации, то работаем с ним
             if (this.settings.bitbucketAuthService) {
-                this.authService = new serviceContructor('bitbucket', (new URL('/bitbucket/oauth/proxy/login', this.settings.bitbucketAuthService)).toString());
+                // Пересоздам сервис авторизации если его не было до этого
+                this.authService ||= new serviceContructor('bitbucket', (new URL('/bitbucket/oauth/proxy/login', this.settings.bitbucketAuthService)).toString());
                 // eslint-disable-next-line no-console
-                console.info(`Драйвер Bitbucket активирован в режиме сервиса авторизации [${this.settings.bitbucketAuthService}]`);
                 this.config.mode = 'registry';
             } else if (this.settings.bitbucketPersonalToken) { // Если указан персональный токен, то считаем, что работаем в персональном режиме
                 this.authService = null;
@@ -241,13 +272,50 @@ const driver = {
         console.info(`Драйвер Bitbucket активирован в режиме [${this.config.mode}].`);
         return true;
     },
+
     // Вызывается при инициализации транспортного сервиса
     bootstrap(context) {
+        //Регистрируем перехватчики переходов для OAuth
+        DocHub.router.registerMiddleware({
+            beforeEach: async(to, from, next) => {
+                // Если мы не в режиме OAuth ничего не делаем
+                if (this.config.mode !== 'oauth') {
+                    next();
+                    return;
+                }
+                // Иначе обрабатываем роуты
+                switch (to.name) {
+                    case 'bitbucket_error': next(); break;
+                    case 'bitbucket_callback': {
+                        OAuthCode = Object.keys(to.query).length
+                            ? to.query.code
+                            : new URLSearchParams(to.hash.substr(1)).get('code');
+
+                        this.refreshAccessToken()
+                            .then(() => next(cookie.get('bitbucket-return-route') || '/'))
+                            .catch(() => next('/sso/bitbucket/error'));
+                        break;
+                    }
+                    default:
+                        !to.fullPath.endsWith('/error') && cookie.set('bitbucket-return-route', to.fullPath, { expires: '300s' });
+                        next();
+                }
+            }
+        });
+        // Регистрируем роут для редиректа при авторизации
+        window.DocHub.router.registerRoute(
+            {
+                path: OAUTH_CALLBACK_PAGE,
+                name: 'bitbucket_callback'
+            }
+        );
+
         // Отслеживаем события шины
         DocHub.eventBus.$on(this.eventsIDs.loginRetry, () => {
             this.logout();
             this.login();
         });
+
         // Слушаем запросы о статусе
         DocHub.eventBus.$on(this.eventsIDs.statusGet, () => this.onChangeStatus());
         DocHub.eventBus.$on(this.eventsIDs.logout, () => this.logout());
@@ -367,14 +435,71 @@ const driver = {
     },
     refreshAccessToken() {
         return new Promise((success, reject) => {
-            if (this.authService) {
+            // Если процесс обновления токена уже запущен, ждем результат
+            if (this.isOAuthProcessing) {
+                const wait = () => {
+                    if (!this.isOAuthProcessing) success();
+                    else if (this.isOAuthProcessing === 'error') reject(new Error('Bitbucket authorized error!'));
+                    else setTimeout(wait, 100);
+                };
+                wait();
+                return;
+            } 
+            // Иначе запускам процесс
+            if (this.config.mode === 'registry') {
                 this.authService.refreshAccessToken()
                     .then(success)
                     .catch(reject);
                 return;
-            }
-            // Здесь прямая работа с Bitbucket
-            throw new Error('Прямое взаимодействие с Bitbucket не реализовано!');
+            } else if (this.config.mode === 'oauth') {
+                debugger;
+                this.isOAuthProcessing = true;
+                const data = new FormData();
+                // Если получаем токены по коду авторизации
+                if (OAuthCode) {
+                    data.append('code', OAuthCode);
+                    data.append('grant_type', 'authorization_code');
+                    OAuthCode = null;
+                // Если получаем обновляет токен доступа
+                } else if (this.config.refreshToken) {
+                    data.append('refresh_token', this.config.refreshToken);
+                    data.append('grant_type', 'refresh_token');
+                } else {
+                    reject(new Error('Can not refresh access token :('));
+                    return;
+                }
+
+                axios({
+                    auth: {
+                        username: this.config.appId,
+                        password: this.config.appSecret
+                    },
+                    url: `https://bitbucket.org/site/oauth2/access_token?client_id=${this.config.appId}`,
+                    method: 'POST',
+                    data
+                }).then((response) => {
+                    debugger;
+                    this.config.refreshToken = response.data.refresh_token || this.config.refreshToken;
+                    this.config.accessToken = response.data.access_token;
+
+                    cookie.set(COOKIE_ID_REFRESH_TOKEN,  this.config.refreshToken);
+                    cookie.set(COOKIE_ID_ACCESS_TOKEN, {
+                        expires: response.data.expires_in ? `${1 * response.data.expires_in - 60}s` :  '31536000s'
+                    });
+                    this.isOAuthProcessing = false;
+                    success();
+                }).catch((error) => {
+                    debugger;
+                    // eslint-disable-next-line no-console
+                    console.error(error);
+                    this.isOAuthProcessing = 'error';
+                    this.logout();
+                    reject(error);
+                });
+            } else if (this.config.mode === 'personal') {
+                return;
+            } else 
+                reject(new Error(`Can not refresh access token in mode ${this.config.mode}`));
         });   
     },    
     fetch(options){
@@ -403,6 +528,9 @@ const driver = {
 
                         // Добавляем данные для авторизации
                         switch(this.config.mode) {
+                            case 'oauth': 
+                                options.headers['Authorization'] = `Bearer ${this.config.accessToken}`;
+                                break;
                             case 'registry':
                                 options.headers['Authorization'] = `Bearer ${await this.authService.getAccessToken()}`;
                                 break;
