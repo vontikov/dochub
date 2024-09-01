@@ -34,6 +34,7 @@ export default {
             this.status = Object.assign(this.status || {}, { bitbucket: status }) ;
             this.refresh();
         },
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         refresh() {}
     }
 
