@@ -4,7 +4,6 @@
       <template v-if="isFixedConfig">
         У вас нет прав менять параметры интеграции
       </template>
-
       <config
         v-else
         :mode="mode"
@@ -47,13 +46,13 @@
         instructionURL: null,
         selMode: null,
         servers: [
-          'https://api.bitbucket.org/'
+          'https://bitbucket.org/'
         ]        
       };
     },
     computed: {
       isFixedConfig() {
-        return !!process?.env?.VUE_APP_DOCHUB_BITBUCKET_APP_ID;
+        return !!process?.env?.VUE_APP_DOCHUB_BITBUCKET_APP_ID || ((process?.env?.VUE_APP_DOCHUB_BITBUCKET_DISABLE || '').toLowerCase() === 'yes');
       },
       logo() {
         return this.makeURLDataCode(require('!!raw-loader!../../assets/bitbucket-logo.svg').default);
@@ -88,6 +87,7 @@
               url: new URL('/bitbucket/oauth/proxy/hello', consts.REGISTRY_SERVER)
             });
           } else if (config.mode === 'personal_token') {
+            const url = new URL(config.server);
             await axios({
               method: 'GET',
               auth: {
@@ -97,7 +97,7 @@
               headers:{
                 'Accept': 'application/json'
               },
-              url: new URL('/2.0/user', config.server)
+              url: new URL('/2.0/user', `${url.protocol}//api.${url.host}/2.0/`)
             });
           }
           return true;

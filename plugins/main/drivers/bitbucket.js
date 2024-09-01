@@ -7,6 +7,8 @@ import serviceContructor from './service';
 
 const NULL_ORIGIN = 'null://null/';
 const OAUTH_CALLBACK_PAGE = '/sso/bitbucket/authentication';
+const OAUTH_CALLBACK_PAGE_NAME = 'auth_service_bitbucket_callback';
+
 let OAuthCode = null;   // Код выданный процессом OAuth авторизации
 
 let currentBranch = null;
@@ -176,6 +178,7 @@ const driver = {
         cookie.delete(COOKIE_ID_REFRESH_TOKEN);
         this.config.accessToken = null;
         this.config.refreshToken = null;
+        this.isOAuthProcessing = false;
         this.onChangeStatus();
         DocHub.dataLake.reload();
     },
@@ -286,7 +289,7 @@ const driver = {
                 // Иначе обрабатываем роуты
                 switch (to.name) {
                     case 'bitbucket_error': next(); break;
-                    case 'bitbucket_callback': {
+                    case OAUTH_CALLBACK_PAGE_NAME: {
                         OAuthCode = Object.keys(to.query).length
                             ? to.query.code
                             : new URLSearchParams(to.hash.substr(1)).get('code');
@@ -306,7 +309,7 @@ const driver = {
         window.DocHub.router.registerRoute(
             {
                 path: OAUTH_CALLBACK_PAGE,
-                name: 'bitbucket_callback'
+                name: OAUTH_CALLBACK_PAGE_NAME   // ВАЖНО! Для перехвата роута в своем flow название используем идентичное сервису авторизации
             }
         );
 
@@ -452,7 +455,6 @@ const driver = {
                     .catch(reject);
                 return;
             } else if (this.config.mode === 'oauth') {
-                debugger;
                 this.isOAuthProcessing = true;
                 const data = new FormData();
                 // Если получаем токены по коду авторизации
@@ -474,22 +476,20 @@ const driver = {
                         username: this.config.appId,
                         password: this.config.appSecret
                     },
-                    url: `https://bitbucket.org/site/oauth2/access_token?client_id=${this.config.appId}`,
+                    url: new URL(`/site/oauth2/access_token?client_id=${this.config.appId}`, this.config.server),
                     method: 'POST',
                     data
                 }).then((response) => {
-                    debugger;
                     this.config.refreshToken = response.data.refresh_token || this.config.refreshToken;
                     this.config.accessToken = response.data.access_token;
 
                     cookie.set(COOKIE_ID_REFRESH_TOKEN,  this.config.refreshToken);
-                    cookie.set(COOKIE_ID_ACCESS_TOKEN, {
+                    cookie.set(COOKIE_ID_ACCESS_TOKEN, this.config.accessToken, {
                         expires: response.data.expires_in ? `${1 * response.data.expires_in - 60}s` :  '31536000s'
                     });
                     this.isOAuthProcessing = false;
                     success();
                 }).catch((error) => {
-                    debugger;
                     // eslint-disable-next-line no-console
                     console.error(error);
                     this.isOAuthProcessing = 'error';
