@@ -29,8 +29,18 @@
               single-line      
               label="Протокол"
               item-value="protocol"
+              persistent-hint
+              hint="Источник кода"
               :rules="[v => !!v || 'Требуется обязательно']"
-              required />
+              required>
+              <template v-if="protocolObject?.virtual" #append-outer>
+                <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
+              </template>
+              <template #item="data">
+                <span v-if="data.item.virtual" class="item-virtual">{{ data.item.name }} (недоступно)</span>
+                <span v-else>{{ data.item.name }}</span>
+              </template>              
+            </v-autocomplete>
   
             <v-autocomplete
               v-model="repo"
@@ -41,11 +51,21 @@
               item-text="title"
               single-line      
               label="Репозиторий"
+              persistent-hint
+              hint="Репозиторий"
               item-value="ref"
               :rules="[v => !!v || 'Требуется обязательно']"
               append-icon="mdi-reload"
               required 
-              @click:append="reloadRepos" />
+              @click:append="reloadRepos">
+              <template v-if="repoObject?.virtual" #append-outer>
+                <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
+              </template>
+              <template #item="data">
+                <span v-if="data.item.virtual" class="item-virtual">{{ data.item.title }} (недоступно)</span>
+                <span v-else>{{ data.item.title }}</span>
+              </template>              
+            </v-autocomplete>
   
             <v-autocomplete
               v-model="branch"
@@ -56,11 +76,21 @@
               item-text="name"
               single-line      
               label="Бранч"
+              persistent-hint
+              hint="Бранч/ветка в репозитории"
               :rules="[v => !!v || 'Требуется обязательно']"
               item-value="name"
               append-icon="mdi-reload"
               required 
-              @click:append="reloadBranches" />        
+              @click:append="reloadBranches">        
+              <template v-if="branchObject?.virtual" #append-outer>
+                <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
+              </template>
+              <template #item="data">
+                <span v-if="data.item.virtual" class="item-virtual">{{ data.item.name }} (недоступно)</span>
+                <span v-else>{{ data.item.name }}</span>
+              </template>              
+            </v-autocomplete>
   
             <v-autocomplete
               ref="fileSelector"
@@ -72,16 +102,22 @@
               item-text="name"
               single-line      
               label="Корневой манифест"
+              persistent-hint
+              hint="Корневой манифест"
               :rules="[v => !!v || 'Требуется обязательно']"
               item-value="name"
               append-icon="mdi-reload"
               required 
               @click:append="reloadFiles">
+              <template v-if="fileObject?.virtual" #append-outer>
+                <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
+              </template>
               <template #item="{ item }">
                 <v-icon v-if="item.type === 'dir'">mdi-folder</v-icon>
                 <v-icon v-else>mdi-file-code-outline</v-icon>
                 <v-list-item-content style="margin-top: 4px; margin-left: 4px;">
-                  <v-list-item-title :class="item.virtual ? 'item-virtual' : ''" v-text="item.name" />
+                  <v-list-item-title v-if="item.virtual" class="item-virtual">{{ item.name }} (недоступно)</v-list-item-title>
+                  <v-list-item-title v-else>{{ item.name }}</v-list-item-title>
                 </v-list-item-content>
               </template>           
             </v-autocomplete>
@@ -92,7 +128,7 @@
       <v-btn
         v-if="!contentLoading"
         :disabled="!valid"
-        color="success"
+        color="primary"
         class="mr-4"
         @click="apply">
         Применить
@@ -163,12 +199,16 @@
         this.status?.bitbucket?.isLogined && result.push({ name: 'Bitbucket', protocol: 'bitbucket', status: this.status.bitbucket});
         return result;
       },
+      protocolObject() {
+        return this.protocolList?.find((item) => item.protocol === this.protocol);
+      },
       protocolList() {
         const result = [].concat(this.protocols || []);
         if (this.protocolSearch && !result.find((item) => item.protocol === this.protocolSearch?.toLowerCase())) {
           result.unshift({
             protocol: this.protocolSearch,
             name: this.protocolSearch,
+            virtual: true,
             status: {
               api: {
                 async fetchRepos() {return []; },
@@ -181,7 +221,9 @@
         }
         return result;
       },
-  
+      repoObject() {
+        return this.repoList?.find((item) => item.ref === this.repo);
+      }, 
       repoList() {
         const result = (this.repos || []).map((item) => {
           const title = item.full_name || item.name;
@@ -199,6 +241,9 @@
         }
         return result;
       },
+      branchObject() {
+        return this.branchList?.find((item) => item.name === this.branch);
+      },
       branchList() {
         const result = [].concat(this.branches || []);
         if (this.branchSearch && !result.find((item) => item.name === this.branchSearch)) {
@@ -208,6 +253,9 @@
           });
         }
         return result;
+      },
+      fileObject() {
+        return this.fileList?.find((item) => item.name === this.file);
       },
       fileList() {
         const result = [].concat(this.files || []);
@@ -235,6 +283,7 @@
       },
       repo() {
         this.reloadBranches();
+        this.reloadFiles();
         this.makeURI();
       },
       branch() {
@@ -418,6 +467,7 @@
             })
             .catch((error) => {
               this.filesError = error;
+              this.files = [];
               // eslint-disable-next-line no-console
               console.error(error);
             })
@@ -494,7 +544,7 @@
   }
   
   .item-virtual {
-    color: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.2); /*chocolate*/
   }
   
   </style>
