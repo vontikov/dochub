@@ -140,7 +140,7 @@ window.DocHub = {
             try {
                 // eslint-disable-next-line no-console
                 console.info(`Initialization protocol [${protocol}]...`);
-                driver.__proto__ = protoProtocolDriver;
+                !driver.__proto__ && (driver.__proto__ = protoProtocolDriver);
                 // driver = Object.assign({}, protoProtocolDriver, driver);
                 driver.bootstrap && driver.bootstrap({
                     emitError: DocHub.problems.emit,

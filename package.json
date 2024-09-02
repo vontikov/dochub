@@ -60,6 +60,7 @@
     "yaml": "1.10.2"
   },
   "devDependencies": {
+    "dochub-sdk": "^0.1.0",
     "@babel/eslint-parser": "7.19.1",
     "@babel/preset-env": "7.20.2",
     "@babel/preset-typescript": "7.18.6",

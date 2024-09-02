@@ -27,7 +27,7 @@ const api = {
     },
     // Возвращает текущий бранч
     currentBranch: () => {
-        return currentBranch || driver.config.defBranch;        
+        return currentBranch;
     },
     // Переключает бранч
     checkout: async(to) => {
@@ -42,10 +42,11 @@ const api = {
         DocHub.dataLake.reload(affects.length ? affects : undefined);
     },
     // Сравнивает бранчи и возвращает разницу
-    compare: async(from, to) => {
+    compare: async(from, to, projectId) => {
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         const result = (await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${driver.config.defProject}/repository/compare?from=${from}&to=${to}&straight=true`, api.getAPIServer())
+            url: new URL(`/api/v4/projects/${projectId}/repository/compare?from=${from}&to=${to}&straight=true`, api.getAPIServer())
         })).data;
 
         return {
@@ -58,7 +59,7 @@ const api = {
     fetchBranches: async(projectId) => {
         return (await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${projectId || driver.config.defProject}/repository/branches`, api.getAPIServer())
+            url: new URL(`/api/v4/projects/${projectId}/repository/branches`, api.getAPIServer())
         })).data;
     },
     // Возвращает список проектов
@@ -74,7 +75,7 @@ const api = {
     fetchFiles: async(path, branch, repo) => {
         return ((await driver.fetch({
             method: 'get',
-            url: new URL(`/api/v4/projects/${repo || driver.config.defProject}/repository/tree?path=${encodeURIComponent(path || '')}&ref=${branch}`, api.getAPIServer())
+            url: new URL(`/api/v4/projects/${repo}/repository/tree?path=${encodeURIComponent(path || '')}&ref=${branch}`, api.getAPIServer())
         })).data || []).map((item) => {
             return {
                 ...item,
@@ -96,16 +97,14 @@ const driver = {
     active: false,              // Признак активности драйвера
     profile: null,              // Профиль пользователя
     isOAuthProcessing: false,   // Признак взаимодействия с сервером авторизации 
+    settings: {},               // Пользовательские настройки
     config: {
-        service: null,          // Сервис авторизации GitLab
+        mode: null,             // Режим функционирования дрейвера oauth/personal/registry/off
         server: null,           // GitLab сервер
         accessToken: null,      // Токен доступа
         refreshToken: null,     // Токен обновления
         appId: null,            // Идентификатор приложения для OAuth авторизации,
-        appSecret: null,        // Секрет приложения для OAuth авторизации
-        isOAuth: false,         // Признак использования OAuth авторизации
-        defProject: 43847396,   // Проект по умолчанию
-        defBranch: 'master'     // Ветка по умолчанию
+        appSecret: null         // Секрет приложения для OAuth авторизации
     },
     // Возвращает true если драйвер готов обрабатывать запросы
     isActive() {
@@ -241,6 +240,14 @@ const driver = {
     },
     // Вызывается при изменении параметров интеграции
     restart(context) {
+        // Проверяем не запрещено ли использование драйвера перемнными среды
+        if((context?.env?.VUE_APP_DOCHUB_GITLAB_DISABLE || '').toLowerCase() === 'yes') {
+            this.config.mode = 'off';
+            // eslint-disable-next-line no-console
+            console.warn('Драйвер Bitbucket не активирован т.к. его использование зарещено переменной VUE_APP_DOCHUB_BITBUCKET_DISABLE.');
+            return false;
+        }
+
         // Для начала проверяем не настроена ли OAuth авторизация для GitLab
         this.config.appId = context.env.VUE_APP_DOCHUB_GITLAB_APP_ID
             || context.env.VUE_APP_DOCHUB_APP_ID; // Для совместимости со старыми конфигурациями
@@ -404,8 +411,8 @@ const driver = {
     parseURL(url) {
         return ((struct) => ({
             space: ((space) => ({
-                projectId: space[0] || this.config.defProject,
-                branch: currentBranch || space[1] || this.config.defBranch
+                projectId: space[0],
+                branch: currentBranch || space[1]
             }))(((struct.length > 1 && struct[0]) || '').split(':')),
             location: struct.slice(struct.length > 1 ? 1 : 0).join('@')
         }))(url.pathname.split('@'));

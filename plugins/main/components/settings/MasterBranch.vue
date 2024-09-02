@@ -5,8 +5,8 @@
         <v-expansion-panel>
           <v-expansion-panel-header>
             <v-row>
-              <v-icon v-if="navigator?.clipboard" title="Копировать" @click.stop="copyText(uri)">mdi-content-copy</v-icon>
-              <v-icon v-if="navigator?.clipboard" title="Вставить" @click.stop="focusToURIEditor(), pastText((text) => pasteURL(text) && parseURI(true))">mdi-content-paste</v-icon>
+              <v-icon v-if="isClipboardActions" title="Копировать" @click.stop="copyText(uri)">mdi-content-copy</v-icon>
+              <v-icon v-if="isClipboardActions" title="Вставить" @click.stop="focusToURIEditor(), pastText((text) => pasteURL(text) && parseURI(true))">mdi-content-paste</v-icon>
               <v-text-field
                 id="urieditor"
                 v-model="uri"
@@ -200,6 +200,9 @@
       };
     },
     computed: {
+      isClipboardActions() {
+        return !!navigator?.clipboard;
+      },
       isCanCreateRoot() {
         return !this.protocolObject?.virtual && !this.repoObject?.virtual && !this.branchObject?.virtual;
       },
