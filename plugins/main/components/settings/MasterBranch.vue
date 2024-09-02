@@ -5,18 +5,25 @@
         <v-expansion-panel>
           <v-expansion-panel-header>
             <v-row>
-              <v-icon title="Копировать" @click.stop="copyText(uri)">mdi-content-copy</v-icon>
-              <v-icon title="Вставить" @click.stop="focusToURIEditor(), pastText((text) => pasteURL(text) && parseURI(true))">mdi-content-paste</v-icon>
+              <v-icon v-if="navigator?.clipboard" title="Копировать" @click.stop="copyText(uri)">mdi-content-copy</v-icon>
+              <v-icon v-if="navigator?.clipboard" title="Вставить" @click.stop="focusToURIEditor(), pastText((text) => pasteURL(text) && parseURI(true))">mdi-content-paste</v-icon>
               <v-text-field
                 id="urieditor"
                 v-model="uri"
                 style="margin-left: 4px; margin-right: 16px;"
                 :rules="[v => checkURI(v) || 'Неверный формат URI']"
                 label="Полный URI файла"
-                append-icon="mdi-close"
+                :append-icon="isChanged ? 'mdi-close' : undefined"
                 required
                 @click.stop
                 @click:append="reset" />
+              <v-icon 
+                v-if="rootNotFound && !filesLoading"
+                style="margin-right: 24px;"
+                color="warning"
+                title="Коревой манифет не обнаружен! Проверьте корректность ссылки на него.">
+                mdi-alert
+              </v-icon>
             </v-row>
           </v-expansion-panel-header>
           <v-expansion-panel-content>
@@ -58,7 +65,7 @@
               append-icon="mdi-reload"
               required 
               @click:append="reloadRepos">
-              <template v-if="repoObject?.virtual" #append-outer>
+              <template v-if="repoObject?.virtual && !reposLoading" #append-outer>
                 <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
               </template>
               <template #item="data">
@@ -83,7 +90,7 @@
               append-icon="mdi-reload"
               required 
               @click:append="reloadBranches">        
-              <template v-if="branchObject?.virtual" #append-outer>
+              <template v-if="branchObject?.virtual && !branchLoading" #append-outer>
                 <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
               </template>
               <template #item="data">
@@ -109,7 +116,7 @@
               append-icon="mdi-reload"
               required 
               @click:append="reloadFiles">
-              <template v-if="fileObject?.virtual" #append-outer>
+              <template v-if="fileObject?.virtual && !filesLoading" #append-outer>
                 <v-icon color="warning" title="Недоступно! Выберите доступный вариант из списка.">mdi-alert</v-icon>
               </template>
               <template #item="{ item }">
@@ -134,7 +141,7 @@
         Применить
       </v-btn>
       <v-btn 
-        v-if="!contentLoading && rootNotFound"
+        v-if="!contentLoading && rootNotFound && isCanCreateRoot"
         :disabled="!valid"
         class="mr-4"
         @click="createFile">
@@ -170,11 +177,13 @@
         repos: null,
         repoSearch: null,
         repoError: null,
+        reposLoading: false,
   
         branch: null,
         branches: null,
         branchSearch: null,
         branchError: null,
+        branchLoading: false,
   
         file: null,
         files: null,
@@ -185,13 +194,21 @@
         contentLoading: null,
         contentURI: null,
         content: null,
-        rootNotFound: false,
         contentError: null,
   
         copied: null
       };
     },
     computed: {
+      isCanCreateRoot() {
+        return !this.protocolObject?.virtual && !this.repoObject?.virtual && !this.branchObject?.virtual;
+      },
+      rootNotFound() {
+        return this.fileObject?.virtual;
+      },
+      isChanged() {
+        return this.uri !== DocHub.settings.pull(['rootManifest']).rootManifest;
+      },
       protocols() {
         const result = [];
         this.status?.gitlab?.isLogined && result.push({ name: 'GitLab', protocol: 'gitlab', status: this.status.gitlab});
@@ -294,7 +311,6 @@
         this.makeURI();
       },
       uri() {
-        this.rootNotFound = false;
         this.parseURI();
         this.reloadRootManifest();
       },
@@ -387,8 +403,8 @@
         this.reloadFiles();
       },
       reloadRepos() {
-        this.branches = null;
         this.repos = null;
+        this.reposLoading = true;
         const doit = () => {
           if (!this.protocolAPI) {
             setTimeout(doit, 50);
@@ -404,12 +420,16 @@
               // eslint-disable-next-line no-console
               console.error(error);
             })
-            .finally(() => this.repos ||= []);
+            .finally(() => {
+              this.repos ||= [];
+              this.reposLoading = false;
+            });
         };
         doit();
       },
       reloadBranches() {
         this.branches = null;
+        this.branchLoading = true;
         const doit = () => {
           if (!this.protocolAPI) {
             setTimeout(doit, 50);
@@ -425,7 +445,10 @@
               // eslint-disable-next-line no-console
               console.error(error);
             })
-            .finally(() => this.branches ||= []);
+            .finally(() => {
+              this.branches ||= [];
+              this.branchLoading = false;
+            });
         };
         doit();
       },
@@ -479,28 +502,6 @@
         doit();
       },
       reloadRootManifest() {
-        if(this.contentURI !== this.uri){
-          if (this.contentLoading) clearTimeout(this.contentLoading);
-          this.contentURI = this.uri;
-          this.contentLoading = setTimeout(() => {
-            this.protocolAPI?.getContent(this.uri)
-              .then(() => {
-                this.rootNotFound = false;
-                this.contentError = null;
-              })
-              .catch((error) => {
-                this.rootNotFound = error.response?.status === 404;
-                if (!this.rootNotFound) {
-                  this.contentError = error;
-                  // eslint-disable-next-line no-console
-                  console.error(error);
-                }
-              })
-              .finally(() => {
-                this.contentLoading = null;
-              });
-          }, 300);          
-        } 
       },
       apply() {
         if(this.$refs.form.validate()) {
