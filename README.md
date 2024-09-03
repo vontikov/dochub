@@ -294,5 +294,9 @@ npm run build
 * [Группа DocHubTeam](https://t.me/archascode)
 * [Канал "Архитектура как код"](https://t.me/dochubchannel)
 
+# Динамика роста популярности 
+ 
+![Звезды на GitHub](https://starchart.cc/RabotaRu/DocHub)
+
 # Лицензия
 DocHub распространяется под лицензией Apache License 2.0 Open source license.
