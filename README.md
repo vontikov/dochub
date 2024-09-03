@@ -2,6 +2,9 @@
 
 ![Инкрементальное развитие архитектуры](pics/interface.png)
 
+[![CodeFactor](https://www.codefactor.io/repository/github/rabotaru/dochub/badge)](https://www.codefactor.io/repository/github/rabotaru/dochub)
+![GitHub License](https://img.shields.io/github/license/rabotaru/dochub)
+
 DocHub - инструмент описания архитектуры через код (Architecture as a code). Код архитектуры - ансамбль файлов на языках,
 решающих задачу описания. Поддерживаются:
 
