@@ -296,7 +296,7 @@ npm run build
 
 # Динамика роста популярности 
  
-![Звезды на GitHub](https://starchart.cc/RabotaRu/DocHub)
+[![Звезды на GitHub](https://starchart.cc/RabotaRu/DocHub.svg?variant=adaptive)](https://starchart.cc/RabotaRu/DocHub)
 
 # Лицензия
 DocHub распространяется под лицензией Apache License 2.0 Open source license.
