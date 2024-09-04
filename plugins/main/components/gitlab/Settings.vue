@@ -1,5 +1,5 @@
 <template>
-  <settings driver="gitlab" name="GitLab" :logo="logo">
+  <settings :driver="driver" name="GitLab" :logo="logo">
     <template #config>
       <template v-if="isFixedConfig">
         У вас нет прав менять параметры интеграции
@@ -26,6 +26,7 @@
   import config from '../settings/Config.vue';
   import settingsMixin from '../mixins/settings';
   import consts from '../../consts';
+  import gitlab from '../../drivers/gitlab';
 
   export default {
     name: 'GitHubSettings',
@@ -41,6 +42,9 @@
       };
     },
     computed: {
+      driver() {
+        return gitlab;
+      },
       isFixedConfig() {
         return !!process?.env?.VUE_APP_DOCHUB_GITLAB_APP_ID;
       },

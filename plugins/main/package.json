@@ -8,6 +8,169 @@
   },
   "author": "R.Piontik",
   "license": "Apache-2.0",
+  "dochub": {
+    "event-bus": {
+      "events": {
+        "gitlab-status-change": {
+          "title": {
+            "ru": "Изменение статуса",
+            "en": "On changed GitLab driver status"
+          }
+        },   
+        "gitlab-login-retry": {
+          "title": {
+            "ru": "Попытаться переавторизоваться",
+            "en": "Request to re-authorize"
+          }
+        },
+        "gitlab-status-get": {
+          "title": {
+            "ru": "Запрос статуса драйвера протокола GitLab",
+            "en": "Request to GitLab Driver for receive the status"
+          }
+        },
+        "gitlab-logout": {
+          "title": {
+            "ru": "Выполнить завершение сессии",
+            "en": "Request to log out"
+          }
+        },
+        "gitlab-login": {
+          "title": {
+            "ru": "Выполнить авторизацию",
+            "en": "Request to log in"
+          }
+        },
+        "gitlab-restart": {
+          "title": {
+            "ru": "Выполнить перезапуск драйвера проткола GitLab",
+            "en": "Request to restart the driver GitLab"
+          }
+        }
+      }
+    },
+    "enveroments": {
+      "configurations": {
+        "default": {
+          "title": {
+            "ru": "Конфигурация по умолчанию",
+            "en": "Default configuration"
+          }
+        },
+        "bitbucket-personal": {
+          "title": {
+            "ru": "Интеграция с Bitbucket с использованием персонального токена",
+            "en": "Integrate with Bitbucket using a personal token"
+          },
+          "schema": {
+
+          },
+          "examples": {
+            "default": {
+              "title": {
+                "ru": "Простой пример конфигурации для персональной авторизации",
+                "en": "Simple configuration example for personal authorization"
+              },
+              "profile": {
+                "BITBUCKET_URL": {
+                  "value" : "https://bitbucket.org/",
+                  "description": "Адрес Bitbucket сервера"
+                },
+                "BITBUCKET_USERNAME": "piontik",
+                "PERSONAL_TOKEN": "wjqhejkhk889ekljlkj2lkjsj22"
+              }
+            }
+          }
+        }
+      },
+      "variables": {
+        "DEV_AUTH_SERVICE": {
+          "title": {
+            "ru": "Адрес DEV сервера сервиса авторизации",
+            "en": "DEV address of the authorization service server"
+          }
+        },
+        "BITBUCKET_DISABLE": {
+          "title": {
+            "ru": "Флаг отключения драйвера Bitbucket",
+            "en": "Bitbucket Driver Disable Flag"
+          }
+        },
+        "BITBUCKET_URL": {
+          "title": {
+            "ru": "URL адрес сервера Bitbucket",
+            "en": "Bitbucket server URL"
+          }
+        },
+        "BITBUCKET_AUTH_SERVICE": {
+          "title": {
+            "ru": "URL адрес сервера авторизации для Bitbucket",
+            "en": "Authorization server URL for Bitbucket"
+          }
+        },
+        "BITBUCKET_APP_ID": {
+          "title": {
+            "ru": "Идентификатор OAuth приложения в Bitbucket",
+            "en": "Application OAuth ID in Bitbucket"
+          }
+        },
+        "CLIENT_SECRET": {
+          "title": {
+            "ru": "Секрет OAuth приложения в Bitbucket",
+            "en": "The secret to app OAuth in Bitbucket"
+          }
+        },
+        "BITBUCKET_USERNAME": {
+          "title": {
+            "ru": "Идентификатор пользователя в Bitbucket",
+            "en": "Bitbucket User ID"
+          }
+        },
+        "PERSONAL_TOKEN": {
+          "title": {
+            "ru": "Персональный токен в Bitbucket",
+            "en": "Personal Token in Bitbucket"
+          }
+        },
+  
+  
+  
+  
+        "GITLAB_DISABLE": {
+          "title": {
+            "ru": "Флаг отключения драйвера GitLab",
+            "en": "GitLab Driver Disable Flag"
+          }
+        },
+        "GITLAB_URL": {
+          "title": {
+            "ru": "URL адрес сервера GitLab",
+            "en": "GitLab server URL"
+          }
+        }
+      }
+    },
+    "settings": {
+      "gitlabAuthService": {
+        "title": {
+          "ru": "URL адрес сервиса универсальной авторизации DocHub",
+          "en": "URL of the DocHub universal authorization service"
+        }
+      },
+      "gitlabServer": {
+        "title": {
+          "ru": "URL GitLab сервера",
+          "en": "GitLab server URL"
+        }
+      },
+      "gitlabPersonalToken": {
+        "title": {
+          "ru": "Персональный токен GitLab",
+          "en": "GitLab Personal Token"
+        }
+      }
+    }
+  },
   "dependencies": {
     "axios": "1.7.2",
     "object-hash": "^3.0.0",

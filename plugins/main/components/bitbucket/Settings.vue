@@ -1,5 +1,5 @@
 <template>
-  <settings driver="bitbucket" name="Bitbucket" :logo="logo">
+  <settings :driver="driver" name="Bitbucket" :logo="logo">
     <template #config>
       <template v-if="isFixedConfig">
         У вас нет прав менять параметры интеграции
@@ -31,7 +31,8 @@
   import config from '../settings/Config.vue';
   import axios from 'axios';
   import consts from '../../consts';
-
+  import bitbucket from '../../drivers/bitbucket';
+  
   
   export default {
     name: 'BitbucketSettings',
@@ -51,6 +52,9 @@
       };
     },
     computed: {
+      driver() {
+        return bitbucket;
+      },
       isFixedConfig() {
         return !!process?.env?.VUE_APP_DOCHUB_BITBUCKET_APP_ID || ((process?.env?.VUE_APP_DOCHUB_BITBUCKET_DISABLE || '').toLowerCase() === 'yes');
       },

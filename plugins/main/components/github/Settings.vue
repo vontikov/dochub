@@ -1,5 +1,5 @@
 <template>
-  <settings driver="github" name="GitHub" :logo="logo">
+  <settings :driver="driver" name="GitHub" :logo="logo">
     <template #config>
       Интеграция с GitHub не требует настроек, т.к. происходит через специальный сервис 
       <a href="https://registry.dochub.info">https://registry.dochub.info</a>.
@@ -10,6 +10,7 @@
 <script>
   import settings from '../settings/Integration.vue';
   import settingsMixin from '../mixins/settings';
+  import github from '../../drivers/github';
 
   export default {
     name: 'GitHubSettings',
@@ -21,6 +22,9 @@
       return {};
     },
     computed: {
+      driver() {
+        return github;
+      },
       logo() {
         return this.makeURLDataCode(require('!!raw-loader!../../assets/github-logo.svg').default);
       }

@@ -24,7 +24,7 @@ export default function(driver, address) {
         },
         service: {
             name: `auth_service_${driver}`,
-            path: address || `https://registry.dochub.info/${driver}/oauth/proxy/login`
+            path: new URL(`/${driver}/oauth/proxy/login`, address || 'https://registry.dochub.info/')
         }
     };
 

@@ -8,23 +8,23 @@
     </div>
     <h3 class="intergarion-setting-header">Настройки</h3>
     <slot name="config" />
-    <template v-if="status[driver]?.isActive">
+    <template v-if="driver?.isActive">
       <h3 class="intergarion-setting-header">Статус авторизации</h3>
       <div class="intergarion-setting-status">
-        <template v-if="status[driver]?.isLogined">
+        <template v-if="thisStatus?.isLogined">
           <v-avatar color="indigo">
-            <img v-if="status[driver]?.avatarURL" :src="status[driver]?.avatarURL">
+            <img v-if="thisStatus?.avatarURL" :src="thisStatus?.avatarURL">
             <v-icon v-else dark>
               mdi-account-circle
             </v-icon>
           </v-avatar>
-          <strong> {{ status[driver]?.userName || 'Что-то с авторизацией не так...' }}</strong>
+          <strong> {{ thisStatus?.userName || 'Что-то с авторизацией не так...' }}</strong>
           <br><br>
         </template>
         <slot 
           name="actions"
           :processing="isProcessing"
-          :logined="status[driver]?.isLogined"
+          :logined="thisStatus?.isLogined"
           :login="login"
           :logout="logout" />
       </div>
@@ -41,7 +41,7 @@
     mixins: [statusMixin, settingsMixin],
     props: {
       driver: {
-        type: String,
+        type: Object,
         required: true
       },
       name: {
@@ -58,14 +58,19 @@
         isProcessing: false
       };
     },
+    computed: {
+      thisStatus() {
+        return this.status[(this.driver?.getAlias || (()=>null))() || ''];
+      }
+    },
     methods: {
       login() {
         this.isProcessing = true;
-        DocHub.eventBus.$emit(`${this.driver}-login`);
+        DocHub.eventBus.$emit(this.driver.Events.login);
       },
       logout() {
         this.isProcessing = true;
-        DocHub.eventBus.$emit(`${this.driver}-logout`);
+        DocHub.eventBus.$emit(this.driver.Events.logout);
       },
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       refresh() {

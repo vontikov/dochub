@@ -144,7 +144,10 @@ window.DocHub = {
                 // driver = Object.assign({}, protoProtocolDriver, driver);
                 driver.bootstrap && driver.bootstrap({
                     emitError: DocHub.problems.emit,
-                    env: JSON.parse(JSON.stringify(process.env))
+                    env: Object.keys(process.env).reduce((acc, key) => {
+                        key.startsWith('VUE_APP_DOCHUB_') && (acc[key.slice(15)] = JSON.parse(JSON.stringify(process.env[key])));
+                        return acc;
+                    }, {})
                 });
                 plugins.protocols.push({ protocol, driver });
                 // eslint-disable-next-line no-console

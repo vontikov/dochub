@@ -1,25 +1,29 @@
+import bitbucket from '../../drivers/bitbucket';
+
 export default {
     data() {
+        const status = {
+            gitlab: null,
+            github: null,
+            bitbucket: null
+        };
+
         return {
-            status: {
-                gitlab: null,
-                github: null,
-                bitbucket: null
-            }
+            status
         };
     },
     mounted() {
         DocHub.eventBus.$on('gitlab-status-change', this.setGitlabStatus);
         DocHub.eventBus.$on('github-status-change', this.setGitHubStatus);
-        DocHub.eventBus.$on('bitbucket-status-change', this.setBitbucketStatus);
+        DocHub.eventBus.$on(bitbucket.Events.statusChange, this.setBitbucketStatus);
         DocHub.eventBus.$emit('gitlab-status-get');
         DocHub.eventBus.$emit('github-status-get');
-        DocHub.eventBus.$emit('bitbucket-status-get');
+        DocHub.eventBus.$emit(bitbucket.Events.statusGet);
     },
     unmounted() {
         DocHub.eventBus.$off('gitlab-status-change', this.setGitlabStatus);
         DocHub.eventBus.$off('github-status-change', this.setGitHubStatus);
-        DocHub.eventBus.$off('bitbucket-status-change', this.setBitbucketStatus);
+        DocHub.eventBus.$off(bitbucket.Events.statusChange, this.setBitbucketStatus);
     },
     methods: {
         setGitlabStatus(status) {
@@ -37,5 +41,4 @@ export default {
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         refresh() {}
     }
-
 };
