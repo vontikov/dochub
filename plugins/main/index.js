@@ -4,7 +4,7 @@ import github from './drivers/github';
 import bitbucket from './drivers/bitbucket';
 
 import avatar from './components/OAuthAvatar.vue';
-import branchs from './components/gitlab/BranchSelector.vue';
+import branches from './components/gitlab/BranchSelector.vue';
 
 import MasterBranch from './components/settings/MasterBranch.vue';
 import GitHubSettings from './components/github/Settings.vue';
@@ -17,7 +17,7 @@ import json from './providers/json';
 import yaml from './providers/yaml';
 import xml from './providers/xml';
 
-// Регистрация транспонтрных протоколов 
+// Регистрация транспортных протоколов 
 DocHub.protocols.register('gitlab', gitlab);
 DocHub.protocols.register('github', github);
 DocHub.protocols.register('bitbucket', bitbucket);
@@ -28,7 +28,7 @@ DocHub.contentProviders.register('^(yaml|text/yaml|application/yaml|application/
 DocHub.contentProviders.register('^(xml|text/xml|application/xml|application/xhtml\\+xml)', xml);
 
 // Регистрация UI элементов
-DocHub.ui.register('avatar', branchs);
+DocHub.ui.register('avatar', branches);
 DocHub.ui.register('avatar', avatar);
 
 // Регистрация UI интерфейсов настроек

@@ -3,7 +3,7 @@ import axios from 'axios';
 import cookie from 'vue-cookie';
 import OAuthError from '../components/errors/OAuthError.vue';
 
-// Регистрируем универсальный роут для отражения ошибки авторизациии
+// Регистрируем универсальный роут для отражения ошибки авторизации
 DocHub.router.registerRoute({
     name: 'auth_service_error',
     path: '/sso/:driver/error',
@@ -79,7 +79,7 @@ export default function(driver, address) {
     };
 
     // Вызывает обновление токена
-    this.refreshAccessToken = (weclomeToken) => {
+    this.refreshAccessToken = (welcomeToken) => {
         return new Promise((success, reject) => {
             // Если процесс обновления токена уже запущен, ждем результат
             if (isOAuthProcessing) {
@@ -93,7 +93,7 @@ export default function(driver, address) {
             } 
             // Если нет, запускаем процесс обновления токена доступа
             isOAuthProcessing = true;
-            const token = weclomeToken || cookie.get(`$refresh_token_${driver}`);
+            const token = welcomeToken || cookie.get(`$refresh_token_${driver}`);
             // Если токена обновления нет, сваливаемся в ошибку
             if (!token) {
                 isOAuthProcessing = 'error';

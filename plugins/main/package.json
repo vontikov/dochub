@@ -43,13 +43,13 @@
         },
         "gitlab-restart": {
           "title": {
-            "ru": "Выполнить перезапуск драйвера проткола GitLab",
+            "ru": "Выполнить перезапуск драйвера протокола GitLab",
             "en": "Request to restart the driver GitLab"
           }
         }
       }
     },
-    "enveroments": {
+    "Environments": {
       "configurations": {
         "default": {
           "title": {
@@ -90,6 +90,8 @@
             "en": "DEV address of the authorization service server"
           }
         },
+
+
         "BITBUCKET_DISABLE": {
           "title": {
             "ru": "Флаг отключения драйвера Bitbucket",
@@ -114,7 +116,7 @@
             "en": "Application OAuth ID in Bitbucket"
           }
         },
-        "CLIENT_SECRET": {
+        "BITBUCKET_CLIENT_SECRET": {
           "title": {
             "ru": "Секрет OAuth приложения в Bitbucket",
             "en": "The secret to app OAuth in Bitbucket"
@@ -126,14 +128,12 @@
             "en": "Bitbucket User ID"
           }
         },
-        "PERSONAL_TOKEN": {
+        "BITBUCKET_PERSONAL_TOKEN": {
           "title": {
             "ru": "Персональный токен в Bitbucket",
             "en": "Personal Token in Bitbucket"
           }
         },
-  
-  
   
   
         "GITLAB_DISABLE": {
@@ -147,7 +147,32 @@
             "ru": "URL адрес сервера GitLab",
             "en": "GitLab server URL"
           }
+        },
+        "GITLAB_AUTH_SERVICE": {
+          "title": {
+            "ru": "URL адрес сервера авторизации для GitLab",
+            "en": "Authorization server URL for GitLab"
+          }
+        },
+        "GITLAB_APP_ID": {
+          "title": {
+            "ru": "Идентификатор OAuth приложения в GitLab",
+            "en": "Application OAuth ID in GitLab"
+          }
+        },
+        "GITLAB_CLIENT_SECRET": {
+          "title": {
+            "ru": "Секрет OAuth приложения в GitLab",
+            "en": "The secret to app OAuth in GitLab"
+          }
+        },
+        "GITLAB_PERSONAL_TOKEN": {
+          "title": {
+            "ru": "Персональный токен в GitLab",
+            "en": "Personal Token in GitLab"
+          }
         }
+
       }
     },
     "settings": {

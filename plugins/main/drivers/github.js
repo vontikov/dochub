@@ -1,5 +1,5 @@
 import axios from 'axios';
-import serviceContructor from './service';
+import serviceConstructor from './service';
 
 // Инициализируем сервис авторизации через dochub.info
 // для GitHub он является единственным средством получения токена доступа
@@ -150,7 +150,7 @@ const driver = {
     bootstrap(context) {
         // Получаем ссылку на универсальный сервис авторизации для github
         const settings = DocHub.settings.pull(['githubAuthService']);
-        this.authService = new serviceContructor('github', 
+        this.authService = new serviceConstructor('github', 
             settings.githubAuthService || context?.env?.VUE_APP_DOCHUB_GITHUB_AUTH_SERVICE
         );
         // Отслеживаем события шины

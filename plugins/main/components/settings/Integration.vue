@@ -1,16 +1,16 @@
 <template>
-  <div class="intergarion-setting-profile-list">
+  <div class="integration-setting-profile-list">
     <div style="min-height: 64px">
-      <img class="intergarion-setting-logo" :src="logo">
+      <img class="integration-setting-logo" :src="logo">
       Интеграция с {{ name }} позволяет использовать его как хранилище архкода со встроенным управлением 
-      версями, разграничением доступа и возможностью аудита. Вносимые изменения в репозиторий будут сразу
+      версиями, разграничением доступа и возможностью аудита. Вносимые изменения в репозиторий будут сразу
       отображаться в DocHub.
     </div>
-    <h3 class="intergarion-setting-header">Настройки</h3>
+    <h3 class="integration-setting-header">Настройки</h3>
     <slot name="config" />
     <template v-if="driver?.isActive">
-      <h3 class="intergarion-setting-header">Статус авторизации</h3>
-      <div class="intergarion-setting-status">
+      <h3 class="integration-setting-header">Статус авторизации</h3>
+      <div class="integration-setting-status">
         <template v-if="thisStatus?.isLogined">
           <v-avatar color="indigo">
             <img v-if="thisStatus?.avatarURL" :src="thisStatus?.avatarURL">
@@ -81,22 +81,22 @@
 </script>
 
 <style>
-.intergarion-setting-profile-list {
+.integration-setting-profile-list {
   width: 100%;
   padding: 8px;
 }
 
-.intergarion-setting-status {
+.integration-setting-status {
   margin-left: 8px;
 }
 
-.intergarion-setting-logo {
+.integration-setting-logo {
   float: left;
   margin-right: 16px;
   margin-bottom: 16px;
 }
 
-.intergarion-setting-header {
+.integration-setting-header {
   margin-top: 24px;
   margin-bottom: 8px;
   display: block;

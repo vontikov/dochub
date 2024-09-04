@@ -15,11 +15,9 @@ export default {
         this.active = true;
     },
     // Преобразует контент в объект DataLake
-    toObject(content) {
-
-    },
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    toObject(content) {},
     // Преобразует объект DataLake в контент
-    toContent(object) {
-
-    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    toContent(object) {}
 };

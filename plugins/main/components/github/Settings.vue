@@ -34,7 +34,7 @@
 
 <style>
 
-.intergarion-setting-logo {
+.integration-setting-logo {
   width: 32px;
   height: 32px;
 }

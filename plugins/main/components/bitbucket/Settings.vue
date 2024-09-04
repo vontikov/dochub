@@ -18,8 +18,8 @@
     </template>
     <template #actions="{ logined, processing, login, logout }">
       <template v-if="isLogInOut">
-        <v-btn v-if="logined" color="primary" :disbaled="!processing" :loading="processing" @click="logout">Выйти</v-btn>
-        <v-btn v-else color="primary" :disbaled="!processing" :loading="processing" @click="login">Войти</v-btn>
+        <v-btn v-if="logined" color="primary" :disabled="!processing" :loading="processing" @click="logout">Выйти</v-btn>
+        <v-btn v-else color="primary" :disabled="!processing" :loading="processing" @click="login">Войти</v-btn>
       </template>
     </template>
   </settings>
@@ -111,8 +111,8 @@
           return error;
         }
       },
-      reloadDatalake() {
-        DocHub.eventBus.$off('bitbucket-status-change', this.reloadDatalake);
+      reloadDataLake() {
+        DocHub.eventBus.$off('bitbucket-status-change', this.reloadDataLake);
         DocHub.dataLake.reload();  
       },
       apply(config) {
@@ -141,7 +141,7 @@
         DocHub.settings.push(result);
         this.refreshSettings();
         window.DocHub.eventBus.$emit('bitbucket-restart');
-        DocHub.eventBus.$on('bitbucket-status-change', this.reloadDatalake);
+        DocHub.eventBus.$on('bitbucket-status-change', this.reloadDataLake);
       }
     }
   };

@@ -21,7 +21,7 @@
                 v-if="rootNotFound && !filesLoading"
                 style="margin-right: 24px;"
                 color="warning"
-                title="Коревой манифет не обнаружен! Проверьте корректность ссылки на него.">
+                title="Корневой манифест не обнаружен! Проверьте корректность ссылки на него.">
                 mdi-alert
               </v-icon>
             </v-row>
@@ -518,7 +518,6 @@
         this.reloadRootManifest();
       },
       createFile() {
-  
       }
     }
   };

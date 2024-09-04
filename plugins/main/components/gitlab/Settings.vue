@@ -14,8 +14,8 @@
         @apply="apply" />
     </template>
     <template #actions="{ logined, processing, login, logout }">
-      <v-btn v-if="logined" color="primary" :disbaled="!processing" :loading="processing" @click="logout">Выйти</v-btn>
-      <v-btn v-else color="primary" :disbaled="!processing" :loading="processing" @click="login">Войти</v-btn>
+      <v-btn v-if="logined" color="primary" :disabled="!processing" :loading="processing" @click="logout">Выйти</v-btn>
+      <v-btn v-else color="primary" :disabled="!processing" :loading="processing" @click="login">Войти</v-btn>
     </template>
   </settings>
 </template>
@@ -100,7 +100,7 @@
 
 <style>
 
-.intergarion-setting-logo {
+.integration-setting-logo {
   width: 64px;
   height: 64px;
 }
