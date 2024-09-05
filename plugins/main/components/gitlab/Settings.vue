@@ -11,11 +11,14 @@
         :servers="servers"
         :personal-token="settings?.gitlabPersonalToken"
         :check-integration="checkIntegration"
+        :get-fields="getFields"
         @apply="apply" />
     </template>
-    <template #actions="{ logined, processing, login, logout }">
-      <v-btn v-if="logined" color="primary" :disabled="!processing" :loading="processing" @click="logout">Выйти</v-btn>
-      <v-btn v-else color="primary" :disabled="!processing" :loading="processing" @click="login">Войти</v-btn>
+    <template #actions="{ logined, processing, login, logout, isLogInOut }">
+      <template v-if="isLogInOut">
+        <v-btn v-if="logined" color="primary" :disabled="processing" :loading="processing" @click="logout">Выйти</v-btn>
+        <v-btn v-else color="primary" :disabled="processing" :loading="processing" @click="login">Войти</v-btn>
+      </template>
     </template>
   </settings>
 </template>
@@ -49,7 +52,7 @@
         return !!process?.env?.VUE_APP_DOCHUB_GITLAB_APP_ID;
       },
       mode() {
-        return this.settings?.gitlabAuthService ? 'registry' : 'personal_token';
+        return this.driver?.getStatus().mode;
       },
       logo() {
         return this.makeURLDataCode(require('!!raw-loader!../../assets/gitlab-logo.svg').default);
@@ -61,6 +64,12 @@
     methods: {
       refreshSettings() {
         this.settings = DocHub.settings.pull(['gitlabAuthService', 'gitlabServer', 'gitlabPersonalToken']);
+      },
+      getFields(mode) {
+        // eslint-disable-next-line no-cond-assign
+        return (this.selMode = mode) === 'personal_token' ? 
+          (this.instructionURL = 'https://dochub.info') && ['server', 'personalToken'] 
+          : (this.instructionURL = '') || [];
       },
       async checkIntegration(config) {
         try {

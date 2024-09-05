@@ -16,10 +16,10 @@
         :instruction-u-r-l="instructionURL"
         @apply="apply" />
     </template>
-    <template #actions="{ logined, processing, login, logout }">
+    <template #actions="{ logined, processing, login, logout, isLogInOut }">
       <template v-if="isLogInOut">
-        <v-btn v-if="logined" color="primary" :disabled="!processing" :loading="processing" @click="logout">Выйти</v-btn>
-        <v-btn v-else color="primary" :disabled="!processing" :loading="processing" @click="login">Войти</v-btn>
+        <v-btn v-if="logined" color="primary" :disabled="processing" :loading="processing" @click="logout">Выйти</v-btn>
+        <v-btn v-else color="primary" :disabled="processing" :loading="processing" @click="login">Войти</v-btn>
       </template>
     </template>
   </settings>
@@ -62,12 +62,7 @@
         return this.makeURLDataCode(require('!!raw-loader!../../assets/bitbucket-logo.svg').default);
       },
       mode() {
-        if (this.settings?.bitbucketDisable) return 'disable';
-        else if (this.settings?.bitbucketAuthService) return 'registry';
-        else return 'personal_token';
-      },
-      isLogInOut() {
-        return this.selMode === 'registry' || !!process?.env?.VUE_APP_DOCHUB_BITBUCKET_APP_ID;
+        return this.driver?.getStatus().mode;
       }
     },
     mounted() {

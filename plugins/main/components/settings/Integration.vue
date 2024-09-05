@@ -7,8 +7,11 @@
       отображаться в DocHub.
     </div>
     <h3 class="integration-setting-header">Настройки</h3>
-    <slot name="config" />
-    <template v-if="driver?.isActive">
+    <v-alert v-if="isFixedSettings" dense border="left" type="warning">
+      Вы не можете менять настройки. При необходимости обратитесь к администратору системы.
+    </v-alert>
+    <slot v-else name="config" />
+    <template v-if="!isDisable && driver?.isActive">
       <h3 class="integration-setting-header">Статус авторизации</h3>
       <div class="integration-setting-status">
         <template v-if="thisStatus?.isLogined">
@@ -24,6 +27,7 @@
         <slot 
           name="actions"
           :processing="isProcessing"
+          :isLogInOut="isLogInOut"
           :logined="thisStatus?.isLogined"
           :login="login"
           :logout="logout" />
@@ -35,6 +39,7 @@
 <script>
   import statusMixin from '../mixins/status';
   import settingsMixin from '../mixins/settings';
+  import { ProtocolMode } from '../../drivers/Proto';
 
   export default {
     name: 'IntegrationSettings',
@@ -61,6 +66,15 @@
     computed: {
       thisStatus() {
         return this.status[(this.driver?.getAlias || (()=>null))() || ''];
+      },
+      isLogInOut() {
+        return this.thisStatus?.mode === ProtocolMode.oauth || this.thisStatus?.mode === ProtocolMode.registry;
+      },
+      isDisable() {
+        return this.thisStatus?.mode === ProtocolMode.disable;
+      },
+      isFixedSettings() {
+        return this.driver?.isFixedSettings ? this.driver?.isFixedSettings() : true;
       }
     },
     methods: {
