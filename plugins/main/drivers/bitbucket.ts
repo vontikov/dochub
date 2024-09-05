@@ -1,4 +1,4 @@
-import { IProtocolEnvironments as IProtocolEnvironments, IProtocolRequestConfig, IProtocolSettings, ProtocolMode, ProtoProtocol } from './Proto';
+import { AccessToSetting, IProtocolEnvironments as IProtocolEnvironments, IProtocolRequestConfig, IProtocolSettings, ProtocolMode, ProtoProtocol } from './Proto';
 import { IGitAPI, IProtocolUserProfile } from './types';
 import consts from '../consts';
 import { IDocHubProtocolRequestConfig } from 'dochub-sdk';
@@ -238,8 +238,8 @@ export class BitbucketProtocol extends ProtoProtocol {
         return result;
     }
 
-    isFixedSettings() {
-        return this.isFixedSettings_;
+    isFixedSettings():AccessToSetting {
+        return this.isFixedSettings_ ? AccessToSetting.denied : AccessToSetting.available;
     }
 
     // Возвращает профиль пользователя

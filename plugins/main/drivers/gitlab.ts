@@ -1,4 +1,4 @@
-import { IProtocolEnvironments, IProtocolRequestConfig, IProtocolSettings, ProtocolMode, ProtoProtocol } from './Proto';
+import { AccessToSetting, IProtocolEnvironments, IProtocolRequestConfig, IProtocolSettings, ProtocolMode, ProtoProtocol } from './Proto';
 import { IDocHubProtocolRequestConfig } from 'dochub-sdk';
 import { IGitAPI, IProtocolUserProfile } from './types';
 import axios from 'axios';
@@ -237,8 +237,8 @@ export class GitLabProtocol extends ProtoProtocol {
         return result;
     }
 
-    isFixedSettings() {
-        return this.isFixedSettings_;
+    isFixedSettings(): AccessToSetting {
+        return this.isFixedSettings_ ? AccessToSetting.denied : AccessToSetting.available;
     }
 
     // Возвращает параметры среды

@@ -6,11 +6,13 @@
       версиями, разграничением доступа и возможностью аудита. Вносимые изменения в репозиторий будут сразу
       отображаться в DocHub.
     </div>
-    <h3 class="integration-setting-header">Настройки</h3>
-    <v-alert v-if="isFixedSettings" dense border="left" type="warning">
-      Вы не можете менять настройки. При необходимости обратитесь к администратору системы.
-    </v-alert>
-    <slot v-else name="config" />
+    <template v-if="isFixedSettings < 2">
+      <h3 class="integration-setting-header">Настройки</h3>
+      <v-alert v-if="isFixedSettings" dense border="left" type="warning">
+        Вы не можете менять настройки. При необходимости обратитесь к администратору системы.
+      </v-alert>
+      <slot v-else name="config" />
+    </template>
     <template v-if="!isDisable && driver?.isActive">
       <h3 class="integration-setting-header">Статус авторизации</h3>
       <div class="integration-setting-status">
@@ -39,7 +41,7 @@
 <script>
   import statusMixin from '../mixins/status';
   import settingsMixin from '../mixins/settings';
-  import { ProtocolMode } from '../../drivers/Proto';
+  import { ProtocolMode, AccessToSetting } from '../../drivers/Proto';
 
   export default {
     name: 'IntegrationSettings',
@@ -74,7 +76,7 @@
         return this.thisStatus?.mode === ProtocolMode.disable;
       },
       isFixedSettings() {
-        return this.driver?.isFixedSettings ? this.driver?.isFixedSettings() : true;
+        return this.driver?.isFixedSettings ? this.driver?.isFixedSettings() : AccessToSetting.fixed;
       }
     },
     methods: {

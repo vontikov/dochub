@@ -65,6 +65,12 @@ export interface IMainProtocolStatus extends IProtocolStatus  {
     mode: ProtocolMode;
 }
 
+export enum AccessToSetting {
+    available = 0,
+    denied = 1,
+    fixed = 2
+}
+
 export class ProtoProtocol implements IDocHubProtocol {
     DocHub: any = window['DocHub'];                 // Объект ядра DocHub
     OAuthCode: string | null = null;                // Код выданный процессом OAuth авторизации
@@ -144,10 +150,9 @@ export class ProtoProtocol implements IDocHubProtocol {
     }
 
     // Должен возвращать true если пользователь не может менять конфигурацию
-    isFixedSettings() {
-            return true;
+    isFixedSettings(): AccessToSetting {
+            return AccessToSetting.fixed;
     }
-
     // Возвращает профиль пользователя
     getPublicUserProfile(data: any): IProtocolUserProfile {
         return {
@@ -397,7 +402,8 @@ export class ProtoProtocol implements IDocHubProtocol {
         result.decodeURI = this.parseURL((new URL(options.url)).toString());
         return result;
     }
-    
+
+   
     // Запрос к транспорту
     request(options: IDocHubProtocolRequestConfig): Promise<IDocHubProtocolResponse> {
         return new Promise((success, reject) => {
@@ -418,6 +424,7 @@ export class ProtoProtocol implements IDocHubProtocol {
                 // Выполняем запрос к серверу
                 this.fetch(options_)
                     .then((response: any) => {
+                        options.decoder && options.decoder(response);
                         // Предобрабатываем ответ идентифицируя тип контента по URL
                         const pathname = options_.decodeURI?.path || '';
                         let contentType: any = null;

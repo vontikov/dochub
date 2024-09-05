@@ -4,6 +4,13 @@
       Интеграция с GitHub не требует настроек, т.к. происходит через специальный сервис 
       <a href="https://registry.dochub.info">https://registry.dochub.info</a>.
     </template>
+
+    <template #actions="{ logined, processing, login, logout, isLogInOut }">
+      <template v-if="isLogInOut">
+        <v-btn v-if="logined" color="primary" :disabled="processing" :loading="processing" @click="logout">Выйти</v-btn>
+        <v-btn v-else color="primary" :disabled="processing" :loading="processing" @click="login">Войти</v-btn>
+      </template>
+    </template>
   </settings>
 </template>
 
