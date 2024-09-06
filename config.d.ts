@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-var
-declare var DocHub: {
-  settings: any
-};
+declare var DocHub: any;
+// eslint-disable-next-line no-var
+declare var Router: any;
 
 // eslint-disable-next-line no-var
 declare var DochubVsCodeExt: {

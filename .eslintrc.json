@@ -7,6 +7,8 @@
 	},
 	"globals": {
 		"DocHub": true,
+		"Router": true,
+		"$PAPI": true,
 		"vscode": "readonly",
 		"Zopfli": "readonly"
 	},

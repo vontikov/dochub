@@ -124,7 +124,7 @@ window.DocHub = {
             }
         },
         fetch() {
-            return JSON.parse(JSON.stringify(plugins.contentProviders));
+            return plugins.contentProviders.map((item) => item.contentType);
         }
     },
     protocols: {
@@ -158,7 +158,7 @@ window.DocHub = {
             }
         },
         fetch() {
-            return JSON.parse(JSON.stringify(plugins.protocols));
+            return plugins.protocols.map((item) => item.protocol); 
         }
     },
     documents: {
@@ -166,7 +166,7 @@ window.DocHub = {
             plugins.documents.push({ type, component });
         },
         fetch() {
-            return JSON.parse(JSON.stringify(plugins.documents));
+            return plugins.documents.map((item) => item.type);
         }
     },
     ui: {
@@ -174,9 +174,6 @@ window.DocHub = {
         //      avatar - область справа сверху в главном меню
         register(location, component) {
             plugins.uiComponents.push({ location, component });
-        },
-        fetch() {
-            return JSON.parse(JSON.stringify(plugins.uiComponents));
         }
     },
     // API озера данных

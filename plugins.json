@@ -8,6 +8,7 @@
         "plugins/svg",
         "plugins/bpmnjs",
         "plugins/drawio",
-        "plugins/vscode"
+        "plugins/vscode",
+        "plugins/dochuber"
     ]
 }

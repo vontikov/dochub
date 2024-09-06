@@ -79,7 +79,7 @@
     },
     computed: {
       avatars() {
-        return this.$store.state.plugins?.uiComponents.filter((item) => item.location.toLowerCase() === 'avatar');
+        return DocHub.ui.get('avatar');
       },
       gotoIconShow() {
         return env.isPlugin() && this.$route.name === 'entities';

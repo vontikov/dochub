@@ -278,7 +278,6 @@ export class ProtoProtocol implements IDocHubProtocol {
                 switch (to.name) {
                     case this.getOAuthErrorPageName(): next(); break;
                     case this.getOAuthCallbackPageName(): {
-                        debugger;
                         this.OAuthCode = Object.keys(to.query).length
                             ? to.query.code
                             : new URLSearchParams(to.hash.substr(1)).get('code');
