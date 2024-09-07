@@ -9,6 +9,6 @@
         "plugins/bpmnjs",
         "plugins/drawio",
         "plugins/vscode",
-        "plugins/dochuber"
+        "plugins/markdown"
     ]
 }

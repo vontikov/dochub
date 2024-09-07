@@ -1,0 +1,24 @@
+{
+  "name": "dochub-markdown",
+  "version": "1.0.0",
+  "description": "Markdown editor",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "DocHub",
+    "Markdown",
+    "AaaC"
+  ],
+  "author": "R.Piontik",
+  "license": "ISC",
+  "dependencies": {
+    "@codemirror/lang-markdown": "^6.2.5",
+    "@codemirror/language-data": "^6.5.1",
+    "codemirror": "^6.0.1",
+    "dochub-sdk": "^0.1.0",
+    "mustache": "4.2.0",
+    "vue-markdown": "2.2.4"
+  }
+}

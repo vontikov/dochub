@@ -22,12 +22,7 @@ const responseErrorInterceptor = (error) => {
 };
 
 // Здесь разбираемся, что к нам вернулось из запроса и преобразуем к формату внутренних данных
-axios.interceptors.response.use(async(response) => {
-    // Выполняем перехват, если он определен
-    if (response.config.responseHook)
-        response.config.responseHook(response);
-    return response;
-}, responseErrorInterceptor);
+axios.interceptors.response.use(async(response) => response, responseErrorInterceptor);
 
 
 function injectPAPIMiddleware() {
@@ -112,7 +107,6 @@ export default {
     },
 
     // axios_params - параметры передаваемые в axios
-    // 		responseHook - содержит функцию обработки ответа перед работой interceptors
     //		raw - если true возвращает ответ без обработки
     request(uri, baseURI, axios_params) {
         const params = Object.assign({}, axios_params);
@@ -161,7 +155,7 @@ export default {
             // Если работаем в режиме плагинов, реализуем специальное поведение
             if (
                 env.isPlugin(Plugins.idea) && params.url.toString().startsWith('plugin:') ||
-                env.isPlugin(Plugins.vscode) && params.url.toString().startsWith('https://file+.vscode-resource.vscode-cdn.net') && !params.responseHook
+                env.isPlugin(Plugins.vscode) && params.url.toString().startsWith('https://file+.vscode-resource.vscode-cdn.net')
             ) {
                 injectPAPIMiddleware();
                 this.trace(params.url);

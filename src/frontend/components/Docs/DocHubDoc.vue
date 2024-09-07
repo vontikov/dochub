@@ -59,7 +59,7 @@
     [DocTypes.ASYNCAPI]: 'async-api-component',
     [DocTypes.OPENAPI]: 'swagger',
     [DocTypes.PLANTUML]: 'plantuml',
-    [DocTypes.MARKDOWN]: 'doc-markdown',
+    // [DocTypes.MARKDOWN]: 'doc-markdown',
     [DocTypes.TABLE]: 'doc-table',
     [DocTypes.MERMAID]: 'doc-mermaid',
     [DocTypes.NETWORK]: 'doc-network',
