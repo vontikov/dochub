@@ -290,7 +290,7 @@ export class GitLabProtocol extends ProtoProtocol {
     async prepareGET(options: IProtocolRequestConfig): Promise<IProtocolRequestConfig> {
         // Формируем URL запроса
         options.url = new URL(
-            `api/v4/projects/${options.decodeURI.repo}/repository/files/${encodeURIComponent(options.decodeURI.path)}/raw?ref=${options.decodeURI.branch}`
+            `api/v4/projects/${options.decodeURI.repo}/repository/files/${encodeURIComponent(options.decodeURI.path)}/raw?ref=${options.decodeURI.branch}&random=${Date.now()}`
             , this.api.getAPIServer()).toString();
         return options;
     }

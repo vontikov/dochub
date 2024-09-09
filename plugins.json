@@ -9,6 +9,7 @@
         "plugins/bpmnjs",
         "plugins/drawio",
         "plugins/vscode",
-        "plugins/markdown"
+        "plugins/markdown",
+        "plugins/excalidraw"
     ]
 }

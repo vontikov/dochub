@@ -422,8 +422,10 @@ export class ProtoProtocol implements IDocHubProtocol {
             const resolver = (options_: IProtocolRequestConfig) => {
                 // Выполняем запрос к серверу
                 this.fetch(options_)
-                    .then((response: any) => {
-                        options.decoder && options.decoder(response);
+                    .then(async(response: any) => {
+                        // if (options.url?.includes('excalidraw')) debugger;
+                        // Декодируем ответ, если это необходимо
+                        options.decoder && (response = await options.decoder(response));
                         // Предобрабатываем ответ идентифицируя тип контента по URL
                         const pathname = options_.decodeURI?.path || '';
                         let contentType: any = null;

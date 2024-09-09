@@ -138,6 +138,7 @@
       putContentForPlugin() {
         if (env.isPlugin()) {
           return (url, content) => {
+            if (!url) throw new Error('URL of document is not defined!');
             return new Promise((success, reject) => {
               const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
               window.$PAPI.pushFile(fullPath, content)
@@ -147,6 +148,7 @@
           };
         } else {
           return (url, data) => {
+            if (!url) throw new Error('URL of document is not defined!');
             return requests.request(url, this.baseURI, {
               method: 'put',
               headers: {

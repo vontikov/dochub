@@ -294,7 +294,7 @@ export class BitbucketProtocol extends ProtoProtocol {
     // eslint-disable-next-line no-unused-vars
     async prepareGET(options: IProtocolRequestConfig): Promise<IProtocolRequestConfig> {
         options.url = (new URL(
-            `repositories/${options.decodeURI.repo}/src/${options.decodeURI.branch}/${encodeURIComponent(options.decodeURI.path || '')}`
+            `repositories/${options.decodeURI.repo}/src/${options.decodeURI.branch}/${encodeURIComponent(options.decodeURI.path || '')}?&random=${Date.now()}`
             , this.api.getAPIServer()
         )).toString();
         return options;

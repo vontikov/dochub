@@ -10,7 +10,8 @@
 		"Router": true,
 		"$PAPI": true,
 		"vscode": "readonly",
-		"Zopfli": "readonly"
+		"Zopfli": "readonly",
+		"JSX": true
 	},
 	"ignorePatterns": [
 		"**/public/libs/*.js",

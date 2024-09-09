@@ -1,0 +1,26 @@
+{
+  "name": "dochub-excalidraw",
+  "version": "1.0.0",
+  "description": "The Excalidraw plugin for DocHub",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "DocHub",
+    "Excalidraw"
+  ],
+  "author": "R.Piontik",
+  "license": "ISC",
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.17.6",
+    "dochub-sdk": "^0.1.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "vuera": "^0.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "18.2.5",
+    "@types/react-dom": "18.0.11"
+  }
+}

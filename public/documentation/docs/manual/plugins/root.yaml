@@ -20,6 +20,15 @@ docs:
         type: test
     source: examples/example.html
 
+  // Excalidraw
+  
+  dochub.plugins.excalidraw:
+    title: Excalidraw редактор
+    type: excalidraw
+    source: excalidraw.json
+    location: DocHub/Руководство/Плагины/Примеры/Excalidraw
+
+  // SVG
 
   dochub.plugins.svg_file:
     title: Пример использования SVG
