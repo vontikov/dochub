@@ -77,7 +77,7 @@
     "compression-webpack-plugin": "^11.1.0",
     "cors": "2.8.5",
     "css-loader": "3.6.0",
-    "dochub-sdk": "^0.1.4",
+    "dochub-sdk": "^0.1.5",
     "dotenv": "16.0.3",
     "eslint": "7.32.0",
     "eslint-plugin-vue": "7.20.0",

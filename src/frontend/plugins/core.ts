@@ -6,12 +6,15 @@ import events from './events';
 import storageManager from '@front/manifest/manager';
 import protoProtocolDriver from './protoProtocolDriver';
 import cookie from 'vue-cookie';
+
 import { 
     IDocHubContentProviders,
     IDocHubCore,
     IDocHubDataLake,
     IDocHubDocument,
     IDocHubDocuments,
+    IDocHubEditor,
+    IDocHubEditors,
     IDocHubProblems,
     IDocHubProtocol,
     IDocHubProtocols,
@@ -25,6 +28,7 @@ import { IDocHubContentProvider } from 'dochub-sdk/interfaces/content';
 
 const plugins = {
     documents: [],          // Типы документов
+    editors: [],            // Редакторы документов
     protocols: [],          // Протоколы
     contentProviders: [],   // Драйверы данных
     routes: [],             // Роуты UI
@@ -38,6 +42,7 @@ const plugins = {
             storageManager.mountManifest(uri);
         }
         this.documents.forEach((item) => DocHub.documents.register(item.type, item.component));
+        this.editors.forEach((item) => DocHub.editors.register(item.type, item.component));
     }
 };
 
@@ -106,6 +111,13 @@ class DocHubCore implements IDocHubCore {
                     window.Router[method](middleware[method]);
                 } else throw new Error(`Unsupported middleware method [${method}] for plugins core!`);
             }
+        },
+        navigate: function(url: string) {
+            const parseURL = new URL((url || '').split('/').filter((pice, index) => index === 0 || pice).join('/') || '/', window.location.href);
+            if(parseURL.origin !== window.origin)
+                window.open(url, '_blank');
+            else 
+                window.Router.push({ path: parseURL.pathname, query: Object.fromEntries(parseURL.searchParams), hash: parseURL.hash });
         }
     };
     contentProviders: IDocHubContentProviders = {
@@ -179,6 +191,14 @@ class DocHubCore implements IDocHubCore {
             return plugins.documents.map((item) => item.type);
         }
     };
+    editors: IDocHubEditors = {
+        register: function(type: string, editor: IDocHubEditor) {
+            plugins.editors.push({ type, component: editor });
+        },
+        fetch: function(): string[] {
+            return plugins.editors.map((item) => item.type);
+        }
+    };
     ui: IDocHubUI = {
         register: function(slot: string, component: IDocHubUIComponent) {
             plugins.uiComponents.push({ slot, component });
@@ -217,7 +237,8 @@ export default {
     state: {
         ...plugins,
         ready: false,   // Признак готовности плагинов к использованию
-        documents: {}   // Доступные типы документов
+        documents: {},  // Доступные типы документов
+        editors: {}     // Доступные редакторы документов
     },
     mutations: {
         setReady(state, value) {
@@ -225,6 +246,9 @@ export default {
         },
         registerDocument(state, document) {
             state.documents[document.type] = document.component;
+        },
+        registerEditor(state, editor) {
+            state.editors[editor.type] = editor.component;
         },
         registerUIComponent(state, component) {
             state.uiComponents.push(component);
@@ -244,26 +268,29 @@ export default {
     actions: {
         // Загружаем плагины
         init(context) {
+            // Регистрируем менеджер редакторов для плагинов
+            DocHub.editors.register = (type, component: any) => {
+                component.mixins = component.mixins || [];
+                Vue.component(`plugin-editor-${type}`, component);
+                context.commit('registerEditor', { type, component });
+            };
+            DocHub.editors.fetch = () => Object.keys(context.state.editors);
+
             // Регистрируем менеджер документов для плагинов
             DocHub.documents.register = (type, component: any) => {
                 component.mixins = component.mixins || [];
-                Vue.component(`plugin-doc-${type}`, component);
+                Vue.component(`plugin-document-${type}`, component);
                 context.commit('registerDocument', { type, component });
             };
+            DocHub.documents.fetch = () => Object.keys(context.state.documents);
 
             // Регистрируем UI компонентов настроек
             DocHub.settings.registerUI = (component, location, tags) => {
                 context.commit('registerUISettings', { component, location, tags });
             };
 
-
             DocHub.ui.register = (location, component) => {
                 context.commit('registerUIComponent', { location, component });
-            };
-
-            // Регистрируем функцию получения доступных типов документов
-            DocHub.documents.fetch = () => {
-                return JSON.parse(JSON.stringify(Object.keys(context.state.documents || {})));
             };
 
             DocHub.dataLake.mountManifest = (uri) => {

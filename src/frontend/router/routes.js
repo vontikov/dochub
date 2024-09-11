@@ -97,11 +97,6 @@ const routes = [
     path: '*',
     component: Empty
   }
-].map((route) => (
-  {
-    ...route,
-    props: (route) => route.params
-  }
-));
+];
 
 export default routes;

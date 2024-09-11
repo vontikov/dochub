@@ -16,9 +16,6 @@ const init = async(processEnv) => {
   env.dochub = processEnv ?? {};
 
   const { default: app } = await import(/* webpackMode: "eager" */ './index');
-
-  await import(/* webpackMode: "eager" */ '@front/plugins/core');
-
   return app;
 };
 

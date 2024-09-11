@@ -5,6 +5,7 @@ import gateway from '@idea/gateway';
 import env from '@front/helpers/env';
 
 import appRoutes from './routes';
+import editors from './editors';
 
 Vue.use(Router);
 
@@ -13,8 +14,14 @@ const rConfig = {
 		window.scrollTo(0, 0);
 	},
 	routes: [
-		...appRoutes
-	]
+		...appRoutes,
+		...editors
+	].map((route) => (
+		{
+			...route,
+			props: (route) => route.params
+		}
+	))
 };
 
 if (!env.isPlugin()) {

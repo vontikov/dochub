@@ -6,6 +6,7 @@ import crc16 from '@global/helpers/crc16';
 import entities from '@front/entities/entities';
 import env, { Plugins } from '@front/helpers/env';
 import plugins from '../plugins/core';
+import editors from '../plugins/editors';
 
 import validatorErrors from '@front/constants/validators';
 
@@ -15,7 +16,8 @@ const NET_CODES_ENUM = {
 
 export default {
     modules: {
-        plugins
+        plugins,
+        editors
     },
     state: {
         // Признак загрузки данных

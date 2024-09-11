@@ -6,6 +6,8 @@ import '@/node_modules/@mdi/font/css/materialdesignicons.min.css';
 import '@assets/styles/prism.css';
 import '@assets/libs/prism';
 
+import '@front/plugins/core';
+
 import Axios from 'axios';
 import Vue from 'vue';
 import VueCookie from 'vue-cookie';
@@ -48,6 +50,9 @@ Vue.use(AsyncComputed);
 
 Vue.prototype.$axios = Axios;
 Vuex.Store.prototype.$axios = Axios;
+
+
+// await import(/* webpackMode: "eager" */ '@front/plugins/core');
 
 if (window.DochubVsCodeExt) {
   VsCode.pipe();

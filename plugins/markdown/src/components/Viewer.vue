@@ -19,6 +19,7 @@
 <script>
   import markdown from 'vue-markdown';
   import { DocHub } from 'dochub-sdk';
+  import mustache from 'mustache';
 
   export default {
     name: 'MarkdownViewer',
@@ -35,13 +36,24 @@
       }      
     },
     props: {
-      content: {
-        type: String,
-        required: false,
-        default: ''
+      // Требуем обязательно передавать функцию получения контента
+      getContent: {
+        type: Function,
+        required: true
       },
+      // Требуем обязательно передавать профайл документа 
+      profile: {
+        type: Object,
+        required: true
+      },
+      // Признак того, что документ встроен в другой документ
       inline: {
         type: Boolean,
+        required: true
+      },
+      // Требуем обязательно передавать функцию запросов к DataLake
+      pullData: {
+        type: Function,
         required: true
       }
     },
@@ -50,7 +62,8 @@
         tocShow: true,
         tocHTML: null,
         isRefresh: null,
-        presentationCode: ''
+        presentationCode: '',
+        content: ''
       };
 
     },
@@ -70,10 +83,17 @@
       }
     },
     watch: {
+      profile() {
+        this.onRefresh();
+      },
       content() {
         this.isRefresh && clearTimeout(this.isRefresh);
         this.isRefresh = setTimeout(() => this.isRefresh = null, 50);
       }
+    },
+    mounted() {
+      // При монтировании компонента в DOM, генерируем событие обновления
+      this.onRefresh();
     },
     methods: {
       rerenderPresentation() {
@@ -100,8 +120,38 @@
         // Не выводим оглавление, если в нем всего три раздела или меньше
         // eslint-disable-next-line no-useless-escape
         this.tocHTML = !this.inline && ((tocHTML.match(/\<li\>.*\<\/li\>/g) || []).length > this.tocSensitivity) && tocHTML;
-      }
+      },
+      // Функция обновления контента документа с учетом параметров содержащихся в "this.profile"
+      doRefresh() {
+        if (this.profile) {
+          this.getContent(this.profile.template || this.profile.source)
+            .then((response) => {
+              if (this.profile.template) {
+                this.pullData().then((data) => {
+                  this.content = mustache.render(response.data, data);
+                }).catch((error) => {
+                  this.content = `# Ошибка !\n\n Выполнение запроса для построения шаблона выполнено с ошибкой:\n\n${error.toString()}\n\nЗапрос: \`\`\`jsonata\n${this.profile.source}\n\`\`\`\n`;
+                });
+              } else {
+                this.content = response.data;
+                this.content ||= 'Здесь пусто :(';
+              }
+            })
+            .catch((error) => {
+              this.content = `# Ошибка!\n\n Запрос к ресурсу [${this.profile.source}] был выполнен с ошибкой!\n\n ${error.toString()}`;
+            });
+        } else {
+          this.content = '';
+        }
+      },
 
+      // Обработчик события обновления
+      onRefresh() {
+        // Если обработчик уже запущен, останавливаем его
+        if (this.refresher) clearTimeout(this.refresher);
+        // Для исключения избыточных обращений к Data Lake откладываем обновление на 50мс
+        this.refresher = setTimeout(this.doRefresh, 50);
+      }      
     }
   };
 </script>

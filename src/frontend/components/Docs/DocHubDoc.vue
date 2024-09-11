@@ -1,5 +1,8 @@
 <template>
-  <div>
+  <div
+    :class="{ 'dochub-document-core': true, 'edit-mode-ready': isEditScanning, hover: isHover && isEditScanning }"
+    @mouseover="onHover"
+    @mouseleave="onLive">
     <v-alert v-if="!isReloading && error" icon="error" type="error">
       <h2>Ошибка!</h2>
       <div>Расположение: {{ path }}</div>
@@ -7,27 +10,28 @@
     </v-alert>
     <template v-if="!isReloading && !error">
       <component
-        v-bind:is="is"
+        :is="is"
         v-if="is"
-        v-bind:inline="inline"
-        v-bind:params="currentParams"
-        v-bind:profile="profile"
-        v-bind:path="currentPath"
-        v-bind:get-content="getContentForPlugin"
-        v-bind:put-content="putContentForPlugin"
-        v-bind:to-print="isPrintVersion"
-        v-bind:event-bus="eventBus"
-        v-bind:pull-data="pullData"
-        v-bind:context-menu="contextMenu" />
+        ref="component"
+        v-model="state"
+        :inline="inline"
+        :editor="editor"
+        :params="currentParams"
+        :profile="profile"
+        :path="currentPath"
+        :get-content="getContentForPlugin"
+        :put-content="putContentForPlugin"
+        :to-print="isPrintVersion"
+        :pull-data="pullData"
+        :event-bus="eventBus"
+        @context-menu="contextMenu" />
       <template v-else>
         <v-alert v-if="profile && !isReloading" icon="warning">
-          Неизвестный тип документа [{{ docType }}]<br>
+          Неизвестный тип {{ editor ? 'редактора' : 'документа' }} [{{ docType }}]<br>
           Path: {{ currentPath }}<br>
           Params: {{ currentParams }}<br>
           Profile: <br>
-          <pre>
-            {{ JSON.stringify(profile, null, 2) }}
-          </pre>
+          <pre>{{ JSON.stringify(profile, null, 2) }}</pre>
         </v-alert>
         <spinner v-else />
       </template>
@@ -36,6 +40,7 @@
 </template>
 
 <script>
+  import { DocHub } from 'dochub-sdk';
   import { DocTypes } from '@front/components/Docs/enums/doc-types.enum';
   import AsyncApiComponent from '@front/components/Docs/DocAsyncApi.vue';
   import Empty from '@front/components/Controls/Empty.vue';
@@ -44,7 +49,8 @@
   import query from '@front/manifest/query';
   import uriTool from '@front/helpers/uri';
   import env from '@front/helpers/env';
-
+  import { EditMode } from '@front/plugins/editors';
+  
   import Swagger from './DocSwagger.vue';
   import Plantuml from './DocPlantUML.vue';
   import DocMarkdown from './DocMarkdown.vue';
@@ -87,6 +93,7 @@
         default: '$URL$'
       },
       inline: { type: Boolean, default: false },
+      editor: { type: Boolean, default: false },
       // Параметры передающиеся в запросы документа
       // Если undefined - берутся из URL
       params: {
@@ -102,8 +109,10 @@
     },
     data() {
       return {
+        state: null,
+        isHover: false, 
         DocTypes,
-        refresher: null,
+        refresher: setTimeout(() => true, 1000), // Заглушка на время старта документа
         profile: null,
         error: null,
         currentPath: this.resolvePath(),
@@ -112,16 +121,20 @@
       };
     },
     computed: {
+      // Определяет режим поиска объекта редактирования
+      isEditScanning() {
+        return !this.editor
+          && (this.$store.state.editors.mode === EditMode.edit)
+          && DocHub.editors.fetch().includes(this.docType);
+      },
       eventBus() {
         return DocHub.eventBus;
       },
       is() {
-        return inbuiltTypes[this.docType]
-          || (this.$store.state.plugins.documents[this.docType] && `plugin-doc-${this.docType}`)
-          || null;
+        return this.docType && (inbuiltTypes[this.docType] || `plugin-${this.editor ? 'editor' : 'document'}-${this.docType}`);
       },
       docType() {
-        return (this.profile?.type || 'unknown').toLowerCase();
+        return (this.profile?.type || '').toLowerCase();
       },
       baseURI() {
         return uriTool.getBaseURIOfPath(this.currentPath);
@@ -161,7 +174,10 @@
       }
     },
     watch: {
-      '$route'() {
+      state(value) {
+        this.$emit('input', value);
+      },
+      '$route.path'() {
         this.refresh();
       },
       params() {
@@ -171,10 +187,41 @@
         this.refresh();
       }
     },
+    created() {
+      window.addEventListener('mousedown', this.onHookMouseDown);
+    },
+    destroyed() {
+      window.removeEventListener('mousedown', this.onHookMouseDown);
+    },
     mounted() {
       this.refresh();
     },
     methods: {
+      onHookMouseDown() {
+        if (this.isHover && this.isEditScanning) {
+          const params = this.resolveParams();
+          const url = new URL(this.path, window.location.href);
+          Object.keys(params).map((key) => url.searchParams.append(key, params[key].toString()));
+          this.$store.dispatch('openEditor', {
+            documentPath: `${url.pathname}${url.search}`,
+            title: this.currentPath
+          });
+          this.$store.commit('setPortalMode', EditMode.view);
+        }
+        return false;
+      },
+      onHover(event) {
+        for(let element = event.target; element; element = element.parentNode) {
+          if (typeof element.className?.includes === 'function' &&  element.className?.includes('dochub-document-core')) {
+            this.isHover = element === this.$el;
+            return;
+          }
+        }
+        this.isHover = false;
+      },
+      onLive() {
+        this.isHover = false;
+      },
       pullProfileFromResource(uri) {
         requests.request(uri).then((response) => {
           const contentType = (response?.headers['content-type'] || '').split(';')[0].split('/')[1];
@@ -251,3 +298,26 @@
     }
   };
 </script>
+
+<style scoped>
+
+.dochub-document-core.edit-mode-ready {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;  
+  border: 3px dotted #ffeb3b;
+  border-radius: 2px;
+  padding: 6px;
+}
+
+.dochub-document-core.edit-mode-ready.hover {
+  cursor: context-menu;
+  border: 4px dotted #ffeb3b !important;
+  padding: 4px;
+}
+
+.dochub-document-core.edit-mode-ready {
+    transition: all 0.15s ease-in;
+}
+
+</style>

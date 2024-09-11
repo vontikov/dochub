@@ -10,7 +10,7 @@
     <v-app-bar-nav-icon v-on:click="() => handleDrawer()">
       <header-logo />
     </v-app-bar-nav-icon>
-    <v-toolbar-title style="cursor: pointer" v-on:click="onLogoClick">DocHub</v-toolbar-title>
+    <v-toolbar-title style="cursor: pointer; min-width: 80px;" v-on:click="onLogoClick">DocHub</v-toolbar-title>
     <v-btn v-if="isBackShow" icon v-on:click="back">
       <v-icon>arrow_back</v-icon>
     </v-btn>
@@ -27,6 +27,11 @@
     <v-btn v-if="gotoIconShow" icon title="Найти в коде" v-on:click="gotoCode">
       <v-icon class="material-icons" style="display: inline">code</v-icon>
     </v-btn>
+    <v-divider vertical inset class="toolbar-divider" />
+    <v-btn icon title="Редактировать элемент" :class="isEditMode && 'blink-element-search'" :color="isEditMode ? 'yellow' : null" v-on:click="isEditMode ? onOnEditOff() : onOnEditOn()">
+      <v-icon>mdi-select-search</v-icon>
+    </v-btn>
+    <v-divider vertical inset class="toolbar-divider" />
     <!-- Выводим зарегистрированные компоненты аватаров -->
     <template v-for="(item, index) in avatars">
       <component v-bind:is="item.component" v-bind:key="index" />
@@ -63,14 +68,17 @@
 </template>
 
 <script>
+  import EditorTabs from './Editor/Tabs.vue';
   import env, {Plugins} from '@front/helpers/env';
+  import { EditMode } from '@front/plugins/editors';
 
   import HeaderLogo from './HeaderLogo';
 
   export default {
     name: 'Header',
     components: {
-      HeaderLogo
+      HeaderLogo,
+      EditorTabs
     },
     data() {
       return {
@@ -78,6 +86,9 @@
       };
     },
     computed: {
+      isEditMode() {
+        return this.$store.state.editors.mode === EditMode.edit;
+      },
       avatars() {
         return DocHub.ui.get('avatar');
       },
@@ -106,6 +117,12 @@
       }
     },
     methods: {
+      onOnEditOn() {
+        this.$store.commit('setPortalMode', EditMode.edit);
+      },
+      onOnEditOff() {
+        this.$store.commit('setPortalMode', EditMode.view);
+      },
       doSettings() {
         this.$router.push({ name: 'settings' });
       },
@@ -168,9 +185,21 @@ header.print-version {
   animation: blink 1s step-start 0s infinite;
 }
 
+.blink-element-search {
+  color: #fff !important;
+  animation: blink 1s step-start 0s infinite;
+}
+
+
 .settings-menu-icon {
   width: 32px !important;
   display: inline !important;
+}
+
+.toolbar-divider {
+  margin-left: 6px;
+  margin-right: 6px;
+  border-width: 0 thin 2px 2px;
 }
 
 </style>

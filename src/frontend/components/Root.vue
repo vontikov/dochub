@@ -29,6 +29,7 @@
         color="primary"
         indeterminate />
     </template>
+    <footer-component />
   </v-app>
 </template>
 
@@ -39,6 +40,7 @@
 
   import MenuComponent from './Layouts/Menu';
   import HeaderComponent from './Layouts/Header';
+  import FooterComponent from './Layouts/Footer';
   import Problems from './Problems/Problems.vue';
 
   const minDrawerSize = 200;
@@ -49,6 +51,7 @@
     components: {
       MenuComponent,
       HeaderComponent,
+      FooterComponent,
       PluginInit,
       Problems
     },
