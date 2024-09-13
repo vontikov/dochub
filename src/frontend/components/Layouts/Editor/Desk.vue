@@ -38,6 +38,7 @@
         });
       },
       '$route.path'(to) {
+        debugger;
         this.currentPath = to.slice(7);
         this.parseHashCommands();
       },

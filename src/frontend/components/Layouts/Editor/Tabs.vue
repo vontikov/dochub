@@ -12,13 +12,28 @@
         {{ tab.title || '...' }}
         <v-icon v-if="!tab.protected" dark right title="Закрыть" @click.stop="onClose(tab)">mdi-close-box-outline</v-icon>
       </v-tab>
+      <v-menu up left>
+        <template #activator="{ on, attrs }">
+          <v-btn text class="align-self-center mr-4" v-bind="attrs" v-on="on">
+            <v-icon style="margin-right: 8px;">mdi-plus</v-icon>
+            Создать            
+          </v-btn>
+        </template>
+        <v-list class="grey lighten-3">
+          <v-list-item
+            v-for="item in addItems"
+            :key="item.title"
+            @click="onAdd(item)">
+            {{ item.title }}
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </template>
   </v-tabs>  
 </template>
 
 <script>
-
-  import { DocHub } from 'dochub-sdk';
+  import { DocHub, EditorEvents } from 'dochub-sdk';
 
   export default {
     name: 'EditorTabs',
@@ -30,16 +45,15 @@
           protected: true,
           path: this.$route.fullPath || '/',
           title: 'Портал'
-        },
-        createTab: {
-          icon: 'mdi-plus',
-          path: '/',
-          protected: true,
-          title: 'Создать'
         }
       };
     },
     computed: {
+      addItems() {
+        return this.$store.state.plugins.editors.map((item) => ({
+          ...item
+        }));
+      },
       contexts() {
         return this.$store.state.editors.contexts;
       },
@@ -50,8 +64,7 @@
             title: item.title.length > 16 ? `...${item.title.slice(-12)}` : item.title,
             hint: item.title,
             path: `/editor/${item.documentPath.slice(item.documentPath[0] === '/' ? 1 : 0)}`
-          })),
-          this.createTab
+          }))
         ];
       },
       selected: {
@@ -88,6 +101,9 @@
       this.updateSelectedTab();
     },
     methods: {
+      onAdd(item) {
+        this.$router.push({ path : `/editor/$/${item.type}`, hash: `#${EditorEvents.create}`});
+      },
       isEqualityPath(url1 = '/', url2 = '/') {
         const parseURL1 = new URL(url1, window.location.href);
         const parseURL2 = new URL(url2, window.location.href);
@@ -99,15 +115,6 @@
       updateSelectedTab() {
         this.selectedTab = this.tabs.findIndex((item) => this.isEqualityPath(this.$route.fullPath, item.path));
         this.selectedTab = this.selectedTab >= 0 ? this.selectedTab : 0;
-        /*
-        setTimeout(() => {
-          if (this.selectedTab >= this.tabs.length) {
-            DocHub.router.navigate(this.tabs[this.tabs.length - 1]?.path);
-          } else if (!this.isEqualityPath(this.$router.currentRoute?.fullPath, this.tabs[this.selectedTab]?.path)) {
-            DocHub.router.navigate(this.tabs[this.selectedTab]?.path);
-          }
-        }, 50);
-        */
       },
       onClose(tab) {
         DocHub.router.navigate(`${tab.path.split('#')[0]}#$close`);

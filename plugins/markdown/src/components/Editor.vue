@@ -1,5 +1,6 @@
 <template>
   <div class="markdown-editor">
+    [{{ profileURI }}]
     <v-row>
       <v-progress-linear v-if="isSaving" indeterminate />
     </v-row>
@@ -56,6 +57,9 @@
       };
     },
     computed: {
+      profileURI() {
+        return this.profile?.__uri__;
+      },
       title() {
         return this.profile?.title 
           || this.profile?.location?.split('/').pop()
@@ -67,12 +71,26 @@
       }
     },
     mounted() {
+      document.addEventListener('keydown', this.onHotKeys);
       this.onRefresh();
       this.$on(EditorEvents.close, (listener) => {
         listener.success(true);
       });
+      this.$on(EditorEvents.create, (event) => {
+        console.info(event);
+      });
+    },
+    beforeDestroy() {
+      document.removeEventListener('keydown', this.onHotKeys, false);
     },
     methods: {
+      onHotKeys(event) {
+        if (event.ctrlKey && event.code==='KeyS')  {
+          this.doSave();
+          event.preventDefault();  
+        }
+        return false;
+      },
       updateState() {
         this.$emit('input', {
           title: this.title
@@ -102,8 +120,9 @@
         this.refresher = setTimeout(this.doRefresh, 50);
       },      
       // Выполняет сохранение кода
-      save() {
+      doSave() {
         this.isSaving = true;
+        debugger;
         this.putContent(this.contentURI, this.coderAPI.getCode()) 
           .then(() => {
             this.saveSuccess = true;

@@ -147,30 +147,6 @@
       },
       isPrintVersion() {
         return this.$store.state.isPrintVersion;
-      },
-      putContentForPlugin() {
-        if (env.isPlugin()) {
-          return (url, content) => {
-            if (!url) throw new Error('URL of document is not defined!');
-            return new Promise((success, reject) => {
-              const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
-              window.$PAPI.pushFile(fullPath, content)
-                .then(success)
-                .catch(reject);
-            });
-          };
-        } else {
-          return (url, data) => {
-            if (!url) throw new Error('URL of document is not defined!');
-            return requests.request(url, this.baseURI, {
-              method: 'put',
-              headers: {
-                'Content-type': 'text/plain; charset=UTF-8'
-              },
-              data
-            });
-          };
-        }
       }
     },
     watch: {
@@ -238,6 +214,7 @@
         query.expression(query.getObject(dateLakeId), null, this.resolveParams())
           .evaluate()
           .then((profile) => {
+            debugger;
             this.profile = Object.assign({ $base: this.path }, profile);
           })
           .catch((e) => {
@@ -249,13 +226,23 @@
             this.refresher = null;
           });
       },
+      // Создает дефольный профиль документа для системных операций над ним.
+      // Например, при создании
+      makeDefaultProfileFor(docType) {
+        this.profile = {
+          type: docType
+        };
+        this.refresher = null;
+      },
       // Обновляем контент документа
       refresh() {
         if (this.refresher) clearTimeout(this.refresher);
         this.refresher = setTimeout(() => {
           this.profile = null;
           const path = this.resolvePath().slice(1).split('/');
-          if (path[1].startsWith('blob:') || (path[1].slice(-1) === ':')) {
+          if (path[0] === '$') {
+            this.makeDefaultProfileFor(path[1]);
+          } else if (path[1].startsWith('blob:') || (path[1].slice(-1) === ':')) {
             this.pullProfileFromResource(path.slice(1).join('/'));
           } else {
             this.pullProfileFromDataLake(`"${path.join('"."')}"`);
@@ -274,6 +261,10 @@
       //  url - прямой или относительный URL к файлу
       getContentForPlugin(url) {
         return new Promise((success, reject) => {
+          if (!url) {
+            reject(new Error('Empty URI'));
+            return;
+          }
           const whiter = setInterval(() => {
             if (!this.isReloading) {
               requests.request(url, this.baseURI, { raw: true })
@@ -283,6 +274,30 @@
             }
           }, 50);
         });
+      },
+      putContentForPlugin() {
+        if (env.isPlugin()) {
+          return (url, content) => {
+            if (!url) throw new Error('URL of document is not defined!');
+            return new Promise((success, reject) => {
+              const fullPath = uriTool.makeURIByBaseURI(url, this.baseURI);
+              window.$PAPI.pushFile(fullPath, content)
+                .then(success)
+                .catch(reject);
+            });
+          };
+        } else {
+          return (url, data) => {
+            if (!url) throw new Error('URL of document is not defined!');
+            return requests.request(url, this.baseURI, {
+              method: 'put',
+              headers: {
+                'Content-type': 'text/plain; charset=UTF-8'
+              },
+              data
+            });
+          };
+        }
       },
       // API к озеру данных архитектуры
       //  expression - JSONata запрос или идентификатор ресурса
@@ -294,7 +309,17 @@
           return this.dataProvider.releaseData(this.resolvePath(), params || this.params);
         } else
           return this.dataProvider.getData(context, { source: expression }, params);
+      },
+      // API к озеру данных архитектуры
+      //  expression - JSONata запрос или идентификатор ресурса
+      //  self - значение переменной $self в запросе
+      //  params - значение переменной $params в запросе
+      //  context - контекст запроса (по умолчанию равен manifest)
+      // eslint-disable-next-line no-unused-vars
+      pushData(changes,  params, context) {
+        throw new Error('Is not implemented.');
       }
+
     }
   };
 </script>

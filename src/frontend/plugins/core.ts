@@ -8,6 +8,7 @@ import protoProtocolDriver from './protoProtocolDriver';
 import cookie from 'vue-cookie';
 
 import { 
+    IDataLakeChange,
     IDocHubContentProviders,
     IDocHubCore,
     IDocHubDataLake,
@@ -35,15 +36,7 @@ const plugins = {
     uiSettings: [],         // UI компоненты настроек плагинов
     uiComponents: [],       // Встраиваемые UI компоненты
     mounted: {},            // Примонтированные манифесты
-    problems: [],           // Проблемы возникшие в плагине
-    // Все ранее зарегистрированные плагины переносим в основной менеджер
-    pull() {
-        for(const uri in this.mounted) {
-            storageManager.mountManifest(uri);
-        }
-        this.documents.forEach((item) => DocHub.documents.register(item.type, item.component));
-        this.editors.forEach((item) => DocHub.editors.register(item.type, item.component));
-    }
+    problems: []            // Проблемы возникшие в плагине
 };
 
 const routerMiddlewareMethods = { 
@@ -186,14 +179,16 @@ class DocHubCore implements IDocHubCore {
     documents: IDocHubDocuments = {
         register: function(type: string, component: IDocHubDocument) {
             plugins.documents.push({ type, component });
+            Vue.component(`plugin-document-${type}`, component);
         },
         fetch: function(): string[] {
             return plugins.documents.map((item) => item.type);
         }
     };
     editors: IDocHubEditors = {
-        register: function(type: string, editor: IDocHubEditor) {
-            plugins.editors.push({ type, component: editor });
+        register: function(type: string, editor: IDocHubEditor, title?: string) {
+            plugins.editors.push({ type, component: editor, title: title || type });
+            Vue.component(`plugin-editor-${type}`, editor);
         },
         fetch: function(): string[] {
             return plugins.editors.map((item) => item.type);
@@ -217,15 +212,18 @@ class DocHubCore implements IDocHubCore {
             DocHub.eventBus.$emit(events.dataLake.unmountManifest, uri);
         },
         reload: function(uriPattern?: string | string[] | RegExp) {
-            DocHub.eventBus.$emit(events.dataLake.reloadManifests, 
-                uriPattern && 
-                    ((Array.isArray(uriPattern) ? uriPattern : [uriPattern]).map((item) => 
-                            typeof item === 'string'
-                            ? new RegExp('^' + item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$')
-                            : item
-                        )
-                    )
+            DocHub.eventBus.$emit(events.dataLake.reloadManifests,
+                uriPattern &&
+                ((Array.isArray(uriPattern) ? uriPattern : [uriPattern]).map((item) => typeof item === 'string'
+                    ? new RegExp('^' + item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$')
+                    : item
+                )
+                )
             );
+        },
+        // eslint-disable-next-line no-unused-vars
+        pushChanges: function(changes: IDataLakeChange) {
+            throw new Error('Function not implemented.');
         }
     };
 }
@@ -236,19 +234,17 @@ export default {
     namespaced: true,
     state: {
         ...plugins,
-        ready: false,   // Признак готовности плагинов к использованию
-        documents: {},  // Доступные типы документов
-        editors: {}     // Доступные редакторы документов
+        ready: false    // Признак готовности плагинов к использованию
     },
     mutations: {
         setReady(state, value) {
             state.ready = value;
         },
-        registerDocument(state, document) {
-            state.documents[document.type] = document.component;
+        refreshDocuments(state) {
+            state.documents = [...state.documents];
         },
-        registerEditor(state, editor) {
-            state.editors[editor.type] = editor.component;
+        refreshEditor(state) {
+            state.editors = [...state.editors];
         },
         registerUIComponent(state, component) {
             state.uiComponents.push(component);
@@ -269,20 +265,18 @@ export default {
         // Загружаем плагины
         init(context) {
             // Регистрируем менеджер редакторов для плагинов
-            DocHub.editors.register = (type, component: any) => {
-                component.mixins = component.mixins || [];
-                Vue.component(`plugin-editor-${type}`, component);
-                context.commit('registerEditor', { type, component });
+            const oldEditorRegister = DocHub.editors.register;
+            DocHub.editors.register = (type:string, component: any, title?: string) => {
+                oldEditorRegister(type, component, title);
+                context.commit('refreshEditors');
             };
-            DocHub.editors.fetch = () => Object.keys(context.state.editors);
 
             // Регистрируем менеджер документов для плагинов
+            const oldDocumentRegister = DocHub.documents.register;
             DocHub.documents.register = (type, component: any) => {
-                component.mixins = component.mixins || [];
-                Vue.component(`plugin-document-${type}`, component);
-                context.commit('registerDocument', { type, component });
+                oldDocumentRegister(type, component);
+                context.commit('refreshDocuments');
             };
-            DocHub.documents.fetch = () => Object.keys(context.state.documents);
 
             // Регистрируем UI компонентов настроек
             DocHub.settings.registerUI = (component, location, tags) => {
@@ -303,10 +297,7 @@ export default {
                 DocHub.eventBus.$emit(events.dataLake.unmountManifest, uri);
             };
 
-            plugins.pull();
-
             let counter = 0;
-
             // Получаем данные манифеста приложения
             !env.isPlugin() && requests.request('/manifest.json', new URL('/', window.location.toString())).then((response) => {
                 (response?.data?.plugins || []).map((url) => {
