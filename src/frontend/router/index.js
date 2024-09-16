@@ -6,6 +6,7 @@ import env from '@front/helpers/env';
 
 import appRoutes from './routes';
 import editors from './editors';
+import constructors from './constructors';
 
 Vue.use(Router);
 
@@ -15,7 +16,8 @@ const rConfig = {
 	},
 	routes: [
 		...appRoutes,
-		...editors
+		...editors,
+		...constructors
 	].map((route) => (
 		{
 			...route,

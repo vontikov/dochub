@@ -12,7 +12,7 @@
         {{ tab.title || '...' }}
         <v-icon v-if="!tab.protected" dark right title="Закрыть" @click.stop="onClose(tab)">mdi-close-box-outline</v-icon>
       </v-tab>
-      <v-menu up left>
+      <v-menu up left class="menu-create">
         <template #activator="{ on, attrs }">
           <v-btn text class="align-self-center mr-4" v-bind="attrs" v-on="on">
             <v-icon style="margin-right: 8px;">mdi-plus</v-icon>
@@ -33,8 +33,6 @@
 </template>
 
 <script>
-  import { DocHub, EditorEvents } from 'dochub-sdk';
-
   export default {
     name: 'EditorTabs',
     data() {
@@ -50,7 +48,7 @@
     },
     computed: {
       addItems() {
-        return this.$store.state.plugins.editors.map((item) => ({
+        return this.$store.state.plugins.constructors.map((item) => ({
           ...item
         }));
       },
@@ -102,7 +100,7 @@
     },
     methods: {
       onAdd(item) {
-        this.$router.push({ path : `/editor/$/${item.type}`, hash: `#${EditorEvents.create}`});
+        this.$router.push({ path : `/constructor/${item.uid}`});
       },
       isEqualityPath(url1 = '/', url2 = '/') {
         const parseURL1 = new URL(url1, window.location.href);
@@ -134,4 +132,9 @@
 .dochub-editor-tabs .v-tabs-bar {
   height: 32px;
 }
+
+.dochub-editor-tabs .menu-create {
+  z-index: 1000
+}
+
 </style>

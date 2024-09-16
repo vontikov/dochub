@@ -8,10 +8,11 @@ import protoProtocolDriver from './protoProtocolDriver';
 import cookie from 'vue-cookie';
 
 import { 
-    IDataLakeChange,
+    IDocHubConstructorComponent,
+    IDocHubConstructorItem,
+    IDocHubConstructors,
     IDocHubContentProviders,
     IDocHubCore,
-    IDocHubDataLake,
     IDocHubDocument,
     IDocHubDocuments,
     IDocHubEditor,
@@ -27,9 +28,12 @@ import {
 } from 'dochub-sdk';
 import { IDocHubContentProvider } from 'dochub-sdk/interfaces/content';
 
+import { DocHubDataLake } from './datalake';
+
 const plugins = {
     documents: [],          // Типы документов
     editors: [],            // Редакторы документов
+    constructors: [],       // Конструкторы объектов
     protocols: [],          // Протоколы
     contentProviders: [],   // Драйверы данных
     routes: [],             // Роуты UI
@@ -202,30 +206,19 @@ class DocHubCore implements IDocHubCore {
             return plugins.uiComponents.filter((item) => (item.slot === slot));
         }
     };
-    dataLake: IDocHubDataLake = {
-        mountManifest: function(uri: string) {
-            plugins.mounted[uri] = true;
-            DocHub.eventBus.$emit(events.dataLake.mountManifest, uri);
+    constructors: IDocHubConstructors = {
+        register: function(uid: string, title: string, component: IDocHubConstructorComponent) {
+            plugins.constructors.push({uid, title, component});
         },
-        unmountManifest: function(uri: string) {
-            delete plugins.mounted[uri];
-            DocHub.eventBus.$emit(events.dataLake.unmountManifest, uri);
+        fetch: function(): IDocHubConstructorItem[] {
+            return plugins.constructors;
         },
-        reload: function(uriPattern?: string | string[] | RegExp) {
-            DocHub.eventBus.$emit(events.dataLake.reloadManifests,
-                uriPattern &&
-                ((Array.isArray(uriPattern) ? uriPattern : [uriPattern]).map((item) => typeof item === 'string'
-                    ? new RegExp('^' + item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$')
-                    : item
-                )
-                )
-            );
-        },
-        // eslint-disable-next-line no-unused-vars
-        pushChanges: function(changes: IDataLakeChange) {
-            throw new Error('Function not implemented.');
+        get: function(uid: string): IDocHubConstructorItem {
+            return plugins.constructors.find((item) => item.uid === uid);
         }
     };
+
+    dataLake = new DocHubDataLake(this);
 }
 
 const DocHub: DocHubCore = (window['DocHub'] = new DocHubCore());
@@ -239,6 +232,9 @@ export default {
     mutations: {
         setReady(state, value) {
             state.ready = value;
+        },
+        refreshConstructors(state) {
+            state.constructors = [...state.constructors];
         },
         refreshDocuments(state) {
             state.documents = [...state.documents];
@@ -276,6 +272,13 @@ export default {
             DocHub.documents.register = (type, component: any) => {
                 oldDocumentRegister(type, component);
                 context.commit('refreshDocuments');
+            };
+
+            // Регистрируем менеджер конструкторов для плагинов
+            const oldConstructorRegister = DocHub.constructors.register;
+            DocHub.constructors.register = (uid: string, title: string, component: IDocHubConstructorComponent) => {
+                oldConstructorRegister(uid, title, component);
+                context.commit('refreshConstructors');
             };
 
             // Регистрируем UI компонентов настроек

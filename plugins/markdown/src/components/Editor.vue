@@ -1,6 +1,6 @@
 <template>
   <div class="markdown-editor">
-    [{{ profileURI }}]
+    <div v-if="isCreated">CREATED!</div>
     <v-row>
       <v-progress-linear v-if="isSaving" indeterminate />
     </v-row>
@@ -47,6 +47,7 @@
     },
     data() {
       return {
+        isCreated: false,
         coderAPI: {
           getCode: () => ''
         },
@@ -77,7 +78,7 @@
         listener.success(true);
       });
       this.$on(EditorEvents.create, (event) => {
-        console.info(event);
+        this.isCreated = event;
       });
     },
     beforeDestroy() {

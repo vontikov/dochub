@@ -1,4 +1,4 @@
-import Editor from '@front/components/Layouts/Editor/Desk.vue';
+import Editor from '@front/components/Layouts/Editor/EditorDesk.vue';
 
 export default [
   {

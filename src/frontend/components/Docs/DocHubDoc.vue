@@ -24,6 +24,7 @@
         :to-print="isPrintVersion"
         :pull-data="pullData"
         :event-bus="eventBus"
+        @hook:mounted="onMountedDocument"
         @context-menu="contextMenu" />
       <template v-else>
         <v-alert v-if="profile && !isReloading" icon="warning">
@@ -173,6 +174,9 @@
       this.refresh();
     },
     methods: {
+      onMountedDocument() {
+        this.$emit('on-document-mounted', this.$refs.component);
+      },
       onHookMouseDown() {
         if (this.isHover && this.isEditScanning) {
           const params = this.resolveParams();
@@ -214,7 +218,6 @@
         query.expression(query.getObject(dateLakeId), null, this.resolveParams())
           .evaluate()
           .then((profile) => {
-            debugger;
             this.profile = Object.assign({ $base: this.path }, profile);
           })
           .catch((e) => {
@@ -312,14 +315,10 @@
       },
       // API к озеру данных архитектуры
       //  expression - JSONata запрос или идентификатор ресурса
-      //  self - значение переменной $self в запросе
-      //  params - значение переменной $params в запросе
-      //  context - контекст запроса (по умолчанию равен manifest)
-      // eslint-disable-next-line no-unused-vars
-      pushData(changes,  params, context) {
-        throw new Error('Is not implemented.');
+      //  changes - Массив изменений
+      pushData(changes) {
+        DocHub.dataLake.pushChanges(changes);
       }
-
     }
   };
 </script>
