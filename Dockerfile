@@ -1,33 +1,21 @@
-# syntax = docker/dockerfile:1.3
-ARG NODE_VERSION=20
+FROM node:20-alpine AS base
+FROM nginxinc/nginx-unprivileged:1.26-alpine AS runner
 
-
-
-FROM node:${NODE_VERSION}-alpine AS deps
+FROM base AS deps
 WORKDIR /var/www
 COPY package.json package-lock.json ./
 COPY plugins ./plugins/
-# RUN --mount=type=cache,target=/root/.npm npm install
 RUN npm install
 
-
-
-FROM node:${NODE_VERSION}-alpine AS builder
+FROM base AS builder
 WORKDIR /var/www
 COPY --from=deps /var/www .
 COPY . .
 COPY --from=deps /var/www/plugins ./plugins/
 ENV NODE_ENV=production
-# RUN --mount=type=cache,target=./node_modules/.cache npm run build
 RUN npm run build
-CMD ["npm", "run", "serve"]
-EXPOSE 8080
 
-
-
-
-
-FROM ghcr.io/rabotaru/dochub/nginx:v0.0.3 as nginx
+FROM runner
 COPY --chown=101 --from=builder /var/www/dist /usr/share/nginx/html
-
-
+COPY --chown=101 nginx/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 3000
