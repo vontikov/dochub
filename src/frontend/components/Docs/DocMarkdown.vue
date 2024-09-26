@@ -95,7 +95,7 @@
     computed: {
       // Определяет поддерживаются ли HTML тэги в markdown
       isHTMLSupport() {
-        return (process.env.VUE_APP_DOCHUB_MARKDOWN_HTML || env.ideSettings?.env.DOCHUB_IDE_MARKDOWN_HTML || 'off').toLocaleLowerCase() === 'on';
+        return (process.env.VUE_APP_DOCHUB_MARKDOWN_HTML || env.ideSettings?.env.DOCHUB_IDE_MARKDOWN_HTML || 'on').toLocaleLowerCase() === 'on';
       },
       // Возвращает URL документа с учетом истории переходов
       currentURL() {
